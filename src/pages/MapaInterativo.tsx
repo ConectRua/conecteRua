@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { AddUBSModal } from '@/components/Forms/AddUBSModal';
 import { useMockData } from '@/hooks/useMockData';
 import { useState } from 'react';
 import { 
@@ -23,6 +24,7 @@ const MapaInterativo = () => {
     ongsList, 
     pacientesList,
     equipamentosSociais,
+    addUBS,
     loading 
   } = useMockData();
 
@@ -30,6 +32,11 @@ const MapaInterativo = () => {
   const [showONGs, setShowONGs] = useState(true);
   const [showPacientes, setShowPacientes] = useState(true);
   const [showEquipamentosSociais, setShowEquipamentosSociais] = useState(true);
+  const [showAddUBSModal, setShowAddUBSModal] = useState(false);
+
+  const handleAddUBS = (newUBS: Parameters<typeof addUBS>[0]) => {
+    addUBS(newUBS);
+  };
 
   return (
     <div className="space-y-6">
@@ -128,7 +135,12 @@ const MapaInterativo = () => {
                 <Search className="h-4 w-4 mr-2" />
                 Buscar por CEP
               </Button>
-              <Button variant="outline" size="sm" className="w-full">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full"
+                onClick={() => setShowAddUBSModal(true)}
+              >
                 <Building2 className="h-4 w-4 mr-2" />
                 Nova UBS
               </Button>
@@ -227,6 +239,13 @@ const MapaInterativo = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal para adicionar UBS */}
+      <AddUBSModal
+        open={showAddUBSModal}
+        onOpenChange={setShowAddUBSModal}
+        onAdd={handleAddUBS}
+      />
     </div>
   );
 };
