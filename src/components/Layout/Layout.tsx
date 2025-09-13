@@ -8,9 +8,9 @@ export const Layout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gradient-subtle">
+    <div className="min-h-screen bg-gradient-subtle flex">
       {/* Desktop Sidebar */}
-      <div className="hidden lg:block">
+      <div className="hidden lg:block fixed left-0 top-0 h-full z-40">
         <Sidebar />
       </div>
 
@@ -28,15 +28,16 @@ export const Layout = () => {
       )}
 
       {/* Main Content */}
-      <div className={cn(
-        "lg:pl-64 flex flex-col min-h-screen"
-      )}>
-        <Header 
-          showMenuButton
-          onMenuClick={() => setSidebarOpen(true)}
-        />
+      <div className="flex-1 lg:ml-64">
+        {/* Mobile Header */}
+        <div className="lg:hidden">
+          <Header 
+            showMenuButton
+            onMenuClick={() => setSidebarOpen(true)}
+          />
+        </div>
         
-        <main className="flex-1 p-6">
+        <main className="p-6 min-h-screen">
           <Outlet />
         </main>
       </div>
