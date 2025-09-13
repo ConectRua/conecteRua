@@ -126,7 +126,7 @@ const mockUBS: UBS[] = [
   {
     id: '5',
     nome: 'UBS 7 de Samambaia',
-    endereco: 'Quadra 302, Conjunto 05, Samambaia Sul - Brasília, DF',
+    endereco: 'Quadra 302, Conjunto 05, Lote 01 - Samambaia, Brasília - DF',
     cep: '72302-302',
     telefone: '(61) 3458-5424',
     latitude: -15.8822,
