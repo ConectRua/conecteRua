@@ -15,7 +15,9 @@ import {
   Building2,
   Heart,
   Users,
-  Building
+  Building,
+  Edit,
+  Save
 } from 'lucide-react';
 
 const MapaInterativo = () => {
@@ -25,6 +27,7 @@ const MapaInterativo = () => {
     pacientesList,
     equipamentosSociais,
     addUBS,
+    updateLocation,
     loading 
   } = useMockData();
 
@@ -33,9 +36,14 @@ const MapaInterativo = () => {
   const [showPacientes, setShowPacientes] = useState(true);
   const [showEquipamentosSociais, setShowEquipamentosSociais] = useState(true);
   const [showAddUBSModal, setShowAddUBSModal] = useState(false);
+  const [editMode, setEditMode] = useState(false);
 
   const handleAddUBS = (newUBS: Parameters<typeof addUBS>[0]) => {
     addUBS(newUBS);
+  };
+
+  const handleLocationUpdate = (type: 'ubs' | 'ong' | 'paciente' | 'equipamento', id: string, newLat: number, newLng: number) => {
+    updateLocation(type, id, newLat, newLng);
   };
 
   return (
@@ -46,9 +54,18 @@ const MapaInterativo = () => {
           <h1 className="text-3xl font-bold flex items-center space-x-2">
             <Map className="h-8 w-8 text-primary" />
             <span>Mapa Interativo</span>
+            {editMode && (
+              <Badge variant="secondary" className="ml-2">
+                <Edit className="h-3 w-3 mr-1" />
+                Modo Edição
+              </Badge>
+            )}
           </h1>
           <p className="text-muted-foreground mt-2">
-            Visualização georreferenciada da rede de assistência social e saúde
+            {editMode 
+              ? "Arraste os marcadores para alterar suas posições. Clique em 'Salvar Edições' quando terminar."
+              : "Visualização georreferenciada da rede de assistência social e saúde"
+            }
           </p>
         </div>
         
@@ -144,6 +161,24 @@ const MapaInterativo = () => {
                 <Building2 className="h-4 w-4 mr-2" />
                 Nova UBS
               </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full"
+                onClick={() => setEditMode(!editMode)}
+              >
+                {editMode ? (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Salvar Edições
+                  </>
+                ) : (
+                  <>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Editar Posições
+                  </>
+                )}
+              </Button>
               <Button variant="outline" size="sm" className="w-full">
                 <Heart className="h-4 w-4 mr-2" />
                 Nova ONG
@@ -181,6 +216,8 @@ const MapaInterativo = () => {
               centerLat={-15.8781}
               centerLng={-48.0958}
               zoom={11}
+              editMode={editMode}
+              onLocationUpdate={handleLocationUpdate}
             />
           </CardContent>
         </Card>

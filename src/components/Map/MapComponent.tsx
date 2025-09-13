@@ -11,6 +11,8 @@ interface MapComponentProps {
   centerLat?: number;
   centerLng?: number;
   zoom?: number;
+  editMode?: boolean;
+  onLocationUpdate?: (type: 'ubs' | 'ong' | 'paciente' | 'equipamento', id: string, newLat: number, newLng: number) => void;
 }
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyDRwidXV58hU0ialb5D1oBAGOl0SBssiuQ';
@@ -23,7 +25,9 @@ export const MapComponent = ({
   showEquipamentosSociais = true,
   centerLat = -15.8781,
   centerLng = -48.0958,
-  zoom = 12
+  zoom = 12,
+  editMode = false,
+  onLocationUpdate
 }: MapComponentProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
@@ -96,18 +100,19 @@ export const MapComponent = ({
 
     const map = mapInstanceRef.current;
 
-    // Add UBS markers
     if (showUBS) {
       ubsList.forEach((ubs: UBS) => {
         const marker = new google.maps.Marker({
           position: { lat: ubs.latitude, lng: ubs.longitude },
           map: map,
           title: ubs.nome,
+          draggable: editMode,
           icon: {
             url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
               <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="16" cy="16" r="14" fill="#3b82f6" stroke="white" stroke-width="2"/>
+                <circle cx="16" cy="16" r="14" fill="${editMode ? '#f59e0b' : '#3b82f6'}" stroke="white" stroke-width="2"/>
                 <text x="16" y="21" font-family="Arial" font-size="14" fill="white" text-anchor="middle">🏥</text>
+                ${editMode ? '<circle cx="24" cy="8" r="6" fill="#ef4444" stroke="white" stroke-width="1"/><text x="24" y="12" font-family="Arial" font-size="8" fill="white" text-anchor="middle">✎</text>' : ''}
               </svg>
             `),
             scaledSize: new google.maps.Size(32, 32)
@@ -141,6 +146,17 @@ export const MapComponent = ({
           infoWindow.open(map, marker);
         });
 
+        // Add drag event listener for edit mode
+        if (editMode && onLocationUpdate) {
+          marker.addListener('dragend', (event: google.maps.MapMouseEvent) => {
+            if (event.latLng) {
+              const newLat = event.latLng.lat();
+              const newLng = event.latLng.lng();
+              onLocationUpdate('ubs', ubs.id, newLat, newLng);
+            }
+          });
+        }
+
         markersRef.current.push(marker);
       });
     }
@@ -152,11 +168,13 @@ export const MapComponent = ({
           position: { lat: ong.latitude, lng: ong.longitude },
           map: map,
           title: ong.nome,
+          draggable: editMode,
           icon: {
             url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
               <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="16" cy="16" r="14" fill="#10b981" stroke="white" stroke-width="2"/>
+                <circle cx="16" cy="16" r="14" fill="${editMode ? '#f59e0b' : '#10b981'}" stroke="white" stroke-width="2"/>
                 <text x="16" y="21" font-family="Arial" font-size="14" fill="white" text-anchor="middle">❤️</text>
+                ${editMode ? '<circle cx="24" cy="8" r="6" fill="#ef4444" stroke="white" stroke-width="1"/><text x="24" y="12" font-family="Arial" font-size="8" fill="white" text-anchor="middle">✎</text>' : ''}
               </svg>
             `),
             scaledSize: new google.maps.Size(32, 32)
@@ -190,6 +208,17 @@ export const MapComponent = ({
           infoWindow.open(map, marker);
         });
 
+        // Add drag event listener for edit mode
+        if (editMode && onLocationUpdate) {
+          marker.addListener('dragend', (event: google.maps.MapMouseEvent) => {
+            if (event.latLng) {
+              const newLat = event.latLng.lat();
+              const newLng = event.latLng.lng();
+              onLocationUpdate('ong', ong.id, newLat, newLng);
+            }
+          });
+        }
+
         markersRef.current.push(marker);
       });
     }
@@ -201,11 +230,13 @@ export const MapComponent = ({
           position: { lat: paciente.latitude, lng: paciente.longitude },
           map: map,
           title: paciente.nome,
+          draggable: editMode,
           icon: {
             url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
               <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="10" fill="#8b5cf6" stroke="white" stroke-width="2"/>
+                <circle cx="12" cy="12" r="10" fill="${editMode ? '#f59e0b' : '#8b5cf6'}" stroke="white" stroke-width="2"/>
                 <text x="12" y="16" font-family="Arial" font-size="10" fill="white" text-anchor="middle">👤</text>
+                ${editMode ? '<circle cx="18" cy="6" r="4" fill="#ef4444" stroke="white" stroke-width="1"/><text x="18" y="9" font-family="Arial" font-size="6" fill="white" text-anchor="middle">✎</text>' : ''}
               </svg>
             `),
             scaledSize: new google.maps.Size(24, 24)
@@ -239,6 +270,17 @@ export const MapComponent = ({
         marker.addListener('click', () => {
           infoWindow.open(map, marker);
         });
+
+        // Add drag event listener for edit mode
+        if (editMode && onLocationUpdate) {
+          marker.addListener('dragend', (event: google.maps.MapMouseEvent) => {
+            if (event.latLng) {
+              const newLat = event.latLng.lat();
+              const newLng = event.latLng.lng();
+              onLocationUpdate('paciente', paciente.id, newLat, newLng);
+            }
+          });
+        }
 
         markersRef.current.push(marker);
       });
@@ -284,11 +326,13 @@ export const MapComponent = ({
           position: coords,
           map: map,
           title: equipamento.nome,
+          draggable: editMode,
           icon: {
             url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
               <svg width="${iconConfig.size}" height="${iconConfig.size}" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="${iconConfig.size/2}" cy="${iconConfig.size/2}" r="${iconConfig.size/2 - 2}" fill="${iconConfig.color}" stroke="white" stroke-width="2"/>
+                <circle cx="${iconConfig.size/2}" cy="${iconConfig.size/2}" r="${iconConfig.size/2 - 2}" fill="${editMode ? '#f59e0b' : iconConfig.color}" stroke="white" stroke-width="2"/>
                 <text x="${iconConfig.size/2}" y="${iconConfig.size/2 + 4}" font-family="Arial" font-size="12" fill="white" text-anchor="middle">${iconConfig.emoji}</text>
+                ${editMode ? `<circle cx="${iconConfig.size - 6}" cy="6" r="4" fill="#ef4444" stroke="white" stroke-width="1"/><text x="${iconConfig.size - 6}" y="9" font-family="Arial" font-size="6" fill="white" text-anchor="middle">✎</text>` : ''}
               </svg>
             `),
             scaledSize: new google.maps.Size(iconConfig.size, iconConfig.size)
@@ -317,6 +361,17 @@ export const MapComponent = ({
         marker.addListener('click', () => {
           infoWindow.open(map, marker);
         });
+
+        // Add drag event listener for edit mode
+        if (editMode && onLocationUpdate) {
+          marker.addListener('dragend', (event: google.maps.MapMouseEvent) => {
+            if (event.latLng) {
+              const newLat = event.latLng.lat();
+              const newLng = event.latLng.lng();
+              onLocationUpdate('equipamento', equipamento.id, newLat, newLng);
+            }
+          });
+        }
 
         markersRef.current.push(marker);
       });
