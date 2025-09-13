@@ -136,8 +136,8 @@ const MapaInterativo = () => {
               showUBS={showUBS}
               showONGs={showONGs}
               showPacientes={showPacientes}
-              centerLat={-15.8658}
-              centerLng={-48.1102}
+              centerLat={-15.865795758079274}
+              centerLng={-48.074650142328295}
               zoom={13}
             />
           </CardContent>
