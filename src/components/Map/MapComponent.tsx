@@ -251,25 +251,54 @@ export const MapComponent = ({
           ? { lat: equipamento.latitude, lng: equipamento.longitude }
           : getCoordinatesForBairro(equipamento.bairro);
 
+        // Determine icon based on equipment type
+        const isUBS = equipamento.tipo.includes('Centro de Saúde') || 
+                     equipamento.tipo.includes('Unidade Básica') ||
+                     equipamento.nome.includes('UBS');
+        
+        const isHospital = equipamento.tipo.includes('Hospital') ||
+                          equipamento.nome.includes('Hospital');
+
+        let iconConfig;
+        if (isUBS) {
+          iconConfig = {
+            color: '#22c55e',
+            emoji: '🏥',
+            size: 26
+          };
+        } else if (isHospital) {
+          iconConfig = {
+            color: '#dc2626',
+            emoji: '🏥',
+            size: 30
+          };
+        } else {
+          iconConfig = {
+            color: '#f59e0b',
+            emoji: '🏢',
+            size: 28
+          };
+        }
+
         const marker = new google.maps.Marker({
           position: coords,
           map: map,
           title: equipamento.nome,
           icon: {
             url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-              <svg width="28" height="28" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="14" cy="14" r="12" fill="#f59e0b" stroke="white" stroke-width="2"/>
-                <text x="14" y="18" font-family="Arial" font-size="12" fill="white" text-anchor="middle">🏢</text>
+              <svg width="${iconConfig.size}" height="${iconConfig.size}" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="${iconConfig.size/2}" cy="${iconConfig.size/2}" r="${iconConfig.size/2 - 2}" fill="${iconConfig.color}" stroke="white" stroke-width="2"/>
+                <text x="${iconConfig.size/2}" y="${iconConfig.size/2 + 4}" font-family="Arial" font-size="12" fill="white" text-anchor="middle">${iconConfig.emoji}</text>
               </svg>
             `),
-            scaledSize: new google.maps.Size(28, 28)
+            scaledSize: new google.maps.Size(iconConfig.size, iconConfig.size)
           }
         });
 
         const infoWindow = new google.maps.InfoWindow({
           content: `
             <div class="p-3" style="min-width: 280px;">
-              <h3 class="font-bold text-lg mb-2" style="color: #f59e0b;">${equipamento.nome}</h3>
+              <h3 class="font-bold text-lg mb-2" style="color: ${iconConfig.color};">${equipamento.nome}</h3>
               <div class="space-y-1 text-sm">
                 <p><strong>Tipo:</strong> ${equipamento.tipo}</p>
                 <p><strong>Endereço:</strong> ${equipamento.endereco}</p>
