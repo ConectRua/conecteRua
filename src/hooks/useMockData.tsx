@@ -32,6 +32,7 @@ export interface ONG {
 export interface Paciente {
   id: string;
   nome: string;
+  cns: string;
   endereco: string;
   cep: string;
   telefone: string;
@@ -129,6 +130,7 @@ const mockPacientes: Paciente[] = [
   {
     id: '1',
     nome: 'Ana Paula Costa',
+    cns: '123456789012345',
     endereco: 'QS 103, Conjunto A, Casa 12, Samambaia',
     cep: '72302-103',
     telefone: '(61) 9999-1111',
@@ -143,6 +145,7 @@ const mockPacientes: Paciente[] = [
   {
     id: '2',
     nome: 'Carlos Eduardo Silva',
+    cns: '987654321098765',
     endereco: 'Quadra 103, Casa 25, Recanto das Emas',
     cep: '72610-103',
     telefone: '(61) 9999-2222',
@@ -157,6 +160,7 @@ const mockPacientes: Paciente[] = [
   {
     id: '3',
     nome: 'Isabella Santos',
+    cns: '456789123456789',
     endereco: 'Rua 12, Casa 45, Águas Claras',
     cep: '71916-012',
     telefone: '(61) 9999-3333',
