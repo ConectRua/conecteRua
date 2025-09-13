@@ -38,10 +38,6 @@ const MapaInterativo = () => {
   const [showAddUBSModal, setShowAddUBSModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
 
-  // Debug logs
-  console.log('MapaInterativo renderizado');
-  console.log('Edit mode:', editMode);
-  console.log('UBS count:', ubsList.length);
 
   const handleAddUBS = (newUBS: Parameters<typeof addUBS>[0]) => {
     addUBS(newUBS);

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { useMockData, UBS, ONG, Paciente, EquipamentoSocial } from '@/hooks/useMockData';
 
@@ -36,10 +36,8 @@ export const MapComponent = ({
   const [mapError, setMapError] = useState<string | null>(null);
   const { ubsList, ongsList, pacientesList, equipamentosSociais } = useMockData();
 
-  console.log('MapComponent renderizado, editMode:', editMode);
-
   // Função para obter coordenadas aproximadas baseada no bairro
-  const getCoordinatesForBairro = (bairro: string): { lat: number; lng: number } => {
+  const getCoordinatesForBairro = useCallback((bairro: string): { lat: number; lng: number } => {
     const bairroCoords: Record<string, { lat: number; lng: number }> = {
       'Recanto das Emas': { lat: -15.9045, lng: -48.0632 },
       'Samambaia': { lat: -15.8781, lng: -48.0958 },
@@ -52,28 +50,27 @@ export const MapComponent = ({
       lat: coords.lat + (Math.random() - 0.5) * 0.01,
       lng: coords.lng + (Math.random() - 0.5) * 0.01
     };
-  };
+  }, []);
 
+  // Inicialização do mapa
   useEffect(() => {
-    console.log('MapComponent useEffect iniciado');
+    let isMounted = true;
+    let initializationTimeout: NodeJS.Timeout;
     
     const initMap = async () => {
-      console.log('Iniciando carregamento do mapa...');
+      // Aguardar um pouco mais para garantir que o DOM esteja pronto
+      await new Promise(resolve => setTimeout(resolve, 200));
       
-      if (!mapRef.current) {
-        console.error('mapRef.current é null');
-        setMapError('Elemento do mapa não encontrado');
+      if (!isMounted || !mapRef.current) {
         return;
       }
       
       if (mapInstanceRef.current) {
-        console.log('Mapa já carregado, pulando...');
-        return;
+        return; // Mapa já carregado
       }
 
       try {
         setMapError(null);
-        console.log('Carregando Google Maps API...');
         
         const loader = new Loader({
           apiKey: GOOGLE_MAPS_API_KEY,
@@ -82,16 +79,12 @@ export const MapComponent = ({
         });
 
         await loader.load();
-        console.log('Google Maps API carregada com sucesso');
 
-        // Verificar se o elemento ainda existe antes de criar o mapa
-        if (!mapRef.current) {
-          console.warn('Elemento do mapa foi removido durante o carregamento');
-          setMapError('Elemento do mapa foi removido');
+        // Verificar novamente se ainda estamos montados e o elemento existe
+        if (!isMounted || !mapRef.current) {
           return;
         }
 
-        console.log('Criando instância do mapa...');
         const map = new google.maps.Map(mapRef.current, {
           center: { lat: centerLat, lng: centerLng },
           zoom: zoom,
@@ -109,23 +102,28 @@ export const MapComponent = ({
           ]
         });
 
+        if (!isMounted) return;
+        
         mapInstanceRef.current = map;
         setMapLoaded(true);
-        console.log('Mapa carregado com sucesso!');
       } catch (error) {
         console.error('Erro ao carregar Google Maps:', error);
-        setMapError(`Erro ao carregar mapa: ${error}`);
+        if (isMounted) {
+          setMapError(`Erro ao carregar mapa: ${error}`);
+        }
       }
     };
 
-    // Adicionar um pequeno delay para garantir que o DOM está pronto
-    const timer = setTimeout(initMap, 100);
+    // Inicializar com delay
+    initializationTimeout = setTimeout(initMap, 100);
+    
     return () => {
-      clearTimeout(timer);
-      console.log('Limpando timer do mapa');
+      isMounted = false;
+      clearTimeout(initializationTimeout);
     };
   }, [centerLat, centerLng, zoom]);
 
+  // Atualização dos marcadores
   useEffect(() => {
     if (!mapInstanceRef.current || !mapLoaded) return;
 
@@ -135,6 +133,7 @@ export const MapComponent = ({
 
     const map = mapInstanceRef.current;
 
+    // Add UBS markers
     if (showUBS) {
       ubsList.forEach((ubs: UBS) => {
         const marker = new google.maps.Marker({
@@ -412,7 +411,7 @@ export const MapComponent = ({
       });
     }
 
-  }, [ubsList, ongsList, pacientesList, equipamentosSociais, showUBS, showONGs, showPacientes, showEquipamentosSociais, mapLoaded, editMode]);
+  }, [ubsList, ongsList, pacientesList, equipamentosSociais, showUBS, showONGs, showPacientes, showEquipamentosSociais, mapLoaded, editMode, onLocationUpdate, getCoordinatesForBairro]);
 
   // Cleanup on unmount
   useEffect(() => {
