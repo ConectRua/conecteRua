@@ -38,6 +38,12 @@ const navItems: NavItem[] = [
     description: 'Visualização georreferenciada'
   },
   {
+    title: 'Pacientes',
+    href: '/pacientes',
+    icon: Users,
+    description: 'Cadastro e pareamento'
+  },
+  {
     title: 'Cadastro Manual',
     href: '/cadastro',
     icon: UserPlus,
@@ -66,12 +72,6 @@ const navItems: NavItem[] = [
     href: '/ongs',
     icon: Heart,
     description: 'Organizações e Instituições'
-  },
-  {
-    title: 'Pacientes',
-    href: '/pacientes',
-    icon: Users,
-    description: 'Cadastro e pareamento'
   },
   {
     title: 'Relatórios',
