@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
-import { useMockData, UBS, ONG, Paciente } from '@/hooks/useMockData';
+import { useMockData, UBS, ONG, Paciente, EquipamentoSocial } from '@/hooks/useMockData';
 
 interface MapComponentProps {
   height?: string;
   showUBS?: boolean;
   showONGs?: boolean;
   showPacientes?: boolean;
+  showEquipamentosSociais?: boolean;
   centerLat?: number;
   centerLng?: number;
   zoom?: number;
@@ -19,6 +20,7 @@ export const MapComponent = ({
   showUBS = true,
   showONGs = true,
   showPacientes = true,
+  showEquipamentosSociais = true,
   centerLat = -15.8781,
   centerLng = -48.0958,
   zoom = 12
@@ -27,7 +29,23 @@ export const MapComponent = ({
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const { ubsList, ongsList, pacientesList } = useMockData();
+  const { ubsList, ongsList, pacientesList, equipamentosSociais } = useMockData();
+
+  // Função para obter coordenadas aproximadas baseada no bairro
+  const getCoordinatesForBairro = (bairro: string): { lat: number; lng: number } => {
+    const bairroCoords: Record<string, { lat: number; lng: number }> = {
+      'Recanto das Emas': { lat: -15.9045, lng: -48.0632 },
+      'Samambaia': { lat: -15.8781, lng: -48.0958 },
+      'SH Água Quente': { lat: -15.8965, lng: -48.0455 },
+    };
+    
+    // Adiciona pequena variação aleatória para evitar sobreposição
+    const coords = bairroCoords[bairro] || { lat: -15.8781, lng: -48.0958 };
+    return {
+      lat: coords.lat + (Math.random() - 0.5) * 0.01,
+      lng: coords.lng + (Math.random() - 0.5) * 0.01
+    };
+  };
 
   useEffect(() => {
     const initMap = async () => {
@@ -226,7 +244,56 @@ export const MapComponent = ({
       });
     }
 
-  }, [ubsList, ongsList, pacientesList, showUBS, showONGs, showPacientes, mapLoaded]);
+    // Add equipamentos sociais markers
+    if (showEquipamentosSociais) {
+      equipamentosSociais.forEach((equipamento: EquipamentoSocial) => {
+        const coords = equipamento.latitude && equipamento.longitude 
+          ? { lat: equipamento.latitude, lng: equipamento.longitude }
+          : getCoordinatesForBairro(equipamento.bairro);
+
+        const marker = new google.maps.Marker({
+          position: coords,
+          map: map,
+          title: equipamento.nome,
+          icon: {
+            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+              <svg width="28" height="28" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="14" cy="14" r="12" fill="#f59e0b" stroke="white" stroke-width="2"/>
+                <text x="14" y="18" font-family="Arial" font-size="12" fill="white" text-anchor="middle">🏢</text>
+              </svg>
+            `),
+            scaledSize: new google.maps.Size(28, 28)
+          }
+        });
+
+        const infoWindow = new google.maps.InfoWindow({
+          content: `
+            <div class="p-3" style="min-width: 280px;">
+              <h3 class="font-bold text-lg mb-2" style="color: #f59e0b;">${equipamento.nome}</h3>
+              <div class="space-y-1 text-sm">
+                <p><strong>Tipo:</strong> ${equipamento.tipo}</p>
+                <p><strong>Endereço:</strong> ${equipamento.endereco}</p>
+                <p><strong>Bairro:</strong> ${equipamento.bairro}</p>
+                <p><strong>Telefone:</strong> ${equipamento.telefone || 'Não informado'}</p>
+                <p><strong>Horário:</strong> ${equipamento.horarioFuncionamento}</p>
+                <div class="mt-2 text-xs text-gray-600">
+                  <p><strong>Fonte:</strong> ${equipamento.fonte}</p>
+                  <p><strong>Data da Coleta:</strong> ${equipamento.dataColeta}</p>
+                </div>
+              </div>
+            </div>
+          `
+        });
+
+        marker.addListener('click', () => {
+          infoWindow.open(map, marker);
+        });
+
+        markersRef.current.push(marker);
+      });
+    }
+
+  }, [ubsList, ongsList, pacientesList, equipamentosSociais, showUBS, showONGs, showPacientes, showEquipamentosSociais, mapLoaded]);
 
   return (
     <div 

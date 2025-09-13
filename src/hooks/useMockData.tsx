@@ -45,10 +45,25 @@ export interface Paciente {
   distanciaUBS?: number;
 }
 
+export interface EquipamentoSocial {
+  id: string;
+  nome: string;
+  tipo: string;
+  endereco: string;
+  bairro: string;
+  telefone: string;
+  horarioFuncionamento: string;
+  latitude?: number;
+  longitude?: number;
+  fonte: string;
+  dataColeta: string;
+}
+
 export interface Estatisticas {
   totalUBS: number;
   totalONGs: number;
   totalPacientes: number;
+  totalEquipamentosSociais: number;
   pacientesVinculados: number;
   coberturaPorRegiao: Record<string, number>;
   distanciaMedia: number;
@@ -187,11 +202,181 @@ const mockPacientes: Paciente[] = [
   }
 ];
 
+// Dados dos Equipamentos Sociais do DF baseados no arquivo Excel
+const mockEquipamentosSociais: EquipamentoSocial[] = [
+  {
+    id: 'eq1',
+    nome: 'Associação Beneficente Coração de Cristo (CoCris)',
+    tipo: 'Educação Infantil e Assistência Social',
+    endereco: 'Avenida Recanto das Emas, Quadra 301, Lote 26, Brasília-DF',
+    bairro: 'Recanto das Emas',
+    telefone: '3575-4125 / 3575-4119',
+    horarioFuncionamento: 'Não especificado',
+    fonte: 'Busca Paralela - Instituição Filantrópica Recanto das Emas',
+    dataColeta: '13/09/2025'
+  },
+  {
+    id: 'eq2',
+    nome: 'CAPS i Recanto das Emas',
+    tipo: 'Centro de Atenção Psicossocial Infantil',
+    endereco: 'Quadra 307, A/E 1 – Recanto das Emas/DF (dentro do Centro de Saúde 1)',
+    bairro: 'Recanto das Emas',
+    telefone: '2017-1145 (Ramais 6000, 6001 e 6002)',
+    horarioFuncionamento: 'De 7h às 18h, de segunda a sexta-feira',
+    fonte: 'Busca Paralela - Centro de Referência Recanto das Emas',
+    dataColeta: '13/09/2025'
+  },
+  {
+    id: 'eq3',
+    nome: 'CRAS RECANTO DAS EMAS I',
+    tipo: 'Centro de Referência de Assistência Social',
+    endereco: 'Quadra 602 -Área Especial- Lote 01 – Recanto da Emas',
+    bairro: 'Recanto das Emas',
+    telefone: '3773-7429, 3773-7430, 3773-7431, 3773-7432',
+    horarioFuncionamento: '8h às 17h',
+    fonte: 'Busca Paralela - Centro Pop Recanto das Emas',
+    dataColeta: '13/09/2025'
+  },
+  {
+    id: 'eq4',
+    nome: 'CRAS RECANTO DAS EMAS II',
+    tipo: 'Centro de Referência de Assistência Social',
+    endereco: 'Quadra 113 área especial 01 – Recanto das Emas',
+    bairro: 'Recanto das Emas',
+    telefone: '3773-7433, 3773-7295',
+    horarioFuncionamento: '8h às 18h',
+    fonte: 'Busca Paralela - Centro Pop Recanto das Emas',
+    dataColeta: '13/09/2025'
+  },
+  {
+    id: 'eq5',
+    nome: 'UBS 02 RECANTO DAS EMAS',
+    tipo: 'Centro de Saúde/Unidade Básica',
+    endereco: 'QUADRA 102 AREA ESPECIAL 01, RECANTO DAS EMAS, BRASILIA - DF',
+    bairro: 'Recanto das Emas',
+    telefone: 'Não informado',
+    horarioFuncionamento: 'Segunda-Sexta 07:00 - 22:00, Sábado 07:00 - 12:00',
+    fonte: 'Busca Paralela - UBS Recanto das Emas',
+    dataColeta: '13/09/2025'
+  },
+  {
+    id: 'eq6',
+    nome: 'UBS 4 do Recanto',
+    tipo: 'Unidade Básica de Saúde',
+    endereco: 'Q. 308 AE 2, Recanto das Emas, Distrito Federal',
+    bairro: 'Recanto das Emas',
+    telefone: '3449-6926',
+    horarioFuncionamento: 'Segunda-Sexta 07:00 - 19:00',
+    fonte: 'Busca Paralela - UBS Recanto das Emas',
+    dataColeta: '13/09/2025'
+  },
+  {
+    id: 'eq7',
+    nome: 'UBS 7 Recanto das Emas',
+    tipo: 'Unidade Básica de Saúde',
+    endereco: 'DF-341, Recanto das Emas, Distrito Federal',
+    bairro: 'Recanto das Emas',
+    telefone: '3449-6937',
+    horarioFuncionamento: 'Segunda-Sexta 07:00 - 18:00',
+    fonte: 'Busca Paralela - UBS Recanto das Emas',
+    dataColeta: '13/09/2025'
+  },
+  {
+    id: 'eq8',
+    nome: 'ASSOCIACAO DE ACAO SOCIAL DE SAMAMBAIA (ASSAMA)',
+    tipo: 'Associação de Defesa de Direitos',
+    endereco: 'QUADRA QR 402 CONJUNTO 01 CASA, SAMAMBAIA, Brasília - DF',
+    bairro: 'Samambaia',
+    telefone: '34581138',
+    horarioFuncionamento: 'Não especificado',
+    fonte: 'Busca Paralela - Ação Social Samambaia',
+    dataColeta: '13/09/2025'
+  },
+  {
+    id: 'eq9',
+    nome: 'CAPS III',
+    tipo: 'Centro de Atenção Psicossocial',
+    endereco: 'Quadra 302 Conjunto 05 Lote 01 - Centro Urbano de Samambaia',
+    bairro: 'Samambaia',
+    telefone: '3357-0783',
+    horarioFuncionamento: 'Não especificado',
+    fonte: 'Busca Paralela - UBS Samambaia',
+    dataColeta: '13/09/2025'
+  },
+  {
+    id: 'eq10',
+    nome: 'CRAS Samambaia Expansão',
+    tipo: 'Centro de Referência de Assistência Social',
+    endereco: 'QR 833, Conjunto 08, Lote 01/02 – Samambaia Expansão',
+    bairro: 'Samambaia',
+    telefone: '3773-7444, 3773-7445, 3773-7443, 3773-7446',
+    horarioFuncionamento: '8h às 17h',
+    fonte: 'SEDES-DF Oficial',
+    dataColeta: '13/09/2025'
+  },
+  {
+    id: 'eq11',
+    nome: 'CRAS Samambaia Sul',
+    tipo: 'Centro de Referência de Assistência Social',
+    endereco: 'QN 317, Área Especial 02, Samambaia',
+    bairro: 'Samambaia',
+    telefone: '3773-7449, 3773-7450, 3773-7451, 3773-7452',
+    horarioFuncionamento: '8h às 17h',
+    fonte: 'SEDES-DF Oficial',
+    dataColeta: '13/09/2025'
+  },
+  {
+    id: 'eq12',
+    nome: 'Hospital Regional de Samambaia - HRSam',
+    tipo: 'Hospital Regional',
+    endereco: 'QS 614 Conj. C Lote 01/02 Samambaia Norte - CEP 72322-583',
+    bairro: 'Samambaia',
+    telefone: '3458-9835',
+    horarioFuncionamento: '24 horas',
+    fonte: 'Busca Paralela - UBS Samambaia',
+    dataColeta: '13/09/2025'
+  },
+  {
+    id: 'eq13',
+    nome: 'UBS 08 RECANTO DAS EMAS SAO FRANCISCO',
+    tipo: 'Centro de Saúde/Unidade Básica',
+    endereco: 'Df 280 Km 03 Qd 04 Setor Habitacional Agua Quente, S/N',
+    bairro: 'SH Água Quente',
+    telefone: '3359-6733',
+    horarioFuncionamento: 'Segunda-Sexta 07:00 - 18:00',
+    fonte: 'Busca Paralela - UBS SH Água Quente',
+    dataColeta: '13/09/2025'
+  },
+  {
+    id: 'eq14',
+    nome: 'Conselho Tutelar de Água Quente',
+    tipo: 'Conselho Tutelar (Assistência Social)',
+    endereco: 'QUADRA 01, LOTE 05-RESIDENCIAL RÓCIO, DF-280, KM 2',
+    bairro: 'SH Água Quente',
+    telefone: '2244-1088, 98382-0142 (plantão)',
+    horarioFuncionamento: 'Plantão 24h para emergências',
+    fonte: 'Busca Paralela - Centro de Referência SH Água Quente',
+    dataColeta: '13/09/2025'
+  },
+  {
+    id: 'eq15',
+    nome: 'Instituto Embalando Sonhos',
+    tipo: 'Instituto Social, Cultural e Educativo',
+    endereco: 'Samambaia - DF',
+    bairro: 'Samambaia',
+    telefone: '9.9198-0652',
+    horarioFuncionamento: 'Não especificado',
+    fonte: 'Busca Paralela - Ação Social Samambaia',
+    dataColeta: '13/09/2025'
+  }
+];
+
 // Hook principal para centralizaar todos os mocks
 export const useMockData = () => {
   const [ubsList, setUbsList] = useState<UBS[]>(mockUBS);
   const [ongsList, setOngsList] = useState<ONG[]>(mockONGs);
   const [pacientesList, setPacientesList] = useState<Paciente[]>(mockPacientes);
+  const [equipamentosSociais, setEquipamentosSociais] = useState<EquipamentoSocial[]>(mockEquipamentosSociais);
   const [loading, setLoading] = useState(false);
 
   // Simula carregamento de dados
@@ -316,6 +501,7 @@ export const useMockData = () => {
       totalUBS: ubsList.length,
       totalONGs: ongsList.length,
       totalPacientes: pacientesList.length,
+      totalEquipamentosSociais: equipamentosSociais.length,
       pacientesVinculados,
       coberturaPorRegiao: {
         'Samambaia': pacientesList.filter(p => p.endereco.includes('Samambaia')).length,
@@ -331,6 +517,7 @@ export const useMockData = () => {
     ubsList,
     ongsList,
     pacientesList,
+    equipamentosSociais,
     loading,
     
     // CRUD UBS

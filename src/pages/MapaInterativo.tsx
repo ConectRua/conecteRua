@@ -13,14 +13,23 @@ import {
   Maximize,
   Building2,
   Heart,
-  Users
+  Users,
+  Building
 } from 'lucide-react';
 
 const MapaInterativo = () => {
-  const { ubsList, ongsList, pacientesList } = useMockData();
+  const { 
+    ubsList, 
+    ongsList, 
+    pacientesList,
+    equipamentosSociais,
+    loading 
+  } = useMockData();
+
   const [showUBS, setShowUBS] = useState(true);
   const [showONGs, setShowONGs] = useState(true);
   const [showPacientes, setShowPacientes] = useState(true);
+  const [showEquipamentosSociais, setShowEquipamentosSociais] = useState(true);
 
   return (
     <div className="space-y-6">
@@ -48,13 +57,14 @@ const MapaInterativo = () => {
         </div>
       </div>
 
-      {/* Controls and Filters */}
-      <div className="grid gap-4 lg:grid-cols-4">
-        <Card className="lg:col-span-1">
+      {/* Controls and Map */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Sidebar with filters and controls */}
+        <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center space-x-2">
               <Filter className="h-5 w-5" />
-              <span>Filtros do Mapa</span>
+              <span>Filtros e Controles</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -97,32 +107,51 @@ const MapaInterativo = () => {
                   onCheckedChange={setShowPacientes}
                 />
               </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
+                  <span className="text-sm">Equip. Sociais</span>
+                  <Badge variant="secondary">{equipamentosSociais.length}</Badge>
+                </div>
+                <Switch 
+                  checked={showEquipamentosSociais} 
+                  onCheckedChange={setShowEquipamentosSociais}
+                />
+              </div>
             </div>
 
             {/* Quick Actions */}
-            <div className="space-y-2">
+            <div className="space-y-3 pt-4 border-t">
               <h4 className="text-sm font-medium">Ações Rápidas</h4>
-              <Button className="w-full" size="sm">
+              <Button variant="outline" size="sm" className="w-full">
                 <Search className="h-4 w-4 mr-2" />
                 Buscar por CEP
               </Button>
-              <Button className="w-full" variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="w-full">
                 <Building2 className="h-4 w-4 mr-2" />
                 Nova UBS
               </Button>
-              <Button className="w-full" variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="w-full">
                 <Heart className="h-4 w-4 mr-2" />
                 Nova ONG
               </Button>
             </div>
 
             {/* Statistics */}
-            <div className="space-y-2 pt-4 border-t">
+            <div className="space-y-3 pt-4 border-t">
               <h4 className="text-sm font-medium">Estatísticas</h4>
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p>• Total de marcadores: {ubsList.length + ongsList.length + pacientesList.length}</p>
-                <p>• Área coberta: Samambaia, Recanto das Emas, Águas Claras</p>
-                <p>• Última atualização: Agora</p>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Total de Marcadores:</span>
+                  <span className="font-semibold">
+                    {ubsList.length + ongsList.length + pacientesList.length + equipamentosSociais.length}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Área de Cobertura:</span>
+                  <span className="font-semibold">25 km²</span>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -136,9 +165,10 @@ const MapaInterativo = () => {
               showUBS={showUBS}
               showONGs={showONGs}
               showPacientes={showPacientes}
-              centerLat={-15.865795758079274}
-              centerLng={-48.074650142328295}
-              zoom={13}
+              showEquipamentosSociais={showEquipamentosSociais}
+              centerLat={-15.8781}
+              centerLng={-48.0958}
+              zoom={11}
             />
           </CardContent>
         </Card>
@@ -150,7 +180,7 @@ const MapaInterativo = () => {
           <CardTitle className="text-lg">Legenda e Informações</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-4">
             <div className="space-y-2">
               <h4 className="font-medium flex items-center space-x-2">
                 <Building2 className="h-4 w-4 text-blue-500" />
@@ -158,7 +188,7 @@ const MapaInterativo = () => {
               </h4>
               <p className="text-sm text-muted-foreground">
                 Marcadores azuis representam UBS, hospitais e clínicas. 
-                Clique para ver especialidades e horários.
+                Clique para ver informações detalhadas.
               </p>
             </div>
             
@@ -181,6 +211,17 @@ const MapaInterativo = () => {
               <p className="text-sm text-muted-foreground">
                 Marcadores roxos indicam pacientes cadastrados e sua 
                 vinculação com as UBS mais próximas.
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <h4 className="font-medium flex items-center space-x-2">
+                <Building className="h-4 w-4 text-amber-500" />
+                <span>Equipamentos Sociais</span>
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Marcadores amarelos mostram CRAS, CAPS, Conselhos Tutelares 
+                e outros equipamentos da rede socioassistencial.
               </p>
             </div>
           </div>
