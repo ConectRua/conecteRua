@@ -38,12 +38,23 @@ const MapaInterativo = () => {
   const [showAddUBSModal, setShowAddUBSModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
 
+  // Debug logs
+  console.log('MapaInterativo renderizado');
+  console.log('Edit mode:', editMode);
+  console.log('UBS count:', ubsList.length);
+
   const handleAddUBS = (newUBS: Parameters<typeof addUBS>[0]) => {
     addUBS(newUBS);
   };
 
   const handleLocationUpdate = (type: 'ubs' | 'ong' | 'paciente' | 'equipamento', id: string, newLat: number, newLng: number) => {
+    console.log('Location update:', type, id, newLat, newLng);
     updateLocation(type, id, newLat, newLng);
+  };
+
+  const handleEditModeToggle = () => {
+    console.log('Toggling edit mode from', editMode, 'to', !editMode);
+    setEditMode(!editMode);
   };
 
   return (
@@ -165,7 +176,7 @@ const MapaInterativo = () => {
                 variant="outline" 
                 size="sm" 
                 className="w-full"
-                onClick={() => setEditMode(!editMode)}
+                onClick={handleEditModeToggle}
               >
                 {editMode ? (
                   <>

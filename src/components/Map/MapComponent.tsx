@@ -33,7 +33,10 @@ export const MapComponent = ({
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
   const { ubsList, ongsList, pacientesList, equipamentosSociais } = useMockData();
+
+  console.log('MapComponent renderizado, editMode:', editMode);
 
   // Função para obter coordenadas aproximadas baseada no bairro
   const getCoordinatesForBairro = (bairro: string): { lat: number; lng: number } => {
@@ -52,10 +55,26 @@ export const MapComponent = ({
   };
 
   useEffect(() => {
+    console.log('MapComponent useEffect iniciado');
+    
     const initMap = async () => {
-      if (!mapRef.current || mapInstanceRef.current) return;
+      console.log('Iniciando carregamento do mapa...');
+      
+      if (!mapRef.current) {
+        console.error('mapRef.current é null');
+        setMapError('Elemento do mapa não encontrado');
+        return;
+      }
+      
+      if (mapInstanceRef.current) {
+        console.log('Mapa já carregado, pulando...');
+        return;
+      }
 
       try {
+        setMapError(null);
+        console.log('Carregando Google Maps API...');
+        
         const loader = new Loader({
           apiKey: GOOGLE_MAPS_API_KEY,
           version: 'weekly',
@@ -63,7 +82,16 @@ export const MapComponent = ({
         });
 
         await loader.load();
+        console.log('Google Maps API carregada com sucesso');
 
+        // Verificar se o elemento ainda existe antes de criar o mapa
+        if (!mapRef.current) {
+          console.warn('Elemento do mapa foi removido durante o carregamento');
+          setMapError('Elemento do mapa foi removido');
+          return;
+        }
+
+        console.log('Criando instância do mapa...');
         const map = new google.maps.Map(mapRef.current, {
           center: { lat: centerLat, lng: centerLng },
           zoom: zoom,
@@ -83,12 +111,19 @@ export const MapComponent = ({
 
         mapInstanceRef.current = map;
         setMapLoaded(true);
+        console.log('Mapa carregado com sucesso!');
       } catch (error) {
         console.error('Erro ao carregar Google Maps:', error);
+        setMapError(`Erro ao carregar mapa: ${error}`);
       }
     };
 
-    initMap();
+    // Adicionar um pequeno delay para garantir que o DOM está pronto
+    const timer = setTimeout(initMap, 100);
+    return () => {
+      clearTimeout(timer);
+      console.log('Limpando timer do mapa');
+    };
   }, [centerLat, centerLng, zoom]);
 
   useEffect(() => {
@@ -377,13 +412,57 @@ export const MapComponent = ({
       });
     }
 
-  }, [ubsList, ongsList, pacientesList, equipamentosSociais, showUBS, showONGs, showPacientes, showEquipamentosSociais, mapLoaded]);
+  }, [ubsList, ongsList, pacientesList, equipamentosSociais, showUBS, showONGs, showPacientes, showEquipamentosSociais, mapLoaded, editMode]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (mapInstanceRef.current) {
+        markersRef.current.forEach(marker => marker.setMap(null));
+        markersRef.current = [];
+      }
+    };
+  }, []);
+
+  if (mapError) {
+    return (
+      <div 
+        style={{ height, width: '100%', minHeight: height }}
+        className="rounded-lg border shadow-lg bg-red-50 flex items-center justify-center"
+      >
+        <div className="text-center p-4">
+          <p className="text-red-600 font-medium">Erro ao carregar o mapa</p>
+          <p className="text-red-500 text-sm mt-2">{mapError}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            Recarregar Página
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!mapLoaded) {
+    return (
+      <div 
+        style={{ height, width: '100%', minHeight: height }}
+        className="rounded-lg border shadow-lg bg-gray-100 flex items-center justify-center"
+      >
+        <div className="text-center p-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando mapa...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 
       ref={mapRef} 
-      style={{ height, width: '100%' }}
-      className="rounded-lg border shadow-lg"
+      style={{ height, width: '100%', minHeight: height }}
+      className="rounded-lg border shadow-lg bg-gray-100"
     />
   );
 };
