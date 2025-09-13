@@ -1,10 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useMockData, UBS, ONG, Paciente } from '@/hooks/useMockData';
-
-// Mapbox access token
-mapboxgl.accessToken = 'pk.eyJ1IjoiY29uc3VsdG9yaW9uYXJ1YSIsImEiOiJjbWZpdHpyNW0wMnFkMmpvcHRsd2NubW5lIn0._ohDSntfA2n9I_6tqx3gIA';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface MapComponentProps {
   height?: string;
@@ -29,33 +30,70 @@ export const MapComponent = ({
   const mapInstanceRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const { ubsList, ongsList, pacientesList } = useMockData();
+  
+  const [accessToken, setAccessToken] = useState('');
+  const [tokenError, setTokenError] = useState<string | null>(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
 
-  useEffect(() => {
+  const initializeMap = (token: string) => {
     if (!mapRef.current || mapInstanceRef.current) return;
 
-    // Initialize map
-    const map = new mapboxgl.Map({
-      container: mapRef.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
-      center: [centerLng, centerLat],
-      zoom: zoom
-    });
+    try {
+      mapboxgl.accessToken = token;
+      
+      const map = new mapboxgl.Map({
+        container: mapRef.current,
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [centerLng, centerLat],
+        zoom: zoom
+      });
 
-    // Add navigation controls
-    map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+      map.on('load', () => {
+        setMapLoaded(true);
+        setTokenError(null);
+      });
 
-    mapInstanceRef.current = map;
+      map.on('error', (e) => {
+        setTokenError('Token inválido ou sem permissões necessárias');
+        setMapLoaded(false);
+      });
 
+      map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+      mapInstanceRef.current = map;
+
+    } catch (error) {
+      setTokenError('Erro ao inicializar o mapa');
+      setMapLoaded(false);
+    }
+  };
+
+  const handleTokenSubmit = () => {
+    if (!accessToken.trim()) {
+      setTokenError('Por favor, insira um token válido');
+      return;
+    }
+    
+    // Clean up existing map
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.remove();
+      mapInstanceRef.current = null;
+    }
+    
+    setMapLoaded(false);
+    initializeMap(accessToken);
+  };
+
+  useEffect(() => {
     return () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
       }
     };
-  }, [centerLat, centerLng, zoom]);
+  }, []);
 
   useEffect(() => {
-    if (!mapInstanceRef.current) return;
+    if (!mapInstanceRef.current || !mapLoaded) return;
 
     const map = mapInstanceRef.current;
 
@@ -200,7 +238,50 @@ export const MapComponent = ({
       });
     }
 
-  }, [ubsList, ongsList, pacientesList, showUBS, showONGs, showPacientes]);
+  }, [ubsList, ongsList, pacientesList, showUBS, showONGs, showPacientes, mapLoaded]);
+
+  if (!mapLoaded) {
+    return (
+      <div style={{ height, width: '100%' }} className="rounded-lg border shadow-lg">
+        <Card className="h-full flex items-center justify-center">
+          <CardContent className="text-center space-y-4 p-6">
+            <CardHeader>
+              <CardTitle>Configurar Token do Mapbox</CardTitle>
+            </CardHeader>
+            
+            {tokenError && (
+              <Alert className="mb-4">
+                <AlertDescription>{tokenError}</AlertDescription>
+              </Alert>
+            )}
+            
+            <div className="space-y-4 max-w-md">
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Para usar o mapa, você precisa de um token público do Mapbox.
+                </p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Obtenha seu token em: <a href="https://account.mapbox.com/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">account.mapbox.com</a>
+                </p>
+              </div>
+              
+              <Input
+                type="text"
+                placeholder="Cole seu token público do Mapbox aqui..."
+                value={accessToken}
+                onChange={(e) => setAccessToken(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleTokenSubmit()}
+              />
+              
+              <Button onClick={handleTokenSubmit} disabled={!accessToken.trim()}>
+                Carregar Mapa
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div 
