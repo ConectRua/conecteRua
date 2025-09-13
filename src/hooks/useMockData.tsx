@@ -94,6 +94,19 @@ const mockUBS: UBS[] = [
     especialidades: ['Emergência', 'UTI', 'Cirurgia', 'Cardiologia'],
     horarioFuncionamento: '24 horas',
     status: 'ativo'
+  },
+  {
+    id: '4',
+    nome: 'UBS 12 Samambaia',
+    endereco: '22, QR 210 Conj. 20 - Samambaia Norte, Brasília - DF',
+    cep: '72320-210',
+    telefone: '(61) 3901-5678',
+    latitude: -15.8658,
+    longitude: -48.1102,
+    tipo: 'UBS',
+    especialidades: ['Clínica Geral', 'Enfermagem', 'Vacinação', 'Saúde da Família'],
+    horarioFuncionamento: '07:00 - 17:00',
+    status: 'ativo'
   }
 ];
 
