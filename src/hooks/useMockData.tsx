@@ -122,6 +122,19 @@ const mockUBS: UBS[] = [
     especialidades: ['Clínica Geral', 'Enfermagem', 'Vacinação', 'Saúde da Família'],
     horarioFuncionamento: '07:00 - 17:00',
     status: 'ativo'
+  },
+  {
+    id: '5',
+    nome: 'UBS 7 de Samambaia',
+    endereco: 'Quadra 302, Conjunto 05, Samambaia Sul - Brasília, DF',
+    cep: '72302-302',
+    telefone: '(61) 3458-5424',
+    latitude: -15.8822,
+    longitude: -48.0910,
+    tipo: 'UBS',
+    especialidades: ['Clínica Geral', 'Pediatria', 'Enfermagem', 'Vacinação', 'Saúde da Família'],
+    horarioFuncionamento: '07:00 - 17:00',
+    status: 'ativo'
   }
 ];
 
