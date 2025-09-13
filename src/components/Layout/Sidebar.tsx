@@ -110,10 +110,10 @@ export const Sidebar = ({ className }: SidebarProps) => {
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-foreground">
-                GeoSaúde
+                Geo Saúde
               </span>
               <span className="text-xs text-muted-foreground">
-                Sistema Integrado
+                Consultório na Rua
               </span>
             </div>
           </div>
