@@ -103,12 +103,12 @@ export const Sidebar = ({ className }: SidebarProps) => {
       className
     )}>
       {/* Header */}
-      <div className="flex h-16 items-center justify-center px-4 border-b">
+      <div className="flex h-20 items-center justify-center px-4 border-b">
         {!collapsed && (
           <img 
             src={logoConecteRua} 
             alt="ConecteRua - Sistema de Georreferenciamento" 
-            className="h-32 w-auto object-contain"
+            className="h-40 w-auto object-contain max-w-full"
           />
         )}
         
