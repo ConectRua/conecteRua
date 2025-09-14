@@ -116,6 +116,9 @@ export const Sidebar = ({ className }: SidebarProps) => {
                 Geo Saude
               </span>
               <span className="text-xs text-muted-foreground">
+                Sistema de Georreferenciamento
+              </span>
+              <span className="text-xs text-muted-foreground">
                 Assistência Social e Saúde - Samambaia, Recanto das Emas e Águas Quentes
               </span>
             </div>
