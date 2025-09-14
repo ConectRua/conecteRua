@@ -15,7 +15,7 @@ interface MapComponentProps {
   onPositionUpdate?: (id: string, type: 'ubs' | 'ong' | 'paciente' | 'equipamento', lat: number, lng: number) => void;
 }
 
-const GOOGLE_MAPS_API_KEY = 'AIzaSyDRwidXV58hU0ialb5D1oBAGOl0SBssiuQ';
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
 export const MapComponent = ({
   height = '400px',
