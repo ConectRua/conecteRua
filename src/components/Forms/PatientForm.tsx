@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { Geolocation } from '@capacitor/geolocation';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
+import { MapPin, Loader2 } from 'lucide-react';
 import { useMockData, type Paciente } from '@/hooks/useMockData';
 import { toast } from 'sonner';
 
@@ -47,6 +49,8 @@ const necessidadesOptions = [
 export const PatientForm = ({ open, onOpenChange }: PatientFormProps) => {
   const { addPaciente } = useMockData();
   const [selectedNecessidades, setSelectedNecessidades] = useState<string[]>([]);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
   const form = useForm<PatientFormData>({
     resolver: zodResolver(patientSchema),
@@ -62,10 +66,33 @@ export const PatientForm = ({ open, onOpenChange }: PatientFormProps) => {
     },
   });
 
+  const getCurrentLocation = async () => {
+    setIsGettingLocation(true);
+    try {
+      const coordinates = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 10000
+      });
+      
+      const location = {
+        latitude: coordinates.coords.latitude,
+        longitude: coordinates.coords.longitude
+      };
+      
+      setCurrentLocation(location);
+      toast.success('Localização obtida com sucesso!');
+    } catch (error) {
+      console.error('Erro ao obter localização:', error);
+      toast.error('Não foi possível obter a localização. Verifique as permissões.');
+    } finally {
+      setIsGettingLocation(false);
+    }
+  };
+
   const onSubmit = async (data: PatientFormData) => {
     try {
-      // Simular coordenadas baseadas no CEP (em um app real, seria via API de geocoding)
-      const mockCoordinates = {
+      // Usar localização atual se disponível, senão simular coordenadas baseadas no CEP
+      const coordinates = currentLocation || {
         latitude: -15.8781 + (Math.random() - 0.5) * 0.1,
         longitude: -48.0958 + (Math.random() - 0.5) * 0.1,
       };
@@ -79,13 +106,14 @@ export const PatientForm = ({ open, onOpenChange }: PatientFormProps) => {
         idade: data.idade,
         genero: data.genero,
         necessidades: selectedNecessidades,
-        ...mockCoordinates,
+        ...coordinates,
       };
 
       addPaciente(newPatient);
       toast.success('Paciente cadastrado com sucesso!');
       form.reset();
       setSelectedNecessidades([]);
+      setCurrentLocation(null);
       onOpenChange(false);
     } catch (error) {
       toast.error('Erro ao cadastrar paciente');
@@ -208,6 +236,34 @@ export const PatientForm = ({ open, onOpenChange }: PatientFormProps) => {
                   </FormItem>
                 )}
               />
+            </div>
+
+            {/* Botão de Localização */}
+            <div className="flex items-center justify-between bg-muted p-4 rounded-lg">
+              <div>
+                <Label className="text-sm font-medium">Localização Atual</Label>
+                <p className="text-xs text-muted-foreground">
+                  {currentLocation 
+                    ? `Lat: ${currentLocation.latitude.toFixed(6)}, Long: ${currentLocation.longitude.toFixed(6)}`
+                    : 'Use sua localização atual para um cadastro mais preciso'
+                  }
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={getCurrentLocation}
+                disabled={isGettingLocation}
+                className="flex items-center gap-2"
+              >
+                {isGettingLocation ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <MapPin className="h-4 w-4" />
+                )}
+                {isGettingLocation ? 'Obtendo...' : 'Obter Localização'}
+              </Button>
             </div>
 
             <FormField
