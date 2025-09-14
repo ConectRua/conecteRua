@@ -379,7 +379,7 @@ export const MapComponent = ({
       });
     }
 
-  }, [showUBS, showONGs, showPacientes, showEquipamentosSociais, mapLoaded, editMode]);
+  }, [ubsList, ongsList, pacientesList, equipamentosSociais, showUBS, showONGs, showPacientes, showEquipamentosSociais, mapLoaded, editMode]);
 
   return (
     <div 
