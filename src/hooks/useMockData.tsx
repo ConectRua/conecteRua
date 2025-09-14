@@ -225,6 +225,8 @@ const mockEquipamentosSociais: EquipamentoSocial[] = [
     bairro: 'Recanto das Emas',
     telefone: '3575-4125 / 3575-4119',
     horarioFuncionamento: 'Não especificado',
+    latitude: -15.9041,
+    longitude: -48.0628,
     fonte: 'Busca Paralela - Instituição Filantrópica Recanto das Emas',
     dataColeta: '13/09/2025'
   },
@@ -236,6 +238,8 @@ const mockEquipamentosSociais: EquipamentoSocial[] = [
     bairro: 'Recanto das Emas',
     telefone: '2017-1145 (Ramais 6000, 6001 e 6002)',
     horarioFuncionamento: 'De 7h às 18h, de segunda a sexta-feira',
+    latitude: -15.9048,
+    longitude: -48.0635,
     fonte: 'Busca Paralela - Centro de Referência Recanto das Emas',
     dataColeta: '13/09/2025'
   },
@@ -247,6 +251,8 @@ const mockEquipamentosSociais: EquipamentoSocial[] = [
     bairro: 'Recanto das Emas',
     telefone: '3773-7429, 3773-7430, 3773-7431, 3773-7432',
     horarioFuncionamento: '8h às 17h',
+    latitude: -15.9052,
+    longitude: -48.0640,
     fonte: 'Busca Paralela - Centro Pop Recanto das Emas',
     dataColeta: '13/09/2025'
   },
@@ -258,6 +264,8 @@ const mockEquipamentosSociais: EquipamentoSocial[] = [
     bairro: 'Recanto das Emas',
     telefone: '3773-7433, 3773-7295',
     horarioFuncionamento: '8h às 18h',
+    latitude: -15.9055,
+    longitude: -48.0642,
     fonte: 'Busca Paralela - Centro Pop Recanto das Emas',
     dataColeta: '13/09/2025'
   },
@@ -269,6 +277,8 @@ const mockEquipamentosSociais: EquipamentoSocial[] = [
     bairro: 'Recanto das Emas',
     telefone: 'Não informado',
     horarioFuncionamento: 'Segunda-Sexta 07:00 - 22:00, Sábado 07:00 - 12:00',
+    latitude: -15.9044,
+    longitude: -48.0631,
     fonte: 'Busca Paralela - UBS Recanto das Emas',
     dataColeta: '13/09/2025'
   },
@@ -280,6 +290,8 @@ const mockEquipamentosSociais: EquipamentoSocial[] = [
     bairro: 'Recanto das Emas',
     telefone: '3449-6926',
     horarioFuncionamento: 'Segunda-Sexta 07:00 - 19:00',
+    latitude: -15.9050,
+    longitude: -48.0638,
     fonte: 'Busca Paralela - UBS Recanto das Emas',
     dataColeta: '13/09/2025'
   },
@@ -291,6 +303,8 @@ const mockEquipamentosSociais: EquipamentoSocial[] = [
     bairro: 'Recanto das Emas',
     telefone: '3449-6937',
     horarioFuncionamento: 'Segunda-Sexta 07:00 - 18:00',
+    latitude: -15.9046,
+    longitude: -48.0633,
     fonte: 'Busca Paralela - UBS Recanto das Emas',
     dataColeta: '13/09/2025'
   },
@@ -302,6 +316,8 @@ const mockEquipamentosSociais: EquipamentoSocial[] = [
     bairro: 'Samambaia',
     telefone: '34581138',
     horarioFuncionamento: 'Não especificado',
+    latitude: -15.8785,
+    longitude: -48.0962,
     fonte: 'Busca Paralela - Ação Social Samambaia',
     dataColeta: '13/09/2025'
   },
@@ -313,6 +329,8 @@ const mockEquipamentosSociais: EquipamentoSocial[] = [
     bairro: 'Samambaia',
     telefone: '3357-0783',
     horarioFuncionamento: 'Não especificado',
+    latitude: -15.8788,
+    longitude: -48.0965,
     fonte: 'Busca Paralela - UBS Samambaia',
     dataColeta: '13/09/2025'
   },
@@ -324,6 +342,8 @@ const mockEquipamentosSociais: EquipamentoSocial[] = [
     bairro: 'Samambaia',
     telefone: '3773-7444, 3773-7445, 3773-7443, 3773-7446',
     horarioFuncionamento: '8h às 17h',
+    latitude: -15.8790,
+    longitude: -48.0968,
     fonte: 'SEDES-DF Oficial',
     dataColeta: '13/09/2025'
   },
@@ -335,6 +355,8 @@ const mockEquipamentosSociais: EquipamentoSocial[] = [
     bairro: 'Samambaia',
     telefone: '3773-7449, 3773-7450, 3773-7451, 3773-7452',
     horarioFuncionamento: '8h às 17h',
+    latitude: -15.8792,
+    longitude: -48.0970,
     fonte: 'SEDES-DF Oficial',
     dataColeta: '13/09/2025'
   },
@@ -346,6 +368,8 @@ const mockEquipamentosSociais: EquipamentoSocial[] = [
     bairro: 'Samambaia',
     telefone: '3458-9835',
     horarioFuncionamento: '24 horas',
+    latitude: -15.8795,
+    longitude: -48.0973,
     fonte: 'Busca Paralela - UBS Samambaia',
     dataColeta: '13/09/2025'
   },
@@ -357,6 +381,8 @@ const mockEquipamentosSociais: EquipamentoSocial[] = [
     bairro: 'SH Água Quente',
     telefone: '3359-6733',
     horarioFuncionamento: 'Segunda-Sexta 07:00 - 18:00',
+    latitude: -15.8968,
+    longitude: -48.0458,
     fonte: 'Busca Paralela - UBS SH Água Quente',
     dataColeta: '13/09/2025'
   },
@@ -368,6 +394,8 @@ const mockEquipamentosSociais: EquipamentoSocial[] = [
     bairro: 'SH Água Quente',
     telefone: '2244-1088, 98382-0142 (plantão)',
     horarioFuncionamento: 'Plantão 24h para emergências',
+    latitude: -15.8970,
+    longitude: -48.0460,
     fonte: 'Busca Paralela - Centro de Referência SH Água Quente',
     dataColeta: '13/09/2025'
   },
@@ -379,6 +407,8 @@ const mockEquipamentosSociais: EquipamentoSocial[] = [
     bairro: 'Samambaia',
     telefone: '9.9198-0652',
     horarioFuncionamento: 'Não especificado',
+    latitude: -15.8797,
+    longitude: -48.0975,
     fonte: 'Busca Paralela - Ação Social Samambaia',
     dataColeta: '13/09/2025'
   }

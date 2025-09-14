@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { useMockData, UBS, ONG, Paciente, EquipamentoSocial } from '@/hooks/useMockData';
 
@@ -35,21 +35,14 @@ export const MapComponent = ({
   const [mapLoaded, setMapLoaded] = useState(false);
   const { ubsList, ongsList, pacientesList, equipamentosSociais } = useMockData();
 
-  // Função para obter coordenadas aproximadas baseada no bairro
-  const getCoordinatesForBairro = (bairro: string): { lat: number; lng: number } => {
-    const bairroCoords: Record<string, { lat: number; lng: number }> = {
-      'Recanto das Emas': { lat: -15.9045, lng: -48.0632 },
-      'Samambaia': { lat: -15.8781, lng: -48.0958 },
-      'SH Água Quente': { lat: -15.8965, lng: -48.0455 },
-    };
-    
-    // Adiciona pequena variação aleatória para evitar sobreposição
-    const coords = bairroCoords[bairro] || { lat: -15.8781, lng: -48.0958 };
-    return {
-      lat: coords.lat + (Math.random() - 0.5) * 0.01,
-      lng: coords.lng + (Math.random() - 0.5) * 0.01
-    };
-  };
+  // Estabilizar referências dos dados para evitar re-renders desnecessários
+  const stableData = useMemo(() => ({
+    ubsList,
+    ongsList, 
+    pacientesList,
+    equipamentosSociais
+  }), [ubsList, ongsList, pacientesList, equipamentosSociais]);
+
 
   useEffect(() => {
     const initMap = async () => {
@@ -102,7 +95,7 @@ export const MapComponent = ({
 
     // Add UBS markers
     if (showUBS) {
-      ubsList.forEach((ubs: UBS) => {
+      stableData.ubsList.forEach((ubs: UBS) => {
         const marker = new google.maps.Marker({
           position: { lat: ubs.latitude, lng: ubs.longitude },
           map: map,
@@ -165,7 +158,7 @@ export const MapComponent = ({
 
     // Add ONG markers
     if (showONGs) {
-      ongsList.forEach((ong: ONG) => {
+      stableData.ongsList.forEach((ong: ONG) => {
         const marker = new google.maps.Marker({
           position: { lat: ong.latitude, lng: ong.longitude },
           map: map,
@@ -227,7 +220,7 @@ export const MapComponent = ({
 
     // Add patient markers
     if (showPacientes) {
-      pacientesList.forEach((paciente: Paciente) => {
+      stableData.pacientesList.forEach((paciente: Paciente) => {
         const marker = new google.maps.Marker({
           position: { lat: paciente.latitude, lng: paciente.longitude },
           map: map,
@@ -290,10 +283,9 @@ export const MapComponent = ({
 
     // Add equipamentos sociais markers
     if (showEquipamentosSociais) {
-      equipamentosSociais.forEach((equipamento: EquipamentoSocial) => {
-        const coords = equipamento.latitude && equipamento.longitude 
-          ? { lat: equipamento.latitude, lng: equipamento.longitude }
-          : getCoordinatesForBairro(equipamento.bairro);
+      stableData.equipamentosSociais.forEach((equipamento: EquipamentoSocial) => {
+        // Todos os equipamentos agora têm coordenadas fixas
+        const coords = { lat: equipamento.latitude!, lng: equipamento.longitude! };
 
         // Determine icon based on equipment type
         const isUBS = equipamento.tipo.includes('Centro de Saúde') || 
@@ -379,7 +371,7 @@ export const MapComponent = ({
       });
     }
 
-  }, [ubsList, ongsList, pacientesList, equipamentosSociais, showUBS, showONGs, showPacientes, showEquipamentosSociais, mapLoaded, editMode]);
+  }, [stableData, showUBS, showONGs, showPacientes, showEquipamentosSociais, mapLoaded, editMode, onPositionUpdate]);
 
   return (
     <div 
