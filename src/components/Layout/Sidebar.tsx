@@ -103,15 +103,13 @@ export const Sidebar = ({ className }: SidebarProps) => {
       className
     )}>
       {/* Header */}
-      <div className="flex h-16 items-center justify-between px-4 border-b">
+      <div className="flex h-16 items-center justify-center px-4 border-b">
         {!collapsed && (
-          <div className="flex items-center justify-center w-full">
-            <img 
-              src={logoConsultorio} 
-              alt="Logo" 
-              className="h-16 w-auto object-contain"
-            />
-          </div>
+          <img 
+            src={logoConsultorio} 
+            alt="Logo" 
+            className="h-16 w-auto object-contain"
+          />
         )}
         
         <Button
