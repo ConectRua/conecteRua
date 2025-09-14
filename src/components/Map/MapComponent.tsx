@@ -29,20 +29,27 @@ export const MapComponent = ({
   editMode = false,
   onPositionUpdate
 }: MapComponentProps) => {
-  console.log('MapComponent props:', { editMode, onPositionUpdate: !!onPositionUpdate });
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
   const [mapLoaded, setMapLoaded] = useState(false);
   const { ubsList, ongsList, pacientesList, equipamentosSociais } = useMockData();
 
-  // Estabilizar referências dos dados para evitar re-renders desnecessários
-  const stableData = useMemo(() => ({
-    ubsList,
-    ongsList, 
-    pacientesList,
-    equipamentosSociais
-  }), [ubsList, ongsList, pacientesList, equipamentosSociais]);
+  // Criar referências estáveis dos dados usando useRef para evitar re-renders
+  const dataRef = useRef({ ubsList, ongsList, pacientesList, equipamentosSociais });
+  
+  // Atualizar referências quando os dados realmente mudarem
+  useEffect(() => {
+    dataRef.current = { ubsList, ongsList, pacientesList, equipamentosSociais };
+    
+    // Só re-renderizar marcadores se o mapa já estiver carregado
+    if (mapLoaded && mapInstanceRef.current) {
+      updateMarkers();
+    }
+  }, [ubsList, ongsList, pacientesList, equipamentosSociais, mapLoaded]);
+
+  // Função separada para atualizar marcadores
+  const updateMarkers = () => {
 
 
   useEffect(() => {
@@ -86,23 +93,61 @@ export const MapComponent = ({
   }, [centerLat, centerLng, zoom]);
 
   useEffect(() => {
-    if (!mapInstanceRef.current || !mapLoaded) return;
+    const initMap = async () => {
+      if (!mapRef.current || mapInstanceRef.current) return;
 
-    console.log('Recreating markers with current data:', {
-      ubsCount: stableData.ubsList.length,
-      editMode,
-      onPositionUpdate: !!onPositionUpdate
-    });
+      try {
+        const loader = new Loader({
+          apiKey: GOOGLE_MAPS_API_KEY,
+          version: 'weekly',
+          libraries: ['marker']
+        });
+
+        await loader.load();
+
+        const map = new google.maps.Map(mapRef.current, {
+          center: { lat: centerLat, lng: centerLng },
+          zoom: zoom,
+          mapTypeId: google.maps.MapTypeId.ROADMAP,
+          mapTypeControl: true,
+          streetViewControl: true,
+          fullscreenControl: true,
+          zoomControl: true,
+          styles: [
+            {
+              featureType: 'poi',
+              elementType: 'labels',
+              stylers: [{ visibility: 'off' }]
+            }
+          ]
+        });
+
+        mapInstanceRef.current = map;
+        setMapLoaded(true);
+      } catch (error) {
+        console.error('Erro ao carregar Google Maps:', error);
+      }
+    };
+
+    initMap();
+  }, [centerLat, centerLng, zoom]);
+
+  // Efeito separado para mudanças de visibilidade e modo de edição
+  useEffect(() => {
+    if (mapLoaded && mapInstanceRef.current) {
+      updateMarkers();
+    }
+  }, [showUBS, showONGs, showPacientes, showEquipamentosSociais, editMode]);
+
+    const map = mapInstanceRef.current!;
 
     // Clear existing markers
     markersRef.current.forEach(marker => marker.setMap(null));
     markersRef.current = [];
 
-    const map = mapInstanceRef.current;
-
     // Add UBS markers
     if (showUBS) {
-      stableData.ubsList.forEach((ubs: UBS) => {
+      dataRef.current.ubsList.forEach((ubs: UBS) => {
         const marker = new google.maps.Marker({
           position: { lat: ubs.latitude, lng: ubs.longitude },
           map: map,
@@ -165,7 +210,7 @@ export const MapComponent = ({
 
     // Add ONG markers
     if (showONGs) {
-      stableData.ongsList.forEach((ong: ONG) => {
+      dataRef.current.ongsList.forEach((ong: ONG) => {
         const marker = new google.maps.Marker({
           position: { lat: ong.latitude, lng: ong.longitude },
           map: map,
@@ -227,7 +272,7 @@ export const MapComponent = ({
 
     // Add patient markers
     if (showPacientes) {
-      stableData.pacientesList.forEach((paciente: Paciente) => {
+      dataRef.current.pacientesList.forEach((paciente: Paciente) => {
         const marker = new google.maps.Marker({
           position: { lat: paciente.latitude, lng: paciente.longitude },
           map: map,
@@ -290,7 +335,7 @@ export const MapComponent = ({
 
     // Add equipamentos sociais markers
     if (showEquipamentosSociais) {
-      stableData.equipamentosSociais.forEach((equipamento: EquipamentoSocial) => {
+      dataRef.current.equipamentosSociais.forEach((equipamento: EquipamentoSocial) => {
         // Todos os equipamentos agora têm coordenadas fixas
         const coords = { lat: equipamento.latitude!, lng: equipamento.longitude! };
 
@@ -377,8 +422,7 @@ export const MapComponent = ({
         markersRef.current.push(marker);
       });
     }
-
-  }, [stableData, showUBS, showONGs, showPacientes, showEquipamentosSociais, mapLoaded, editMode, onPositionUpdate]);
+  };
 
   return (
     <div 
