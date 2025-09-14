@@ -29,6 +29,7 @@ export const MapComponent = ({
   editMode = false,
   onPositionUpdate
 }: MapComponentProps) => {
+  console.log('MapComponent props:', { editMode, onPositionUpdate: !!onPositionUpdate });
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
@@ -86,6 +87,12 @@ export const MapComponent = ({
 
   useEffect(() => {
     if (!mapInstanceRef.current || !mapLoaded) return;
+
+    console.log('Recreating markers with current data:', {
+      ubsCount: stableData.ubsList.length,
+      editMode,
+      onPositionUpdate: !!onPositionUpdate
+    });
 
     // Clear existing markers
     markersRef.current.forEach(marker => marker.setMap(null));
@@ -146,7 +153,7 @@ export const MapComponent = ({
             if (event.latLng && onPositionUpdate) {
               const lat = event.latLng.lat();
               const lng = event.latLng.lng();
-              console.log('UBS dragged to:', lat, lng);
+              console.log('UBS dragged to:', lat, lng, 'onPositionUpdate available:', !!onPositionUpdate);
               onPositionUpdate(ubs.id, 'ubs', lat, lng);
             }
           });
