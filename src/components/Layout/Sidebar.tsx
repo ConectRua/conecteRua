@@ -16,6 +16,7 @@ import {
   FileSpreadsheet,
   Search
 } from 'lucide-react';
+import logoConsultorio from '@/assets/logo-consultorio-na-rua.png';
 
 interface NavItem {
   title: string;
@@ -104,16 +105,18 @@ export const Sidebar = ({ className }: SidebarProps) => {
       {/* Header */}
       <div className="flex h-16 items-center justify-between px-4 border-b">
         {!collapsed && (
-          <div className="flex items-center space-x-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-primary flex items-center justify-center">
-              <Heart className="h-5 w-5 text-white" />
-            </div>
+          <div className="flex items-center space-x-3">
+            <img 
+              src={logoConsultorio} 
+              alt="Consultório na Rua" 
+              className="h-10 w-auto object-contain"
+            />
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-foreground">
-                Geo Saúde
+                Consultório na Rua
               </span>
               <span className="text-xs text-muted-foreground">
-                Consultório na Rua
+                Sistema de Georreferenciamento
               </span>
             </div>
           </div>
