@@ -67,35 +67,82 @@ export const PatientForm = ({ open, onOpenChange }: PatientFormProps) => {
   });
 
   const getCurrentLocation = async () => {
+    console.log('=== INICIO getCurrentLocation ===');
     setIsGettingLocation(true);
     try {
-      const coordinates = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: true,
-        timeout: 10000
-      });
+      console.log('Solicitando localização...');
       
-      const location = {
-        latitude: coordinates.coords.latitude,
-        longitude: coordinates.coords.longitude
-      };
-      
-      setCurrentLocation(location);
-      toast.success('Localização obtida com sucesso!');
+      // Primeiro tenta a API Capacitor (para mobile)
+      try {
+        const coordinates = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: true,
+          timeout: 10000
+        });
+        
+        console.log('Coordenadas recebidas via Capacitor:', coordinates);
+        
+        const location = {
+          latitude: coordinates.coords.latitude,
+          longitude: coordinates.coords.longitude
+        };
+        
+        console.log('Localização formatada:', location);
+        setCurrentLocation(location);
+        toast.success('Localização obtida com sucesso!');
+        console.log('=== FIM getCurrentLocation (sucesso via Capacitor) ===');
+        return;
+      } catch (capacitorError) {
+        console.log('Capacitor failed, trying browser API:', capacitorError);
+        
+        // Fallback para API do browser (para web)
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              console.log('Coordenadas recebidas via Browser:', position);
+              const location = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+              };
+              console.log('Localização formatada (browser):', location);
+              setCurrentLocation(location);
+              toast.success('Localização obtida com sucesso!');
+              console.log('=== FIM getCurrentLocation (sucesso via Browser) ===');
+              setIsGettingLocation(false);
+            },
+            (error) => {
+              console.error('Erro browser geolocation:', error);
+              throw error;
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+          );
+          return;
+        } else {
+          throw new Error('Geolocalização não suportada pelo navegador');
+        }
+      }
     } catch (error) {
       console.error('Erro ao obter localização:', error);
       toast.error('Não foi possível obter a localização. Verifique as permissões.');
+      console.log('=== FIM getCurrentLocation (erro) ===');
     } finally {
       setIsGettingLocation(false);
     }
   };
 
   const onSubmit = async (data: PatientFormData) => {
+    console.log('=== INICIO onSubmit ===');
+    console.log('Dados do formulário:', data);
+    console.log('Necessidades selecionadas:', selectedNecessidades);
+    console.log('Localização atual:', currentLocation);
+    
     try {
       // Usar localização atual se disponível, senão simular coordenadas baseadas no CEP
       const coordinates = currentLocation || {
         latitude: -15.8781 + (Math.random() - 0.5) * 0.1,
         longitude: -48.0958 + (Math.random() - 0.5) * 0.1,
       };
+      
+      console.log('Coordenadas a serem usadas:', coordinates);
 
       const newPatient: Omit<Paciente, 'id'> = {
         nome: data.nome,
@@ -108,25 +155,44 @@ export const PatientForm = ({ open, onOpenChange }: PatientFormProps) => {
         necessidades: selectedNecessidades,
         ...coordinates,
       };
+      
+      console.log('Objeto paciente criado:', newPatient);
 
-      addPaciente(newPatient);
+      console.log('Chamando addPaciente...');
+      const result = addPaciente(newPatient);
+      console.log('Resultado addPaciente:', result);
+      
       toast.success('Paciente cadastrado com sucesso!');
       form.reset();
       setSelectedNecessidades([]);
       setCurrentLocation(null);
       onOpenChange(false);
+      console.log('=== FIM onSubmit (sucesso) ===');
     } catch (error) {
+      console.error('Erro no onSubmit:', error);
       toast.error('Erro ao cadastrar paciente');
+      console.log('=== FIM onSubmit (erro) ===');
     }
   };
 
   const handleNecessidadeChange = (necessidade: string, checked: boolean) => {
+    console.log('handleNecessidadeChange:', { necessidade, checked });
+    
+    let newNecessidades: string[];
     if (checked) {
-      setSelectedNecessidades(prev => [...prev, necessidade]);
+      newNecessidades = [...selectedNecessidades, necessidade];
     } else {
-      setSelectedNecessidades(prev => prev.filter(n => n !== necessidade));
+      newNecessidades = selectedNecessidades.filter(n => n !== necessidade);
     }
-    form.setValue('necessidades', selectedNecessidades);
+    
+    console.log('Novas necessidades:', newNecessidades);
+    setSelectedNecessidades(newNecessidades);
+    
+    // Atualizar o formulário com as novas necessidades
+    form.setValue('necessidades', newNecessidades);
+    
+    // Trigger validation manually
+    form.trigger('necessidades');
   };
 
   return (
