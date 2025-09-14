@@ -451,17 +451,23 @@ export const useMockData = () => {
 
   // Função para atualizar posições dos marcadores
   const updatePosition = (id: string, type: 'ubs' | 'ong' | 'paciente' | 'equipamento', lat: number, lng: number) => {
+    console.log('updatePosition called:', { id, type, lat, lng });
+    
     switch (type) {
       case 'ubs':
+        console.log('Updating UBS position');
         updateUBS(id, { latitude: lat, longitude: lng });
         break;
       case 'ong':
+        console.log('Updating ONG position');
         updateONG(id, { latitude: lat, longitude: lng });
         break;
       case 'paciente':
+        console.log('Updating Paciente position');
         updatePaciente(id, { latitude: lat, longitude: lng });
         break;
       case 'equipamento':
+        console.log('Updating Equipamento position');
         setEquipamentosSociais(prev => 
           prev.map(eq => eq.id === id ? { ...eq, latitude: lat, longitude: lng } : eq)
         );

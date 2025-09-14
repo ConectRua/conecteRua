@@ -43,6 +43,7 @@ const MapaInterativo = () => {
   };
 
   const handlePositionUpdate = (id: string, type: 'ubs' | 'ong' | 'paciente' | 'equipamento', lat: number, lng: number) => {
+    console.log('handlePositionUpdate called:', { id, type, lat, lng });
     if (updatePosition) {
       updatePosition(id, type, lat, lng);
     }
