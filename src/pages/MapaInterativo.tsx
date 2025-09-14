@@ -15,7 +15,9 @@ import {
   Building2,
   Heart,
   Users,
-  Building
+  Building,
+  Edit3,
+  Save
 } from 'lucide-react';
 
 const MapaInterativo = () => {
@@ -25,6 +27,7 @@ const MapaInterativo = () => {
     pacientesList,
     equipamentosSociais,
     addUBS,
+    updatePosition,
     loading 
   } = useMockData();
 
@@ -33,9 +36,20 @@ const MapaInterativo = () => {
   const [showPacientes, setShowPacientes] = useState(true);
   const [showEquipamentosSociais, setShowEquipamentosSociais] = useState(true);
   const [showAddUBSModal, setShowAddUBSModal] = useState(false);
+  const [editMode, setEditMode] = useState(false);
 
   const handleAddUBS = (newUBS: Parameters<typeof addUBS>[0]) => {
     addUBS(newUBS);
+  };
+
+  const handlePositionUpdate = (id: string, type: 'ubs' | 'ong' | 'paciente' | 'equipamento', lat: number, lng: number) => {
+    if (updatePosition) {
+      updatePosition(id, type, lat, lng);
+    }
+  };
+
+  const handleEditModeToggle = () => {
+    setEditMode(!editMode);
   };
 
   return (
@@ -53,6 +67,23 @@ const MapaInterativo = () => {
         </div>
         
         <div className="flex space-x-2">
+          <Button 
+            variant={editMode ? "default" : "outline"} 
+            size="sm"
+            onClick={handleEditModeToggle}
+          >
+            {editMode ? (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Salvar Posições
+              </>
+            ) : (
+              <>
+                <Edit3 className="h-4 w-4 mr-2" />
+                Editar Posições
+              </>
+            )}
+          </Button>
           <Button variant="outline" size="sm">
             <Download className="h-4 w-4 mr-2" />
             Exportar
@@ -181,6 +212,8 @@ const MapaInterativo = () => {
               centerLat={-15.8781}
               centerLng={-48.0958}
               zoom={11}
+              editMode={editMode}
+              onPositionUpdate={handlePositionUpdate}
             />
           </CardContent>
         </Card>

@@ -11,6 +11,8 @@ interface MapComponentProps {
   centerLat?: number;
   centerLng?: number;
   zoom?: number;
+  editMode?: boolean;
+  onPositionUpdate?: (id: string, type: 'ubs' | 'ong' | 'paciente' | 'equipamento', lat: number, lng: number) => void;
 }
 
 const GOOGLE_MAPS_API_KEY = 'AIzaSyDRwidXV58hU0ialb5D1oBAGOl0SBssiuQ';
@@ -23,7 +25,9 @@ export const MapComponent = ({
   showEquipamentosSociais = true,
   centerLat = -15.8781,
   centerLng = -48.0958,
-  zoom = 12
+  zoom = 12,
+  editMode = false,
+  onPositionUpdate
 }: MapComponentProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
@@ -103,10 +107,11 @@ export const MapComponent = ({
           position: { lat: ubs.latitude, lng: ubs.longitude },
           map: map,
           title: ubs.nome,
+          draggable: editMode,
           icon: {
             url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
               <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="16" cy="16" r="14" fill="#3b82f6" stroke="white" stroke-width="2"/>
+                <circle cx="16" cy="16" r="14" fill="${editMode ? '#fbbf24' : '#3b82f6'}" stroke="white" stroke-width="2"/>
                 <text x="16" y="21" font-family="Arial" font-size="14" fill="white" text-anchor="middle">🏥</text>
               </svg>
             `),
@@ -138,8 +143,20 @@ export const MapComponent = ({
         });
 
         marker.addListener('click', () => {
-          infoWindow.open(map, marker);
+          if (!editMode) {
+            infoWindow.open(map, marker);
+          }
         });
+
+        if (editMode) {
+          marker.addListener('dragend', (event: google.maps.MapMouseEvent) => {
+            if (event.latLng && onPositionUpdate) {
+              const lat = event.latLng.lat();
+              const lng = event.latLng.lng();
+              onPositionUpdate(ubs.id, 'ubs', lat, lng);
+            }
+          });
+        }
 
         markersRef.current.push(marker);
       });
@@ -152,10 +169,11 @@ export const MapComponent = ({
           position: { lat: ong.latitude, lng: ong.longitude },
           map: map,
           title: ong.nome,
+          draggable: editMode,
           icon: {
             url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
               <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="16" cy="16" r="14" fill="#10b981" stroke="white" stroke-width="2"/>
+                <circle cx="16" cy="16" r="14" fill="${editMode ? '#fbbf24' : '#10b981'}" stroke="white" stroke-width="2"/>
                 <text x="16" y="21" font-family="Arial" font-size="14" fill="white" text-anchor="middle">❤️</text>
               </svg>
             `),
@@ -187,8 +205,20 @@ export const MapComponent = ({
         });
 
         marker.addListener('click', () => {
-          infoWindow.open(map, marker);
+          if (!editMode) {
+            infoWindow.open(map, marker);
+          }
         });
+
+        if (editMode) {
+          marker.addListener('dragend', (event: google.maps.MapMouseEvent) => {
+            if (event.latLng && onPositionUpdate) {
+              const lat = event.latLng.lat();
+              const lng = event.latLng.lng();
+              onPositionUpdate(ong.id, 'ong', lat, lng);
+            }
+          });
+        }
 
         markersRef.current.push(marker);
       });
@@ -201,10 +231,11 @@ export const MapComponent = ({
           position: { lat: paciente.latitude, lng: paciente.longitude },
           map: map,
           title: paciente.nome,
+          draggable: editMode,
           icon: {
             url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
               <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="10" fill="#8b5cf6" stroke="white" stroke-width="2"/>
+                <circle cx="12" cy="12" r="10" fill="${editMode ? '#fbbf24' : '#8b5cf6'}" stroke="white" stroke-width="2"/>
                 <text x="12" y="16" font-family="Arial" font-size="10" fill="white" text-anchor="middle">👤</text>
               </svg>
             `),
@@ -237,8 +268,20 @@ export const MapComponent = ({
         });
 
         marker.addListener('click', () => {
-          infoWindow.open(map, marker);
+          if (!editMode) {
+            infoWindow.open(map, marker);
+          }
         });
+
+        if (editMode) {
+          marker.addListener('dragend', (event: google.maps.MapMouseEvent) => {
+            if (event.latLng && onPositionUpdate) {
+              const lat = event.latLng.lat();
+              const lng = event.latLng.lng();
+              onPositionUpdate(paciente.id, 'paciente', lat, lng);
+            }
+          });
+        }
 
         markersRef.current.push(marker);
       });
@@ -284,10 +327,11 @@ export const MapComponent = ({
           position: coords,
           map: map,
           title: equipamento.nome,
+          draggable: editMode,
           icon: {
             url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
               <svg width="${iconConfig.size}" height="${iconConfig.size}" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="${iconConfig.size/2}" cy="${iconConfig.size/2}" r="${iconConfig.size/2 - 2}" fill="${iconConfig.color}" stroke="white" stroke-width="2"/>
+                <circle cx="${iconConfig.size/2}" cy="${iconConfig.size/2}" r="${iconConfig.size/2 - 2}" fill="${editMode ? '#fbbf24' : iconConfig.color}" stroke="white" stroke-width="2"/>
                 <text x="${iconConfig.size/2}" y="${iconConfig.size/2 + 4}" font-family="Arial" font-size="12" fill="white" text-anchor="middle">${iconConfig.emoji}</text>
               </svg>
             `),
@@ -315,14 +359,26 @@ export const MapComponent = ({
         });
 
         marker.addListener('click', () => {
-          infoWindow.open(map, marker);
+          if (!editMode) {
+            infoWindow.open(map, marker);
+          }
         });
+
+        if (editMode) {
+          marker.addListener('dragend', (event: google.maps.MapMouseEvent) => {
+            if (event.latLng && onPositionUpdate) {
+              const lat = event.latLng.lat();
+              const lng = event.latLng.lng();
+              onPositionUpdate(equipamento.id, 'equipamento', lat, lng);
+            }
+          });
+        }
 
         markersRef.current.push(marker);
       });
     }
 
-  }, [ubsList, ongsList, pacientesList, equipamentosSociais, showUBS, showONGs, showPacientes, showEquipamentosSociais, mapLoaded]);
+  }, [ubsList, ongsList, pacientesList, equipamentosSociais, showUBS, showONGs, showPacientes, showEquipamentosSociais, mapLoaded, editMode]);
 
   return (
     <div 

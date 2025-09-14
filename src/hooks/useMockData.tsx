@@ -449,6 +449,26 @@ export const useMockData = () => {
     setPacientesList(prev => prev.filter(paciente => paciente.id !== id));
   };
 
+  // Função para atualizar posições dos marcadores
+  const updatePosition = (id: string, type: 'ubs' | 'ong' | 'paciente' | 'equipamento', lat: number, lng: number) => {
+    switch (type) {
+      case 'ubs':
+        updateUBS(id, { latitude: lat, longitude: lng });
+        break;
+      case 'ong':
+        updateONG(id, { latitude: lat, longitude: lng });
+        break;
+      case 'paciente':
+        updatePaciente(id, { latitude: lat, longitude: lng });
+        break;
+      case 'equipamento':
+        setEquipamentosSociais(prev => 
+          prev.map(eq => eq.id === id ? { ...eq, latitude: lat, longitude: lng } : eq)
+        );
+        break;
+    }
+  };
+
   // Busca por CEP/Endereço
   const searchByCEP = async (cep: string) => {
     setLoading(true);
@@ -553,6 +573,7 @@ export const useMockData = () => {
     encontrarUBSMaisProxima,
     calcularDistancia,
     getEstatisticas,
+    updatePosition,
     
     // Actions
     fetchData
