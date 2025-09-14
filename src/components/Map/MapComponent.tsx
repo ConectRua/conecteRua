@@ -40,10 +40,18 @@ export const MapComponent = ({
   
   // Atualizar referências quando os dados realmente mudarem
   useEffect(() => {
+    console.log('Dados atualizados no MapComponent:', { 
+      ubsList: ubsList.length, 
+      ongsList: ongsList.length, 
+      pacientesList: pacientesList.length, 
+      equipamentosSociais: equipamentosSociais.length 
+    });
+    
     dataRef.current = { ubsList, ongsList, pacientesList, equipamentosSociais };
     
-    // Só re-renderizar marcadores se o mapa já estiver carregado
+    // Re-renderizar marcadores sempre que os dados mudarem e o mapa estiver carregado
     if (mapLoaded && mapInstanceRef.current) {
+      console.log('Atualizando marcadores...');
       updateMarkers();
     }
   }, [ubsList, ongsList, pacientesList, equipamentosSociais, mapLoaded]);
@@ -53,6 +61,11 @@ export const MapComponent = ({
     if (!mapInstanceRef.current) return;
 
     const map = mapInstanceRef.current;
+
+    console.log('updateMarkers executado. Dados atuais:', {
+      pacientes: dataRef.current.pacientesList.length,
+      showPacientes
+    });
 
     // Clear existing markers
     markersRef.current.forEach(marker => marker.setMap(null));
