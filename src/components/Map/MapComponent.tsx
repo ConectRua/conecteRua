@@ -153,6 +153,7 @@ export const MapComponent = ({
             if (event.latLng && onPositionUpdate) {
               const lat = event.latLng.lat();
               const lng = event.latLng.lng();
+              console.log('UBS dragged to:', lat, lng);
               onPositionUpdate(ubs.id, 'ubs', lat, lng);
             }
           });
@@ -378,7 +379,7 @@ export const MapComponent = ({
       });
     }
 
-  }, [ubsList, ongsList, pacientesList, equipamentosSociais, showUBS, showONGs, showPacientes, showEquipamentosSociais, mapLoaded, editMode, onPositionUpdate]);
+  }, [showUBS, showONGs, showPacientes, showEquipamentosSociais, mapLoaded, editMode]);
 
   return (
     <div 
