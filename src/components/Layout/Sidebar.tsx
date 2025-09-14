@@ -16,7 +16,7 @@ import {
   FileSpreadsheet,
   Search
 } from 'lucide-react';
-import logoConsultorio from '@/assets/logo-consultorio-na-rua.png';
+import logoConecteRua from '@/assets/logo-conecte-rua.png';
 
 interface NavItem {
   title: string;
@@ -106,8 +106,8 @@ export const Sidebar = ({ className }: SidebarProps) => {
       <div className="flex h-16 items-center justify-center px-4 border-b">
         {!collapsed && (
           <img 
-            src={logoConsultorio} 
-            alt="Logo" 
+            src={logoConecteRua} 
+            alt="ConecteRua - Sistema de Georreferenciamento" 
             className="h-16 w-auto object-contain"
           />
         )}
