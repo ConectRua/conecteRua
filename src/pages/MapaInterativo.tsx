@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { AddUBSModal } from '@/components/Forms/AddUBSModal';
+import { PatientForm } from '@/components/Forms/PatientForm';
 import { useMockData } from '@/hooks/useMockData';
 import { useState } from 'react';
 import { 
@@ -17,7 +18,8 @@ import {
   Users,
   Building,
   Edit3,
-  Save
+  Save,
+  UserPlus
 } from 'lucide-react';
 
 const MapaInterativo = () => {
@@ -36,6 +38,7 @@ const MapaInterativo = () => {
   const [showPacientes, setShowPacientes] = useState(true);
   const [showEquipamentosSociais, setShowEquipamentosSociais] = useState(true);
   const [showAddUBSModal, setShowAddUBSModal] = useState(false);
+  const [showAddPatientModal, setShowAddPatientModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
 
   const handleAddUBS = (newUBS: Parameters<typeof addUBS>[0]) => {
@@ -180,6 +183,15 @@ const MapaInterativo = () => {
                 <Heart className="h-4 w-4 mr-2" />
                 Nova ONG
               </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full"
+                onClick={() => setShowAddPatientModal(true)}
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Adicionar Paciente
+              </Button>
             </div>
 
             {/* Statistics */}
@@ -279,6 +291,12 @@ const MapaInterativo = () => {
         open={showAddUBSModal}
         onOpenChange={setShowAddUBSModal}
         onAdd={handleAddUBS}
+      />
+
+      {/* Modal para adicionar Paciente */}
+      <PatientForm
+        open={showAddPatientModal}
+        onOpenChange={setShowAddPatientModal}
       />
     </div>
   );
