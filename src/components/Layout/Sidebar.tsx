@@ -105,11 +105,11 @@ export const Sidebar = ({ className }: SidebarProps) => {
       {/* Header */}
       <div className="flex h-16 items-center justify-between px-4 border-b">
         {!collapsed && (
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center w-full">
             <img 
               src={logoConsultorio} 
               alt="Logo" 
-              className="h-14 w-auto object-contain"
+              className="h-16 w-auto object-contain"
             />
           </div>
         )}
