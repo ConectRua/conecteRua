@@ -30,6 +30,7 @@ type PatientFormData = z.infer<typeof patientSchema>;
 interface PatientFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onAdd?: (paciente: Omit<Paciente, 'id'>) => void;
 }
 
 const necessidadesOptions = [
@@ -46,7 +47,7 @@ const necessidadesOptions = [
   'Acompanhamento Nutricional'
 ];
 
-export const PatientForm = ({ open, onOpenChange }: PatientFormProps) => {
+export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => {
   const { addPaciente } = useMockData();
   const [selectedNecessidades, setSelectedNecessidades] = useState<string[]>([]);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
@@ -159,8 +160,16 @@ export const PatientForm = ({ open, onOpenChange }: PatientFormProps) => {
       console.log('Objeto paciente criado:', newPatient);
 
       console.log('Chamando addPaciente...');
-      const result = addPaciente(newPatient);
-      console.log('Resultado addPaciente:', result);
+      
+      // Usar o callback se fornecido, senão usar o hook diretamente
+      if (onAdd) {
+        console.log('Usando callback onAdd...');
+        onAdd(newPatient);
+      } else {
+        console.log('Usando addPaciente do hook...');
+        const result = addPaciente(newPatient);
+        console.log('Resultado addPaciente:', result);
+      }
       
       toast.success('Paciente cadastrado com sucesso!');
       form.reset();

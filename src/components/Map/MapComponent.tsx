@@ -51,10 +51,18 @@ export const MapComponent = ({
     
     // Re-renderizar marcadores sempre que os dados mudarem e o mapa estiver carregado
     if (mapLoaded && mapInstanceRef.current) {
-      console.log('Atualizando marcadores...');
+      console.log('Atualizando marcadores devido a mudança de dados...');
       updateMarkers();
     }
   }, [ubsList, ongsList, pacientesList, equipamentosSociais, mapLoaded]);
+
+  // Atualizar marcadores quando a visibilidade das camadas mudar
+  useEffect(() => {
+    if (mapLoaded && mapInstanceRef.current) {
+      console.log('Atualizando marcadores devido a mudança de visibilidade...');
+      updateMarkers();
+    }
+  }, [showUBS, showONGs, showPacientes, showEquipamentosSociais, mapLoaded]);
 
   // Função separada para atualizar marcadores
   const updateMarkers = () => {
@@ -64,7 +72,10 @@ export const MapComponent = ({
 
     console.log('updateMarkers executado. Dados atuais:', {
       pacientes: dataRef.current.pacientesList.length,
-      showPacientes
+      showPacientes,
+      ubsList: dataRef.current.ubsList.length,
+      ongsList: dataRef.current.ongsList.length,
+      equipamentosSociais: dataRef.current.equipamentosSociais.length
     });
 
     // Clear existing markers

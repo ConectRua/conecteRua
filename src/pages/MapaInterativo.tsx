@@ -29,6 +29,7 @@ const MapaInterativo = () => {
     pacientesList,
     equipamentosSociais,
     addUBS,
+    addPaciente,
     updatePosition,
     loading 
   } = useMockData();
@@ -43,6 +44,12 @@ const MapaInterativo = () => {
 
   const handleAddUBS = (newUBS: Parameters<typeof addUBS>[0]) => {
     addUBS(newUBS);
+  };
+
+  const handleAddPaciente = (newPaciente: Parameters<typeof addPaciente>[0]) => {
+    console.log('handleAddPaciente called:', newPaciente);
+    addPaciente(newPaciente);
+    setShowAddPatientModal(false);
   };
 
   const handlePositionUpdate = (id: string, type: 'ubs' | 'ong' | 'paciente' | 'equipamento', lat: number, lng: number) => {
@@ -297,6 +304,7 @@ const MapaInterativo = () => {
       <PatientForm
         open={showAddPatientModal}
         onOpenChange={setShowAddPatientModal}
+        onAdd={handleAddPaciente}
       />
     </div>
   );
