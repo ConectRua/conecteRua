@@ -16,7 +16,7 @@ import {
   FileSpreadsheet,
   Search
 } from 'lucide-react';
-import logoConecteRua from '@/assets/logo-conecte-rua.png';
+import logoConecteRua from '@/assets/logo-conecte-rua-updated.png';
 
 interface NavItem {
   title: string;
