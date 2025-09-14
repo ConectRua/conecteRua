@@ -50,96 +50,9 @@ export const MapComponent = ({
 
   // Função separada para atualizar marcadores
   const updateMarkers = () => {
+    if (!mapInstanceRef.current) return;
 
-
-  useEffect(() => {
-    const initMap = async () => {
-      if (!mapRef.current || mapInstanceRef.current) return;
-
-      try {
-        const loader = new Loader({
-          apiKey: GOOGLE_MAPS_API_KEY,
-          version: 'weekly',
-          libraries: ['marker']
-        });
-
-        await loader.load();
-
-        const map = new google.maps.Map(mapRef.current, {
-          center: { lat: centerLat, lng: centerLng },
-          zoom: zoom,
-          mapTypeId: google.maps.MapTypeId.ROADMAP,
-          mapTypeControl: true,
-          streetViewControl: true,
-          fullscreenControl: true,
-          zoomControl: true,
-          styles: [
-            {
-              featureType: 'poi',
-              elementType: 'labels',
-              stylers: [{ visibility: 'off' }]
-            }
-          ]
-        });
-
-        mapInstanceRef.current = map;
-        setMapLoaded(true);
-      } catch (error) {
-        console.error('Erro ao carregar Google Maps:', error);
-      }
-    };
-
-    initMap();
-  }, [centerLat, centerLng, zoom]);
-
-  useEffect(() => {
-    const initMap = async () => {
-      if (!mapRef.current || mapInstanceRef.current) return;
-
-      try {
-        const loader = new Loader({
-          apiKey: GOOGLE_MAPS_API_KEY,
-          version: 'weekly',
-          libraries: ['marker']
-        });
-
-        await loader.load();
-
-        const map = new google.maps.Map(mapRef.current, {
-          center: { lat: centerLat, lng: centerLng },
-          zoom: zoom,
-          mapTypeId: google.maps.MapTypeId.ROADMAP,
-          mapTypeControl: true,
-          streetViewControl: true,
-          fullscreenControl: true,
-          zoomControl: true,
-          styles: [
-            {
-              featureType: 'poi',
-              elementType: 'labels',
-              stylers: [{ visibility: 'off' }]
-            }
-          ]
-        });
-
-        mapInstanceRef.current = map;
-        setMapLoaded(true);
-      } catch (error) {
-        console.error('Erro ao carregar Google Maps:', error);
-      }
-    };
-
-    initMap();
-  }, [centerLat, centerLng, zoom]);
-
-  // Efeito separado para mudanças de visibilidade e modo de edição
-  useEffect(() => {
-    if (mapLoaded && mapInstanceRef.current) {
-      updateMarkers();
-    }
-  }, [showUBS, showONGs, showPacientes, showEquipamentosSociais, editMode]);
-
-    const map = mapInstanceRef.current!;
+    const map = mapInstanceRef.current;
 
     // Clear existing markers
     markersRef.current.forEach(marker => marker.setMap(null));
@@ -198,7 +111,6 @@ export const MapComponent = ({
             if (event.latLng && onPositionUpdate) {
               const lat = event.latLng.lat();
               const lng = event.latLng.lng();
-              console.log('UBS dragged to:', lat, lng, 'onPositionUpdate available:', !!onPositionUpdate);
               onPositionUpdate(ubs.id, 'ubs', lat, lng);
             }
           });
@@ -336,10 +248,8 @@ export const MapComponent = ({
     // Add equipamentos sociais markers
     if (showEquipamentosSociais) {
       dataRef.current.equipamentosSociais.forEach((equipamento: EquipamentoSocial) => {
-        // Todos os equipamentos agora têm coordenadas fixas
         const coords = { lat: equipamento.latitude!, lng: equipamento.longitude! };
 
-        // Determine icon based on equipment type
         const isUBS = equipamento.tipo.includes('Centro de Saúde') || 
                      equipamento.tipo.includes('Unidade Básica') ||
                      equipamento.nome.includes('UBS');
@@ -349,23 +259,11 @@ export const MapComponent = ({
 
         let iconConfig;
         if (isUBS) {
-          iconConfig = {
-            color: '#22c55e',
-            emoji: '🏥',
-            size: 26
-          };
+          iconConfig = { color: '#22c55e', emoji: '🏥', size: 26 };
         } else if (isHospital) {
-          iconConfig = {
-            color: '#dc2626',
-            emoji: '🏥',
-            size: 30
-          };
+          iconConfig = { color: '#dc2626', emoji: '🏥', size: 30 };
         } else {
-          iconConfig = {
-            color: '#f59e0b',
-            emoji: '🏢',
-            size: 28
-          };
+          iconConfig = { color: '#f59e0b', emoji: '🏢', size: 28 };
         }
 
         const marker = new google.maps.Marker({
@@ -423,6 +321,53 @@ export const MapComponent = ({
       });
     }
   };
+
+  useEffect(() => {
+    const initMap = async () => {
+      if (!mapRef.current || mapInstanceRef.current) return;
+
+      try {
+        const loader = new Loader({
+          apiKey: GOOGLE_MAPS_API_KEY,
+          version: 'weekly',
+          libraries: ['marker']
+        });
+
+        await loader.load();
+
+        const map = new google.maps.Map(mapRef.current, {
+          center: { lat: centerLat, lng: centerLng },
+          zoom: zoom,
+          mapTypeId: google.maps.MapTypeId.ROADMAP,
+          mapTypeControl: true,
+          streetViewControl: true,
+          fullscreenControl: true,
+          zoomControl: true,
+          styles: [
+            {
+              featureType: 'poi',
+              elementType: 'labels',
+              stylers: [{ visibility: 'off' }]
+            }
+          ]
+        });
+
+        mapInstanceRef.current = map;
+        setMapLoaded(true);
+      } catch (error) {
+        console.error('Erro ao carregar Google Maps:', error);
+      }
+    };
+
+    initMap();
+  }, [centerLat, centerLng, zoom]);
+
+  // Efeito separado para mudanças de visibilidade e modo de edição
+  useEffect(() => {
+    if (mapLoaded && mapInstanceRef.current) {
+      updateMarkers();
+    }
+  }, [showUBS, showONGs, showPacientes, showEquipamentosSociais, editMode]);
 
   return (
     <div 
