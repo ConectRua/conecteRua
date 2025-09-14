@@ -108,15 +108,15 @@ export const Sidebar = ({ className }: SidebarProps) => {
           <div className="flex items-center space-x-3">
             <img 
               src={logoConsultorio} 
-              alt="Consultório na Rua" 
+              alt="Geo Saude" 
               className="h-10 w-auto object-contain"
             />
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-foreground">
-                Consultório na Rua
+                Geo Saude
               </span>
               <span className="text-xs text-muted-foreground">
-                Sistema de Georreferenciamento
+                Assistência Social e Saúde - Samambaia, Recanto das Emas e Águas Quentes
               </span>
             </div>
           </div>
