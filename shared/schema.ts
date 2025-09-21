@@ -1,7 +1,7 @@
 // Database schema for the georeferencing system
 // Using Drizzle ORM for PostgreSQL with PostGIS support
 
-import { pgTable, serial, varchar, text, boolean, timestamp, integer, decimal, jsonb, uuid } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, text, boolean, timestamp, integer, decimal, jsonb, uuid, doublePrecision } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -39,8 +39,8 @@ export const ubs = pgTable("ubs", {
   nome: varchar("nome", { length: 255 }).notNull(),
   endereco: text("endereco").notNull(),
   cep: varchar("cep", { length: 10 }).notNull(),
-  latitude: decimal("latitude", { precision: 10, scale: 8 }),
-  longitude: decimal("longitude", { precision: 11, scale: 8 }),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
   telefone: varchar("telefone", { length: 20 }),
   email: varchar("email", { length: 255 }),
   horarioFuncionamento: text("horario_funcionamento"),
@@ -68,8 +68,8 @@ export const ongs = pgTable("ongs", {
   nome: varchar("nome", { length: 255 }).notNull(),
   endereco: text("endereco").notNull(),
   cep: varchar("cep", { length: 10 }).notNull(),
-  latitude: decimal("latitude", { precision: 10, scale: 8 }),
-  longitude: decimal("longitude", { precision: 11, scale: 8 }),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
   telefone: varchar("telefone", { length: 20 }),
   email: varchar("email", { length: 255 }),
   site: varchar("site", { length: 255 }),
@@ -97,13 +97,13 @@ export const pacientes = pgTable("pacientes", {
   nome: varchar("nome", { length: 255 }).notNull(),
   endereco: text("endereco").notNull(),
   cep: varchar("cep", { length: 10 }).notNull(),
-  latitude: decimal("latitude", { precision: 10, scale: 8 }),
-  longitude: decimal("longitude", { precision: 11, scale: 8 }),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
   telefone: varchar("telefone", { length: 20 }),
   idade: integer("idade"),
   condicoesSaude: text("condicoes_saude").array(),
   ubsMaisProximaId: integer("ubs_mais_proxima_id").references(() => ubs.id),
-  distanciaUbs: decimal("distancia_ubs", { precision: 8, scale: 2 }),
+  distanciaUbs: doublePrecision("distancia_ubs"),
   ativo: boolean("ativo").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -127,8 +127,8 @@ export const equipamentosSociais = pgTable("equipamentos_sociais", {
   tipo: varchar("tipo", { length: 100 }).notNull(),
   endereco: text("endereco").notNull(),
   cep: varchar("cep", { length: 10 }).notNull(),
-  latitude: decimal("latitude", { precision: 10, scale: 8 }),
-  longitude: decimal("longitude", { precision: 11, scale: 8 }),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
   telefone: varchar("telefone", { length: 20 }),
   email: varchar("email", { length: 255 }),
   horarioFuncionamento: text("horario_funcionamento"),
