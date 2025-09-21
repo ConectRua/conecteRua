@@ -186,22 +186,8 @@ export const auditLogRelations = relations(auditLog, ({ one }) => ({
   }),
 }));
 
-// ============ VALIDATION SCHEMAS (for backwards compatibility) ============
-export const User = z.object({
-  id: z.number(),
+// ============ LOGIN SCHEMA ============
+export const loginUserSchema = z.object({
   username: z.string().min(3).max(50),
-  email: z.string().email(),
-  password: z.string().min(6),
-  emailVerified: z.boolean().default(false),
-  verificationToken: z.string().nullable(),
-  createdAt: z.date().default(() => new Date()),
-  updatedAt: z.date().default(() => new Date()),
+  password: z.string().min(6)
 });
-
-export const loginUserSchema = User.pick({ 
-  username: true, 
-  password: true 
-});
-
-// Export legacy type names for backwards compatibility
-export type LoginUser = z.infer<typeof loginUserSchema>;
