@@ -41,3 +41,6 @@ externalPort = 8081
 localPort = 39547
 externalPort = 3000
 exposeLocalhost = true
+
+[agent]
+integrations = ["javascript_auth_all_persistance:1.0.0"]
