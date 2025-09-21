@@ -43,6 +43,11 @@ externalPort = 3001
 exposeLocalhost = true
 
 [[ports]]
+localPort = 34613
+externalPort = 5173
+exposeLocalhost = true
+
+[[ports]]
 localPort = 34975
 externalPort = 3002
 exposeLocalhost = true
@@ -53,8 +58,18 @@ externalPort = 5000
 exposeLocalhost = true
 
 [[ports]]
+localPort = 37271
+externalPort = 6000
+exposeLocalhost = true
+
+[[ports]]
 localPort = 39009
 externalPort = 3003
+exposeLocalhost = true
+
+[[ports]]
+localPort = 39511
+externalPort = 8000
 exposeLocalhost = true
 
 [[ports]]
@@ -65,6 +80,11 @@ exposeLocalhost = true
 [[ports]]
 localPort = 40307
 externalPort = 4200
+exposeLocalhost = true
+
+[[ports]]
+localPort = 44047
+externalPort = 6800
 exposeLocalhost = true
 
 [agent]
