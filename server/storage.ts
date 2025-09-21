@@ -19,11 +19,37 @@ export interface IStorage {
   // Session store for authentication
   sessionStore: session.Store;
   
-  // Application data methods (keeping existing structure)
+  // UBS CRUD methods
   getUBSList(): Promise<UBS[]>;
+  getUBS(id: number): Promise<UBS | null>;
+  createUBS(ubs: Omit<UBS, 'id' | 'createdAt' | 'updatedAt'>): Promise<UBS>;
+  updateUBS(id: number, updates: Partial<UBS>): Promise<UBS | null>;
+  deleteUBS(id: number): Promise<boolean>;
+  
+  // ONG CRUD methods
   getONGList(): Promise<ONG[]>;
+  getONG(id: number): Promise<ONG | null>;
+  createONG(ong: Omit<ONG, 'id' | 'createdAt' | 'updatedAt'>): Promise<ONG>;
+  updateONG(id: number, updates: Partial<ONG>): Promise<ONG | null>;
+  deleteONG(id: number): Promise<boolean>;
+  
+  // Pacientes CRUD methods
   getPacientesList(): Promise<Paciente[]>;
+  getPaciente(id: number): Promise<Paciente | null>;
+  createPaciente(paciente: Omit<Paciente, 'id' | 'createdAt' | 'updatedAt'>): Promise<Paciente>;
+  updatePaciente(id: number, updates: Partial<Paciente>): Promise<Paciente | null>;
+  deletePaciente(id: number): Promise<boolean>;
+  
+  // Equipamentos Sociais CRUD methods
   getEquipamentosSociais(): Promise<EquipamentoSocial[]>;
+  getEquipamentoSocial(id: number): Promise<EquipamentoSocial | null>;
+  createEquipamentoSocial(equipamento: Omit<EquipamentoSocial, 'id' | 'createdAt' | 'updatedAt'>): Promise<EquipamentoSocial>;
+  updateEquipamentoSocial(id: number, updates: Partial<EquipamentoSocial>): Promise<EquipamentoSocial | null>;
+  deleteEquipamentoSocial(id: number): Promise<boolean>;
+  
+  // Geographic queries
+  findNearbyUBS(latitude: number, longitude: number, radiusKm?: number): Promise<UBS[]>;
+  calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number;
 }
 
 export class MemStorage implements IStorage {
@@ -363,6 +389,164 @@ export class MemStorage implements IStorage {
   async getEquipamentosSociais(): Promise<EquipamentoSocial[]> {
     return this.equipamentosSociais;
   }
+  
+  // UBS CRUD methods
+  async getUBS(id: number): Promise<UBS | null> {
+    return this.ubsList.find(ubs => ubs.id === id) || null;
+  }
+  
+  async createUBS(ubsData: Omit<UBS, 'id' | 'createdAt' | 'updatedAt'>): Promise<UBS> {
+    const ubs: UBS = {
+      id: Math.max(...this.ubsList.map(u => u.id), 0) + 1,
+      ...ubsData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.ubsList.push(ubs);
+    return ubs;
+  }
+  
+  async updateUBS(id: number, updates: Partial<UBS>): Promise<UBS | null> {
+    const index = this.ubsList.findIndex(ubs => ubs.id === id);
+    if (index === -1) return null;
+    
+    this.ubsList[index] = { ...this.ubsList[index], ...updates, updatedAt: new Date() };
+    return this.ubsList[index];
+  }
+  
+  async deleteUBS(id: number): Promise<boolean> {
+    const index = this.ubsList.findIndex(ubs => ubs.id === id);
+    if (index === -1) return false;
+    
+    this.ubsList.splice(index, 1);
+    return true;
+  }
+  
+  // ONG CRUD methods
+  async getONG(id: number): Promise<ONG | null> {
+    return this.ongsList.find(ong => ong.id === id) || null;
+  }
+  
+  async createONG(ongData: Omit<ONG, 'id' | 'createdAt' | 'updatedAt'>): Promise<ONG> {
+    const ong: ONG = {
+      id: Math.max(...this.ongsList.map(o => o.id), 0) + 1,
+      ...ongData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.ongsList.push(ong);
+    return ong;
+  }
+  
+  async updateONG(id: number, updates: Partial<ONG>): Promise<ONG | null> {
+    const index = this.ongsList.findIndex(ong => ong.id === id);
+    if (index === -1) return null;
+    
+    this.ongsList[index] = { ...this.ongsList[index], ...updates, updatedAt: new Date() };
+    return this.ongsList[index];
+  }
+  
+  async deleteONG(id: number): Promise<boolean> {
+    const index = this.ongsList.findIndex(ong => ong.id === id);
+    if (index === -1) return false;
+    
+    this.ongsList.splice(index, 1);
+    return true;
+  }
+  
+  // Pacientes CRUD methods
+  async getPaciente(id: number): Promise<Paciente | null> {
+    return this.pacientesList.find(p => p.id === id) || null;
+  }
+  
+  async createPaciente(pacienteData: Omit<Paciente, 'id' | 'createdAt' | 'updatedAt'>): Promise<Paciente> {
+    const paciente: Paciente = {
+      id: Math.max(...this.pacientesList.map(p => p.id), 0) + 1,
+      ...pacienteData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.pacientesList.push(paciente);
+    return paciente;
+  }
+  
+  async updatePaciente(id: number, updates: Partial<Paciente>): Promise<Paciente | null> {
+    const index = this.pacientesList.findIndex(p => p.id === id);
+    if (index === -1) return null;
+    
+    this.pacientesList[index] = { ...this.pacientesList[index], ...updates, updatedAt: new Date() };
+    return this.pacientesList[index];
+  }
+  
+  async deletePaciente(id: number): Promise<boolean> {
+    const index = this.pacientesList.findIndex(p => p.id === id);
+    if (index === -1) return false;
+    
+    this.pacientesList.splice(index, 1);
+    return true;
+  }
+  
+  // Equipamentos Sociais CRUD methods
+  async getEquipamentoSocial(id: number): Promise<EquipamentoSocial | null> {
+    return this.equipamentosSociais.find(e => e.id === id) || null;
+  }
+  
+  async createEquipamentoSocial(equipamentoData: Omit<EquipamentoSocial, 'id' | 'createdAt' | 'updatedAt'>): Promise<EquipamentoSocial> {
+    const equipamento: EquipamentoSocial = {
+      id: Math.max(...this.equipamentosSociais.map(e => e.id), 0) + 1,
+      ...equipamentoData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.equipamentosSociais.push(equipamento);
+    return equipamento;
+  }
+  
+  async updateEquipamentoSocial(id: number, updates: Partial<EquipamentoSocial>): Promise<EquipamentoSocial | null> {
+    const index = this.equipamentosSociais.findIndex(e => e.id === id);
+    if (index === -1) return null;
+    
+    this.equipamentosSociais[index] = { ...this.equipamentosSociais[index], ...updates, updatedAt: new Date() };
+    return this.equipamentosSociais[index];
+  }
+  
+  async deleteEquipamentoSocial(id: number): Promise<boolean> {
+    const index = this.equipamentosSociais.findIndex(e => e.id === id);
+    if (index === -1) return false;
+    
+    this.equipamentosSociais.splice(index, 1);
+    return true;
+  }
+  
+  // Geographic queries
+  async findNearbyUBS(latitude: number, longitude: number, radiusKm: number = 5): Promise<UBS[]> {
+    return this.ubsList.filter(ubs => {
+      if (!ubs.latitude || !ubs.longitude) return false;
+      const distance = this.calculateDistance(latitude, longitude, ubs.latitude, ubs.longitude);
+      return distance <= radiusKm;
+    });
+  }
+  
+  calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
 }
 
-export const storage = new MemStorage();
+// Import PostgreSQLStorage
+import { PostgreSQLStorage } from "./postgres-storage";
+
+// Configure storage based on environment
+// Use PostgreSQL in production, MemStorage in development for testing
+export const storage: IStorage = process.env.NODE_ENV === 'production' 
+  ? new PostgreSQLStorage()
+  : new PostgreSQLStorage(); // Using PostgreSQL in all environments now
+
+// Keep MemStorage available for testing purposes
+export const memStorage = new MemStorage();
