@@ -2,6 +2,7 @@
 // Based on blueprint:javascript_auth_all_persistance integration
 
 import session from "express-session";
+import type { SessionStore } from "express-session";
 import createMemoryStore from "memorystore";
 import { User, InsertUser, UBS, ONG, Paciente, EquipamentoSocial } from "../shared/schema";
 
@@ -17,7 +18,7 @@ export interface IStorage {
   verifyUserEmail(token: string): Promise<User | null>;
   
   // Session store for authentication
-  sessionStore: session.SessionStore;
+  sessionStore: SessionStore;
   
   // Application data methods (keeping existing structure)
   getUBSList(): Promise<UBS[]>;
@@ -39,7 +40,7 @@ export class MemStorage implements IStorage {
   private pacientesList: Paciente[] = [];
   private equipamentosSociais: EquipamentoSocial[] = [];
 
-  public sessionStore: session.SessionStore;
+  public sessionStore: SessionStore;
 
   constructor() {
     this.sessionStore = new MemoryStore({

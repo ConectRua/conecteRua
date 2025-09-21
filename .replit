@@ -1,4 +1,4 @@
-modules = ["nodejs-20", "web"]
+modules = ["nodejs-20", "web", "postgresql-16"]
 
 [nix]
 channel = "stable-25_05"
@@ -88,4 +88,4 @@ externalPort = 6800
 exposeLocalhost = true
 
 [agent]
-integrations = ["javascript_auth_all_persistance:1.0.0"]
+integrations = ["javascript_auth_all_persistance:1.0.0", "javascript_database:1.0.0"]
