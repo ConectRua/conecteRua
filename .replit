@@ -42,5 +42,10 @@ localPort = 39547
 externalPort = 3000
 exposeLocalhost = true
 
+[[ports]]
+localPort = 42019
+externalPort = 3001
+exposeLocalhost = true
+
 [agent]
 integrations = ["javascript_auth_all_persistance:1.0.0"]

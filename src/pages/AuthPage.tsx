@@ -90,18 +90,18 @@ const AuthPage = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-green-50 dark:from-gray-900 dark:to-gray-800 p-8">
-      <div className="w-full max-w-md space-y-8">
+      <div className="w-full max-w-md space-y-4">
         {/* Logo */}
         <div className="text-center">
           <img 
             src={logoConecteRua} 
             alt="Sistema de Georreferenciamento" 
-            className="h-48 w-auto mx-auto mb-6"
+            className="h-32 w-auto mx-auto mb-4"
           />
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
             Conectando Pessoas aos Cuidados
           </h1>
-          <p className="text-gray-600 dark:text-gray-300">
+          <p className="text-gray-600 dark:text-gray-300 text-sm">
             Sistema de Georreferenciamento
           </p>
         </div>
