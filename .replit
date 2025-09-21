@@ -38,13 +38,28 @@ localPort = 8081
 externalPort = 8081
 
 [[ports]]
+localPort = 33251
+externalPort = 3001
+exposeLocalhost = true
+
+[[ports]]
+localPort = 34975
+externalPort = 3002
+exposeLocalhost = true
+
+[[ports]]
+localPort = 39009
+externalPort = 3003
+exposeLocalhost = true
+
+[[ports]]
 localPort = 39547
 externalPort = 3000
 exposeLocalhost = true
 
 [[ports]]
-localPort = 42019
-externalPort = 3001
+localPort = 40307
+externalPort = 4200
 exposeLocalhost = true
 
 [agent]
