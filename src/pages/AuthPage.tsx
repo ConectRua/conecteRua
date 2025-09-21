@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Eye, EyeOff, MapPin, Users, BarChart3 } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import logoConecteRua from '@/assets/logo-conecte-rua-final.png';
 
@@ -89,39 +89,37 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-blue-50 to-green-50 dark:from-gray-900 dark:to-gray-800">
-      {/* Left side - Authentication Form */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-md space-y-6">
-          {/* Logo */}
-          <div className="text-center">
-            <img 
-              src={logoConecteRua} 
-              alt="ConecteRua - Sistema de Georreferenciamento" 
-              className="h-32 w-auto mx-auto mb-4"
-            />
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              ConecteRua
-            </h1>
-            <p className="text-gray-600 dark:text-gray-300 mt-2">
-              Sistema de Georreferenciamento
-            </p>
-          </div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-green-50 dark:from-gray-900 dark:to-gray-800 p-8">
+      <div className="w-full max-w-md space-y-8">
+        {/* Logo */}
+        <div className="text-center">
+          <img 
+            src={logoConecteRua} 
+            alt="Sistema de Georreferenciamento" 
+            className="h-48 w-auto mx-auto mb-6"
+          />
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            Conectando Pessoas aos Cuidados
+          </h1>
+          <p className="text-gray-600 dark:text-gray-300">
+            Sistema de Georreferenciamento
+          </p>
+        </div>
 
-          {/* Authentication Forms */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Acesso ao Sistema</CardTitle>
-              <CardDescription>
-                Entre com suas credenciais ou crie uma nova conta
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="login" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="login" data-testid="tab-login">Entrar</TabsTrigger>
-                  <TabsTrigger value="register" data-testid="tab-register">Cadastrar</TabsTrigger>
-                </TabsList>
+        {/* Authentication Forms */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Acesso ao Sistema</CardTitle>
+            <CardDescription>
+              Entre com suas credenciais ou crie uma nova conta
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="login" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="login" data-testid="tab-login">Entrar</TabsTrigger>
+                <TabsTrigger value="register" data-testid="tab-register">Cadastrar</TabsTrigger>
+              </TabsList>
 
                 {/* Login Tab */}
                 <TabsContent value="login">
@@ -292,54 +290,6 @@ const AuthPage = () => {
             </CardContent>
           </Card>
         </div>
-      </div>
-
-      {/* Right side - Hero Section */}
-      <div className="hidden lg:flex flex-1 items-center justify-center p-8 bg-gradient-to-br from-primary/10 to-primary/5">
-        <div className="max-w-md text-center space-y-6">
-          <div className="space-y-4">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Conectando Pessoas aos Cuidados
-            </h2>
-            <p className="text-lg text-gray-600 dark:text-gray-300">
-              Sistema de georreferenciamento da rede de assistência social e saúde para 
-              Samambaia, Recanto das Emas e Águas Claras.
-            </p>
-          </div>
-
-          <div className="grid gap-4">
-            <div className="flex items-center space-x-3 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-              <MapPin className="h-8 w-8 text-primary" />
-              <div className="text-left">
-                <h3 className="font-semibold">Localização Inteligente</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Encontre UBS e ONGs próximas ao seu endereço
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-3 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-              <Users className="h-8 w-8 text-primary" />
-              <div className="text-left">
-                <h3 className="font-semibold">Gestão de Pacientes</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Pareamento automático com unidades de saúde
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-3 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-              <BarChart3 className="h-8 w-8 text-primary" />
-              <div className="text-left">
-                <h3 className="font-semibold">Relatórios e Analytics</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Análises de cobertura e eficiência
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
