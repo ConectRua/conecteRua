@@ -1,187 +1,239 @@
 PRD - Sistema de Georreferenciamento da Rede de Assistência Social e Saúde (v2)
-1. Visão do Produto
+
+## Status Atual: PROTÓTIPO FRONTEND CONCLUÍDO ✅
+**Observação**: Esta base de código representa o protótipo completo do frontend, desenvolvido para demonstrar todas as funcionalidades do sistema antes da integração com o backend.
+
+## 1. Visão do Produto
 Sistema web responsivo para mapear e conectar pacientes aos serviços de assistência social e saúde em Samambaia, Recanto das Emas e Águas Claras, otimizando o acesso aos cuidados através de geolocalização.
-3. Funcionalidades Core
-3.1 Mapeamento da Rede
-Cadastro manual de UBS com CEP/coordenadas
-Cadastro de ONGs e instituições filantrópicas
-Importação via planilhas Excel/CSV
-Web scraping de sites públicos
-3.2 Gestão de Pacientes
-Importação de lista de pacientes com endereços
-Geocodificação automática de endereços
-Pareamento automático paciente-UBS por proximidade
-Busca manual por CEP/endereço
-3.3 Interface Web
-Dashboard para visualização do mapa
-Filtros por tipo de serviço
-Busca por CEP/endereço
-Exportação de relatórios
-4. Especificações Técnicas
-4.1 Ferramenta de Georreferenciamento
-Recomendação: OpenStreetMap + Leaflet + Nominatim API
-Vantagens: Gratuito, sem limites de uso
-Geocodificação: API Nominatim (gratuita)
-Backup: ViaCEP para CEPs brasileiros
-4.2 Stack Tecnológica
-Frontend: React.js + Tailwind CSS
-Backend: Node.js + Express
-Banco: PostgreSQL + PostGIS
-Hospedagem: Vercel (frontend) + Railway (backend)
-5. Estratégias de Alimentação
-5.1 Dados Iniciais
-Cadastro Manual: Interface para equipe cadastrar UBS e serviços
-Importação: Upload de planilhas Excel/CSV existentes
-Web Scraping: Sites públicos da Secretaria e SES-DF
-Crowdsourcing: Equipe local valida e complementa dados
-5.2 Fontes de Dados
-Planilhas internas da assistência social
-Sites institucionais públicos
-Cadastro manual pela equipe
-Validação por conhecimento local
-6. Funcionalidades de Entrada de Dados
-6.1 Interface de Cadastro
-Formulário web para UBS/ONGs/instituições
-Upload em lote via planilhas
-Validação automática de CEPs
-Geocodificação em tempo real
-6.2 Validação de Dados
-Verificação automática de coordenadas
-Review manual pela equipe
-Sistema de flags para dados suspeitos
-Histórico de alterações
-Tarefas para Implementação por Fases
-FASE 1 - Infraestrutura Base
-Backend
-Configurar PostgreSQL com extensão PostGIS
-Estruturar API REST com Express.js
-Implementar modelos de dados (UBS, ONGs, Pacientes, Endereços)
-Configurar autenticação básica
-Deploy inicial no Railway
-Frontend
-Setup React.js + Tailwind CSS
-Estrutura de rotas e componentes base
-Layout responsivo principal
-Deploy inicial no Vercel
-Geocodificação
-Integrar Nominatim API para geocodificação
-Implementar fallback com ViaCEP
-Criar serviço de validação de coordenadas
-FASE 2 - Cadastro e Gestão
-Cadastro Manual
-Interface para cadastro de UBS/ONGs
-Formulários com validação em tempo real
-Geocodificação automática por CEP
-Sistema de review/aprovação
-Importação de Dados
-Upload e processamento de planilhas Excel/CSV
-Validação e limpeza automática de dados
-Interface para resolução de conflitos
-Logs de importação
-Gestão de Pacientes
-Importação de listas de pacientes
-Pareamento automático por proximidade
-Interface de busca e filtros
-FASE 3 - Visualização e Mapa (2 semanas)
-Dashboard Principal
-Mapa interativo com Leaflet
-Marcadores para UBS/ONGs/Pacientes
-Filtros por tipo de serviço
-Informações detalhadas em popups
-Funcionalidades do Mapa
-Busca por CEP/endereço
-Cálculo de rotas e distâncias
-Layers toggleáveis
-Zoom automático por região
-FASE 4 - Recursos Avançados
-Web Scraping
-Scripts para coleta de dados públicos
-Agendamento automático de atualizações
-Detecção de novos serviços
-Relatórios e Exportação
-Geração de relatórios em PDF/Excel
-Estatísticas de cobertura por região
-Métricas de distância média
-Dashboards analíticos
-FASE 5 - Otimização e Deploy Final 
-Performance
-Cache de geocodificação
-Otimização de consultas
-Compressão de assets
-Monitoramento
-Testes e Documentação
-Testes automatizados
-Manual de usuário
-Documentação técnica
-Treinamento da equipe
-graph TD
-    A[Página Inicial] --> B{Login/Acesso}
-    
-    B --> C[Dashboard Principal]
-    
-    C --> D[Visualização do Mapa]
-    C --> E[Gestão de Dados]
-    C --> F[Relatórios]
-    
-    %% Fluxo do Mapa
-    D --> D1[Mapa Interativo]
-    D1 --> D2[Filtros por Serviço]
-    D1 --> D3[Busca por CEP/Endereço]
-    D2 --> D1
-    D3 --> D4[Resultado da Busca]
-    D4 --> D5[Detalhes da UBS/Serviço]
-    D5 --> D6[Pareamento com Pacientes]
-    
-    %% Fluxo de Gestão
-    E --> E1{Tipo de Cadastro}
-    
-    E1 --> E2[Cadastro Manual]
-    E2 --> E2a[Form UBS/ONG]
-    E2a --> E2b[Validação CEP]
-    E2b --> E2c[Geocodificação Auto]
-    E2c --> E2d[Confirmação]
-    E2d --> C
-    
-    E1 --> E3[Import Planilha]
-    E3 --> E3a[Upload Excel/CSV]
-    E3a --> E3b[Validação Dados]
-    E3b --> E3c[Review Manual]
-    E3c --> E3d[Aprovação/Correção]
-    E3d --> C
-    
-    E1 --> E4[Web Scraping]
-    E4 --> E4a[Sites Públicos SES-DF]
-    E4a --> E4b[Extração Automática]
-    E4b --> E4c[Validação Equipe]
-    E4c --> C
-    
-    %% Fluxo de Pacientes
-    E --> E5[Gestão Pacientes]
-    E5 --> E5a[Import Lista Pacientes]
-    E5a --> E5b[Geocodificação Endereços]
-    E5b --> E5c[Pareamento Auto UBS]
-    E5c --> E5d[Review Pareamentos]
-    E5d --> C
-    
-    E5 --> E5e[Busca Manual Paciente]
-    E5e --> E5f[CEP/Endereço]
-    E5f --> E5g[UBS Mais Próxima]
-    E5g --> D5
-    
-    %% Fluxo de Relatórios
-    F --> F1[Configurar Filtros]
-    F1 --> F2[Gerar Relatório]
-    F2 --> F3[Visualizar/Exportar]
-    F3 --> C
-    
-    %% Estados de Erro/Validação
-    E2b --> E2e[Erro CEP]
-    E2e --> E2a
-    E3b --> E3e[Dados Inválidos]
-    E3e --> E3a
-    
-    style A fill:#e1f5fe
-    style C fill:#f3e5f5
-    style D1 fill:#e8f5e8
-    style E2d fill:#fff3e0
-    style E3d fill:#fff3e0
+
+## 2. Status das Funcionalidades Implementadas
+
+### 2.1 Mapeamento da Rede ✅ CONCLUÍDO
+- ✅ **Cadastro manual de UBS** - Interface completa com formulários validados
+- ✅ **Cadastro de ONGs** - Sistema completo de registro de organizações
+- ✅ **Interface de importação via planilhas** - Sistema drag-and-drop funcional
+- ❌ **Web scraping de sites públicos** - Planejado para integração backend
+- ✅ **Visualização georreferenciada** - Google Maps integrado com marcadores
+
+### 2.2 Gestão de Pacientes ✅ CONCLUÍDO  
+- ✅ **Formulários de cadastro de pacientes** - Interface completa
+- ✅ **Pareamento automático paciente-UBS** - Algoritmo implementado
+- ✅ **Busca manual por CEP/endereço** - Interface funcional
+- ✅ **Cálculo de distâncias** - Função implementada
+- ❌ **Geocodificação automática real** - Dependente de integração API
+
+### 2.3 Interface Web ✅ CONCLUÍDO
+- ✅ **Dashboard interativo** - Estatísticas e visão geral completas
+- ✅ **Mapa interativo** - Google Maps com filtros e controles
+- ✅ **Filtros por tipo de serviço** - Sistema de layers toggleáveis
+- ✅ **Busca por CEP/endereço** - Interface de pesquisa
+- ✅ **Interface de relatórios** - Dashboards e exportação
+## 3. Dados Mock Implementados
+
+### 3.1 Base de Dados Atual ✅ IMPLEMENTADA
+- **UBS**: 5 unidades cadastradas (Samambaia, Recanto das Emas, Águas Claras)
+- **ONGs**: 2 organizações de assistência social
+- **Pacientes**: 3 cadastros com vinculação UBS
+- **Equipamentos Sociais**: 15 itens (CRAS, CAPS, Conselhos Tutelares, etc.)
+- **Especialidades**: Cadastro completo por UBS
+- **Serviços**: Mapeamento de serviços por ONG
+- **Cálculo de Distâncias**: Algoritmo funcional entre pacientes e UBS
+
+## 4. Especificações Técnicas
+
+### 4.1 Stack Atual Implementada ✅
+- **Frontend**: React.js + TypeScript + Tailwind CSS + shadcn/ui
+- **Mapeamento**: Google Maps JavaScript API integrado
+- **Roteamento**: React Router DOM
+- **Estado**: React Hooks + Context API
+- **Formulários**: React Hook Form + Zod validation
+- **UI Components**: shadcn/ui + Radix UI
+- **Ícones**: Lucide React
+
+### 4.2 Ferramenta de Georreferenciamento
+- ✅ **Atual**: Google Maps JavaScript API
+- ❌ **Planejado**: OpenStreetMap + Leaflet + Nominatim API (alternativa gratuita)
+- ❌ **Geocodificação**: API Nominatim (gratuita) + ViaCEP (backup)
+
+### 4.3 Stack Backend Planejada ❌ PENDENTE
+- **Backend**: Node.js + Express
+- **Banco**: PostgreSQL + PostGIS
+- **Hospedagem**: Vercel (frontend) + Railway (backend)
+- **APIs**: Nominatim + ViaCEP
+## 5. Funcionalidades Detalhadas Implementadas
+
+### 5.1 Dashboard Principal ✅ CONCLUÍDO
+- **Painel de estatísticas**: Cards com métricas em tempo real
+- **Mapa de visão geral**: Integração Google Maps no dashboard
+- **Cobertura por região**: Análise geográfica automatizada
+- **Atividades recentes**: Timeline de eventos do sistema
+- **Ações rápidas**: Botões de acesso direto às principais funcionalidades
+
+### 5.2 Mapa Interativo ✅ CONCLUÍDO
+- **Google Maps integrado**: Visualização completa e responsiva
+- **4 tipos de marcadores**: UBS (azul), ONGs (verde), Pacientes (roxo), Equipamentos Sociais (amarelo)
+- **Controles de camadas**: Toggle individual para cada tipo de marcador
+- **Modo de edição**: Arrastar e soltar marcadores para reposicionamento
+- **InfoWindows**: Popups detalhados com informações completas
+- **Legenda interativa**: Explicação visual de cada tipo de marcador
+- **Estatísticas em tempo real**: Contadores dinâmicos por tipo
+- **Controles do mapa**: Fullscreen, exportação, edição
+
+### 5.3 Gestão de Dados ✅ CONCLUÍDO
+- **Cadastro manual UBS/ONGs**: Formulários completos com validação
+- **Interface de importação**: Drag-and-drop para planilhas Excel/CSV
+- **Modelos de planilha**: Templates prontos para download
+- **Validação de arquivos**: Checagem de formato e tamanho
+- **CRUD completo**: Create, Read, Update, Delete para todas entidades
+
+### 5.4 Sistema de Busca ✅ CONCLUÍDO
+- **Busca por CEP**: Interface de pesquisa geográfica
+- **Resultados ordenados**: Por distância e relevância
+- **Detalhes dos serviços**: Informações completas de contato
+- **Cálculo de rotas**: Distâncias entre pontos
+
+### 5.5 Relatórios e Analytics ✅ CONCLUÍDO
+- **Dashboard analítico**: Métricas de performance
+- **Relatórios pré-configurados**: Templates de análise
+- **Exportação de dados**: Interface para download
+- **Gráficos e estatísticas**: Visualizações de dados
+
+## 6. Estratégias de Alimentação de Dados
+
+### 6.1 Dados Atuais (Mock Data) ✅ IMPLEMENTADO
+- ✅ **Cadastro Manual**: Interfaces funcionais para UBS/ONGs
+- ✅ **Base inicial**: 5 UBS + 2 ONGs + 3 Pacientes + 15 Equipamentos
+- ✅ **Validação de formulários**: Campos obrigatórios e formatos
+- ⚠️ **Importação**: Interface pronta, processamento pendente
+- ❌ **Web Scraping**: Planejado para implementação backend
+
+### 6.2 Próximas Integrações ❌ PENDENTE
+- **Geocodificação real**: APIs Nominatim/ViaCEP
+- **Banco de dados**: PostgreSQL + PostGIS
+- **Processamento planilhas**: Upload e parsing real
+- **Web scraping**: Sites SES-DF e órgãos públicos
+## 7. Roadmap de Implementação Atualizado
+
+### FASE 1 - Frontend Protótipo ✅ CONCLUÍDA
+#### Frontend ✅ COMPLETO
+- ✅ Setup React.js + TypeScript + Tailwind CSS + shadcn/ui
+- ✅ Estrutura de rotas completa (10 páginas)
+- ✅ Layout responsivo com sidebar colapsável
+- ✅ Sistema de componentes reutilizáveis
+- ✅ Integração Google Maps funcional
+
+#### Interface de Usuário ✅ COMPLETA
+- ✅ Dashboard interativo com estatísticas
+- ✅ Mapa interativo com 4 tipos de marcadores
+- ✅ Formulários de cadastro UBS/ONGs
+- ✅ Interface de importação de planilhas
+- ✅ Sistema de busca por CEP
+- ✅ Páginas de gestão e relatórios
+
+#### Dados Mock ✅ IMPLEMENTADOS
+- ✅ Hook customizado para gerenciamento de estado
+- ✅ CRUD completo para todas entidades
+- ✅ Algoritmos de pareamento e distância
+- ✅ Base de dados representativa das 3 regiões
+
+---
+
+### FASE 2 - Backend e Integração ❌ PRÓXIMA FASE
+#### Backend Infrastructure ❌ PENDENTE
+- ❌ Configurar PostgreSQL com extensão PostGIS
+- ❌ Estruturar API REST com Express.js
+- ❌ Implementar modelos de dados reais
+- ❌ Configurar autenticação e autorização
+- ❌ Deploy backend no Railway
+
+#### Geocodificação ❌ PENDENTE
+- ❌ Integrar Nominatim API para geocodificação
+- ❌ Implementar fallback com ViaCEP
+- ❌ Serviço de validação automática de coordenadas
+- ❌ Cache de geocodificação para performance
+
+#### Integração Frontend-Backend ❌ PENDENTE
+- ❌ Substituir mock data por APIs reais
+- ❌ Implementar autenticação de usuário
+- ❌ Sistema de upload e processamento de planilhas
+- ❌ Logs e auditoria de operações
+
+---
+
+### FASE 3 - Recursos Avançados ❌ FUTURO
+#### Web Scraping ❌ PENDENTE
+- ❌ Scripts para coleta de dados públicos SES-DF
+- ❌ Agendamento automático de atualizações
+- ❌ Detecção de novos serviços
+- ❌ Sistema de validação de dados coletados
+
+#### Analytics Avançado ❌ PENDENTE
+- ❌ Implementação de charts reais (recharts)
+- ❌ Geração de relatórios em PDF/Excel
+- ❌ Métricas avançadas de cobertura
+- ❌ Dashboards analíticos com dados históricos
+
+---
+
+### FASE 4 - Otimização e Deploy Final ❌ FUTURO
+#### Performance ❌ PENDENTE
+- ❌ Cache de geocodificação
+- ❌ Otimização de consultas SQL
+- ❌ Compressão de assets
+- ❌ Monitoramento de performance
+
+#### Qualidade ❌ PENDENTE
+- ❌ Testes automatizados (Jest, Testing Library)
+- ❌ Testes E2E (Cypress)
+- ❌ Documentação técnica completa
+- ❌ Manual de usuário
+## 8. Estrutura Atual da Aplicação
+
+### 8.1 Páginas Implementadas ✅
+1. **Dashboard (/)** - Visão geral com estatísticas e mapa resumido
+2. **Mapa Interativo (/mapa)** - Visualização completa e interativa
+3. **Pacientes (/pacientes)** - Gestão de cadastros de pacientes
+4. **Cadastro Manual (/cadastro)** - Formulários UBS/ONGs
+5. **Importação (/importacao)** - Upload de planilhas
+6. **Busca CEP (/busca)** - Localização de serviços
+7. **Gestão UBS (/ubs)** - Administração de unidades de saúde
+8. **Gestão ONGs (/ongs)** - Administração de organizações
+9. **Relatórios (/relatorios)** - Analytics e exportação
+10. **Configurações (/configuracoes)** - Preferências do sistema
+
+### 8.2 Componentes Principais ✅
+- **Layout**: Sidebar responsiva + Header + Conteúdo
+- **MapComponent**: Google Maps com marcadores personalizados
+- **Formulários**: UBS, ONG, Paciente com validação
+- **Dashboard**: Cards de estatísticas e visualizações
+- **UI Components**: Sistema completo shadcn/ui
+
+### 8.3 Hooks e Utilities ✅
+- **useMockData**: Gerenciamento centralizado de dados
+- **Validação**: Zod schemas para formulários
+- **Utilitários**: Cálculo de distâncias, formatação
+- **Toast**: Sistema de notificações
+
+## 9. Próximos Passos para Integração Backend
+
+### 9.1 Prioridade Alta ⚠️
+1. **Substituir mock data** por APIs REST reais
+2. **Implementar geocodificação** com Nominatim/ViaCEP
+3. **Configurar banco PostgreSQL** com PostGIS
+4. **Criar APIs** de CRUD para todas entidades
+
+### 9.2 Prioridade Média ⚠️
+1. **Sistema de autenticação** e autorização
+2. **Upload real de planilhas** com processamento
+3. **Cache de geocodificação** para performance
+4. **Logs de auditoria** e operações
+
+### 9.3 Prioridade Baixa ⚠️
+1. **Web scraping** de dados públicos
+2. **Relatórios avançados** com PDF/Excel
+3. **Analytics histórico** e métricas
+4. **Testes automatizados** completos
+
+---
+
+**Observação Final**: O protótipo frontend está 100% funcional com dados simulados. A próxima fase envolve desenvolver o backend para substituir os dados mock por persistência real e integração com APIs externas de geocodificação.

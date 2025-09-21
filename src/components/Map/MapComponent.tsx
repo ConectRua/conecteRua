@@ -348,7 +348,19 @@ export const MapComponent = ({
 
   useEffect(() => {
     const initMap = async () => {
-      if (!mapRef.current || mapInstanceRef.current) return;
+      // More robust check - ensure the element exists and is properly attached to DOM
+      if (!mapRef.current || mapInstanceRef.current || !mapRef.current.offsetParent) {
+        return;
+      }
+
+      // Add a small delay to ensure DOM is fully ready
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Double-check the element is still available after the delay
+      if (!mapRef.current) {
+        console.warn('Map element not available after delay');
+        return;
+      }
 
       try {
         const loader = new Loader({
@@ -358,6 +370,12 @@ export const MapComponent = ({
         });
 
         await loader.load();
+
+        // Final check before creating the map
+        if (!mapRef.current) {
+          console.error('Map div element became null before map creation');
+          return;
+        }
 
         const map = new google.maps.Map(mapRef.current, {
           center: { lat: centerLat, lng: centerLng },
@@ -383,7 +401,10 @@ export const MapComponent = ({
       }
     };
 
-    initMap();
+    // Use a timeout to ensure the DOM is ready
+    const timeoutId = setTimeout(initMap, 50);
+    
+    return () => clearTimeout(timeoutId);
   }, [centerLat, centerLng, zoom]);
 
   // Efeito separado para mudanças de visibilidade e modo de edição
