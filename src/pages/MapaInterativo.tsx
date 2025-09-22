@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { AddUBSModal } from '@/components/Forms/AddUBSModal';
 import { PatientForm } from '@/components/Forms/PatientForm';
-import { useMockData } from '@/hooks/useMockData';
+import { useApiData } from '@/hooks/useApiData';
 import { useState } from 'react';
 import { 
   Map, 
@@ -32,7 +32,7 @@ const MapaInterativo = () => {
     addPaciente,
     updatePosition,
     loading 
-  } = useMockData();
+  } = useApiData();
 
   const [showUBS, setShowUBS] = useState(true);
   const [showONGs, setShowONGs] = useState(true);

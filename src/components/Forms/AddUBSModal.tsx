@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { UBS } from '@/hooks/useMockData';
+import type { UBS } from '@shared/schema';
 import { MapPin, Building2, Phone, Clock, Stethoscope } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 

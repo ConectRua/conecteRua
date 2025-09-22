@@ -5,11 +5,11 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Users, Search, Plus, UserCheck, MapPin, Phone, Calendar, CreditCard } from 'lucide-react';
 import { PatientForm } from '@/components/Forms/PatientForm';
-import { useMockData } from '@/hooks/useMockData';
+import { useApiData } from '@/hooks/useApiData';
 
 const Pacientes = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const { pacientesList, getEstatisticas } = useMockData();
+  const { pacientesList, getEstatisticas } = useApiData();
   const stats = getEstatisticas();
 
   return (

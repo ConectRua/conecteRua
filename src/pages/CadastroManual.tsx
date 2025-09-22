@@ -6,6 +6,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useState } from 'react';
+import { useApiData } from '@/hooks/useApiData';
+import { useToast } from '@/hooks/use-toast';
 import { 
   UserPlus, 
   Building2, 
@@ -17,6 +19,8 @@ import {
 } from 'lucide-react';
 
 const CadastroManual = () => {
+  const { addUBS, addONG, isCreating } = useApiData();
+  const { toast } = useToast();
   const [tipoEntidade, setTipoEntidade] = useState<'ubs' | 'ong'>('ubs');
   const [formData, setFormData] = useState({
     nome: '',
@@ -30,10 +34,48 @@ const CadastroManual = () => {
     servicos: [] as string[]
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Cadastrando:', tipoEntidade, formData);
-    // Aqui seria feita a integração com o hook useMockData
+    
+    try {
+      if (tipoEntidade === 'ubs') {
+        await addUBS({
+          nome: formData.nome,
+          endereco: formData.endereco,
+          cep: formData.cep,
+          telefone: formData.telefone,
+          especialidades: formData.especialidades,
+          gestor: formData.responsavel,
+          horarioFuncionamento: formData.horarioFuncionamento,
+          ativo: true
+        });
+      } else {
+        await addONG({
+          nome: formData.nome,
+          endereco: formData.endereco,
+          cep: formData.cep,
+          telefone: formData.telefone,
+          servicos: formData.servicos,
+          responsavel: formData.responsavel,
+          ativo: true
+        });
+      }
+      
+      // Reset form on success
+      setFormData({
+        nome: '',
+        endereco: '',
+        cep: '',
+        telefone: '',
+        tipo: '',
+        responsavel: '',
+        horarioFuncionamento: '',
+        especialidades: [],
+        servicos: []
+      });
+    } catch (error) {
+      console.error('Erro ao cadastrar:', error);
+    }
   };
 
   return (

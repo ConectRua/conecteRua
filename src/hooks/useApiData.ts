@@ -494,6 +494,28 @@ export const useApiData = () => {
     updatePaciente: (id: number, updates: Partial<Paciente>) => updatePaciente.mutate({ id, ...updates }),
     deletePaciente: (id: number) => deletePaciente.mutate(id),
 
+    // Position update for map editing (backward compatibility)
+    updatePosition: (id: string, type: 'ubs' | 'ong' | 'paciente' | 'equipamento', lat: number, lng: number) => {
+      const numId = parseInt(id);
+      const updates = { latitude: lat, longitude: lng };
+      
+      switch (type) {
+        case 'ubs':
+          updateUBS.mutate({ id: numId, ...updates });
+          break;
+        case 'ong':
+          updateONG.mutate({ id: numId, ...updates });
+          break;
+        case 'paciente':
+          updatePaciente.mutate({ id: numId, ...updates });
+          break;
+        case 'equipamento':
+          // Note: implement updateEquipamento when available
+          console.warn('Equipamento position update not yet implemented');
+          break;
+      }
+    },
+
     // Mutation states
     isCreating: createUBS.isPending || createONG.isPending || createPaciente.isPending,
     isUpdating: updateUBS.isPending || updateONG.isPending || updatePaciente.isPending,

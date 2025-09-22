@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useMockData } from '@/hooks/useMockData';
+import { useApiData } from '@/hooks/useApiData';
 import { 
   Heart, 
   Phone, 
@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 const GestaoONGs = () => {
-  const { ongsList, loading } = useMockData();
+  const { ongsList, loading } = useApiData();
 
   if (loading) {
     return (

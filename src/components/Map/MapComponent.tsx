@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
-import { useMockData, UBS, ONG, Paciente, EquipamentoSocial } from '@/hooks/useMockData';
+import { useApiData } from '@/hooks/useApiData';
+import type { UBS, ONG, Paciente, EquipamentoSocial } from '../../../shared/schema';
 
 interface MapComponentProps {
   height?: string;
@@ -16,6 +17,17 @@ interface MapComponentProps {
 }
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+
+// Utility function to safely escape HTML and prevent XSS
+const escapeHtml = (unsafe: string | null | undefined): string => {
+  if (!unsafe) return 'Não informado';
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
 
 export const MapComponent = ({
   height = '400px',
@@ -33,7 +45,7 @@ export const MapComponent = ({
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const { ubsList, ongsList, pacientesList, equipamentosSociais } = useMockData();
+  const { ubsList, ongsList, pacientesList, equipamentosSociais } = useApiData();
 
   // Criar referências estáveis dos dados usando useRef para evitar re-renders
   const dataRef = useRef({ ubsList, ongsList, pacientesList, equipamentosSociais });
@@ -104,18 +116,17 @@ export const MapComponent = ({
         const infoWindow = new google.maps.InfoWindow({
           content: `
             <div class="p-3" style="min-width: 250px;">
-              <h3 class="font-bold text-lg mb-2" style="color: #3b82f6;">${ubs.nome}</h3>
+              <h3 class="font-bold text-lg mb-2" style="color: #3b82f6;">${escapeHtml(ubs.nome)}</h3>
               <div class="space-y-1 text-sm">
-                <p><strong>Tipo:</strong> ${ubs.tipo}</p>
-                <p><strong>Endereço:</strong> ${ubs.endereco}</p>
-                <p><strong>CEP:</strong> ${ubs.cep}</p>
-                <p><strong>Telefone:</strong> ${ubs.telefone}</p>
-                <p><strong>Horário:</strong> ${ubs.horarioFuncionamento}</p>
+                <p><strong>Endereço:</strong> ${escapeHtml(ubs.endereco)}</p>
+                <p><strong>CEP:</strong> ${escapeHtml(ubs.cep)}</p>
+                <p><strong>Telefone:</strong> ${escapeHtml(ubs.telefone)}</p>
+                <p><strong>Horário:</strong> ${escapeHtml(ubs.horarioFuncionamento)}</p>
                 <div class="mt-2">
                   <strong>Especialidades:</strong>
                   <div class="flex flex-wrap gap-1 mt-1">
-                    ${ubs.especialidades.map(esp => 
-                      `<span class="px-2 py-1 rounded-full text-xs" style="background-color: #dbeafe; color: #1e40af;">${esp}</span>`
+                    ${(ubs.especialidades || []).map(esp => 
+                      `<span class="px-2 py-1 rounded-full text-xs" style="background-color: #dbeafe; color: #1e40af;">${escapeHtml(esp)}</span>`
                     ).join('')}
                   </div>
                 </div>
@@ -135,7 +146,7 @@ export const MapComponent = ({
             if (event.latLng && onPositionUpdate) {
               const lat = event.latLng.lat();
               const lng = event.latLng.lng();
-              onPositionUpdate(ubs.id, 'ubs', lat, lng);
+              onPositionUpdate(ubs.id.toString(), 'ubs', lat, lng);
             }
           });
         }
@@ -166,18 +177,17 @@ export const MapComponent = ({
         const infoWindow = new google.maps.InfoWindow({
           content: `
             <div class="p-3" style="min-width: 250px;">
-              <h3 class="font-bold text-lg mb-2" style="color: #10b981;">${ong.nome}</h3>
+              <h3 class="font-bold text-lg mb-2" style="color: #10b981;">${escapeHtml(ong.nome)}</h3>
               <div class="space-y-1 text-sm">
-                <p><strong>Tipo:</strong> ${ong.tipo}</p>
-                <p><strong>Endereço:</strong> ${ong.endereco}</p>
-                <p><strong>CEP:</strong> ${ong.cep}</p>
-                <p><strong>Telefone:</strong> ${ong.telefone}</p>
-                <p><strong>Responsável:</strong> ${ong.responsavel}</p>
+                <p><strong>Endereço:</strong> ${escapeHtml(ong.endereco)}</p>
+                <p><strong>CEP:</strong> ${escapeHtml(ong.cep)}</p>
+                <p><strong>Telefone:</strong> ${escapeHtml(ong.telefone)}</p>
+                <p><strong>Responsável:</strong> ${escapeHtml(ong.responsavel)}</p>
                 <div class="mt-2">
                   <strong>Serviços:</strong>
                   <div class="flex flex-wrap gap-1 mt-1">
-                    ${ong.servicos.map(servico => 
-                      `<span class="px-2 py-1 rounded-full text-xs" style="background-color: #d1fae5; color: #065f46;">${servico}</span>`
+                    ${(ong.servicos || []).map(servico => 
+                      `<span class="px-2 py-1 rounded-full text-xs" style="background-color: #d1fae5; color: #065f46;">${escapeHtml(servico)}</span>`
                     ).join('')}
                   </div>
                 </div>
@@ -197,7 +207,7 @@ export const MapComponent = ({
             if (event.latLng && onPositionUpdate) {
               const lat = event.latLng.lat();
               const lng = event.latLng.lng();
-              onPositionUpdate(ong.id, 'ong', lat, lng);
+              onPositionUpdate(ong.id.toString(), 'ong', lat, lng);
             }
           });
         }
@@ -228,19 +238,18 @@ export const MapComponent = ({
         const infoWindow = new google.maps.InfoWindow({
           content: `
             <div class="p-3" style="min-width: 250px;">
-              <h3 class="font-bold text-lg mb-2" style="color: #8b5cf6;">${paciente.nome}</h3>
+              <h3 class="font-bold text-lg mb-2" style="color: #8b5cf6;">${escapeHtml(paciente.nome)}</h3>
               <div class="space-y-1 text-sm">
-                <p><strong>Idade:</strong> ${paciente.idade} anos</p>
-                <p><strong>Gênero:</strong> ${paciente.genero}</p>
-                <p><strong>Endereço:</strong> ${paciente.endereco}</p>
-                <p><strong>CEP:</strong> ${paciente.cep}</p>
-                <p><strong>Telefone:</strong> ${paciente.telefone}</p>
-                ${paciente.distanciaUBS ? `<p><strong>Distância UBS:</strong> ${paciente.distanciaUBS.toFixed(1)} km</p>` : ''}
+                <p><strong>Idade:</strong> ${escapeHtml(paciente.idade?.toString())} anos</p>
+                <p><strong>Endereço:</strong> ${escapeHtml(paciente.endereco)}</p>
+                <p><strong>CEP:</strong> ${escapeHtml(paciente.cep)}</p>
+                <p><strong>Telefone:</strong> ${escapeHtml(paciente.telefone)}</p>
+                ${paciente.distanciaUbs ? `<p><strong>Distância UBS:</strong> ${escapeHtml(paciente.distanciaUbs.toFixed(1))} km</p>` : ''}
                 <div class="mt-2">
-                  <strong>Necessidades:</strong>
+                  <strong>Condições de Saúde:</strong>
                   <div class="flex flex-wrap gap-1 mt-1">
-                    ${paciente.necessidades.map(nec => 
-                      `<span class="px-2 py-1 rounded-full text-xs" style="background-color: #ede9fe; color: #5b21b6;">${nec}</span>`
+                    ${(paciente.condicoesSaude || []).map(cond => 
+                      `<span class="px-2 py-1 rounded-full text-xs" style="background-color: #ede9fe; color: #5b21b6;">${escapeHtml(cond)}</span>`
                     ).join('')}
                   </div>
                 </div>
@@ -260,7 +269,7 @@ export const MapComponent = ({
             if (event.latLng && onPositionUpdate) {
               const lat = event.latLng.lat();
               const lng = event.latLng.lng();
-              onPositionUpdate(paciente.id, 'paciente', lat, lng);
+              onPositionUpdate(paciente.id.toString(), 'paciente', lat, lng);
             }
           });
         }
@@ -309,17 +318,12 @@ export const MapComponent = ({
         const infoWindow = new google.maps.InfoWindow({
           content: `
             <div class="p-3" style="min-width: 280px;">
-              <h3 class="font-bold text-lg mb-2" style="color: ${iconConfig.color};">${equipamento.nome}</h3>
+              <h3 class="font-bold text-lg mb-2" style="color: ${iconConfig.color};">${escapeHtml(equipamento.nome)}</h3>
               <div class="space-y-1 text-sm">
-                <p><strong>Tipo:</strong> ${equipamento.tipo}</p>
-                <p><strong>Endereço:</strong> ${equipamento.endereco}</p>
-                <p><strong>Bairro:</strong> ${equipamento.bairro}</p>
-                <p><strong>Telefone:</strong> ${equipamento.telefone || 'Não informado'}</p>
-                <p><strong>Horário:</strong> ${equipamento.horarioFuncionamento}</p>
-                <div class="mt-2 text-xs text-gray-600">
-                  <p><strong>Fonte:</strong> ${equipamento.fonte}</p>
-                  <p><strong>Data da Coleta:</strong> ${equipamento.dataColeta}</p>
-                </div>
+                <p><strong>Tipo:</strong> ${escapeHtml(equipamento.tipo)}</p>
+                <p><strong>Endereço:</strong> ${escapeHtml(equipamento.endereco)}</p>
+                <p><strong>Telefone:</strong> ${escapeHtml(equipamento.telefone)}</p>
+                <p><strong>Horário:</strong> ${escapeHtml(equipamento.horarioFuncionamento)}</p>
               </div>
             </div>
           `
@@ -336,7 +340,7 @@ export const MapComponent = ({
             if (event.latLng && onPositionUpdate) {
               const lat = event.latLng.lat();
               const lng = event.latLng.lng();
-              onPositionUpdate(equipamento.id, 'equipamento', lat, lng);
+              onPositionUpdate(equipamento.id.toString(), 'equipamento', lat, lng);
             }
           });
         }

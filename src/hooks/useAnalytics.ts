@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { type UBS, type Paciente, type EquipamentoSocial } from './useMockData';
+import type { UBS, Paciente, EquipamentoSocial } from '../../shared/schema';
 
 interface AnalyticsData {
   especialidades: Array<{ name: string; total: number; color: string }>;
@@ -51,12 +51,12 @@ export const useAnalytics = (
       .sort((a, b) => b.total - a.total);
   };
 
-  // Processar necessidades dos pacientes
+  // Processar condições de saúde dos pacientes
   const processNecessidades = (pacientesList: Paciente[]) => {
     const necessidadesCount: Record<string, number> = {};
     
     pacientesList.forEach(paciente => {
-      paciente.necessidades.forEach(nec => {
+      (paciente.condicoesSaude || []).forEach(nec => {
         necessidadesCount[nec] = (necessidadesCount[nec] || 0) + 1;
       });
     });
@@ -130,8 +130,8 @@ export const useAnalytics = (
       );
 
       const distancias = pacientesRegiao
-        .filter(p => p.distanciaUBS !== undefined)
-        .map(p => p.distanciaUBS!);
+        .filter(p => p.distanciaUbs !== undefined && p.distanciaUbs !== null)
+        .map(p => p.distanciaUbs!);
       
       const distanciaMedia = distancias.length > 0 
         ? distancias.reduce((sum, d) => sum + d, 0) / distancias.length 
@@ -165,8 +165,8 @@ export const useAnalytics = (
   // Calcular métricas gerais
   const calcularMetricas = (pacientesList: Paciente[]) => {
     const distancias = pacientesList
-      .filter(p => p.distanciaUBS !== undefined)
-      .map(p => p.distanciaUBS!);
+      .filter(p => p.distanciaUbs !== undefined && p.distanciaUbs !== null)
+      .map(p => p.distanciaUbs!);
     
     return {
       menorDistancia: distancias.length > 0 ? Math.min(...distancias) : 0,
@@ -174,7 +174,7 @@ export const useAnalytics = (
       mediaGeral: distancias.length > 0 
         ? distancias.reduce((sum, d) => sum + d, 0) / distancias.length 
         : 0,
-      pacientesSemVinculacao: pacientesList.filter(p => !p.ubsVinculada).length
+      pacientesSemVinculacao: pacientesList.filter(p => !p.ubsMaisProximaId).length
     };
   };
 

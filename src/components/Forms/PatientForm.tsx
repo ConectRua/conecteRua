@@ -11,18 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
 import { MapPin, Loader2 } from 'lucide-react';
-import { useMockData, type Paciente } from '@/hooks/useMockData';
+import { useApiData } from '@/hooks/useApiData';
+import type { InsertPaciente } from '../../../shared/schema';
+import { insertPacienteSchema } from '../../../shared/schema';
 import { toast } from 'sonner';
 
-const patientSchema = z.object({
-  nome: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  cns: z.string().min(15, 'CNS deve ter 15 dígitos').max(15, 'CNS deve ter 15 dígitos'),
-  endereco: z.string().min(5, 'Endereço é obrigatório'),
-  cep: z.string().regex(/^\d{5}-?\d{3}$/, 'CEP inválido'),
-  telefone: z.string().min(10, 'Telefone é obrigatório'),
-  idade: z.number().min(0).max(120),
-  genero: z.enum(['M', 'F', 'Outro']),
-  necessidades: z.array(z.string()).min(1, 'Selecione pelo menos uma necessidade'),
+// Use the shared schema from the backend for consistency
+const patientSchema = insertPacienteSchema.extend({
+  condicoesSaude: z.array(z.string()).min(1, 'Selecione pelo menos uma condição de saúde'),
 });
 
 type PatientFormData = z.infer<typeof patientSchema>;
@@ -30,26 +26,27 @@ type PatientFormData = z.infer<typeof patientSchema>;
 interface PatientFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAdd?: (paciente: Omit<Paciente, 'id'>) => void;
+  onAdd?: (paciente: InsertPaciente) => void;
 }
 
-const necessidadesOptions = [
-  'Clínica Geral',
-  'Pediatria',
-  'Ginecologia',
-  'Cardiologia',
+const condicoesSaudeOptions = [
   'Hipertensão',
   'Diabetes',
-  'Pré-natal',
-  'Saúde Mental',
-  'Odontologia',
-  'Check-up Geral',
-  'Acompanhamento Nutricional'
+  'Cardiopatia',
+  'Asma',
+  'Obesidade',
+  'Depressão',
+  'Ansiedade',
+  'Artrite',
+  'Osteoporose',
+  'Problemas Renais',
+  'Problemas Visuais',
+  'Problemas Auditivos'
 ];
 
 export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => {
-  const { addPaciente } = useMockData();
-  const [selectedNecessidades, setSelectedNecessidades] = useState<string[]>([]);
+  const { addPaciente } = useApiData();
+  const [selectedCondicoesSaude, setSelectedCondicoesSaude] = useState<string[]>([]);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
@@ -57,13 +54,11 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
     resolver: zodResolver(patientSchema),
     defaultValues: {
       nome: '',
-      cns: '',
       endereco: '',
       cep: '',
       telefone: '',
       idade: 0,
-      genero: 'F',
-      necessidades: [],
+      condicoesSaude: [],
     },
   });
 
@@ -133,7 +128,7 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
   const onSubmit = async (data: PatientFormData) => {
     console.log('=== INICIO onSubmit ===');
     console.log('Dados do formulário:', data);
-    console.log('Necessidades selecionadas:', selectedNecessidades);
+    console.log('Condições de saúde selecionadas:', selectedCondicoesSaude);
     console.log('Localização atual:', currentLocation);
     
     try {
@@ -145,16 +140,16 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
       
       console.log('Coordenadas a serem usadas:', coordinates);
 
-      const newPatient: Omit<Paciente, 'id'> = {
+      const newPatient: InsertPaciente = {
         nome: data.nome,
-        cns: data.cns,
         endereco: data.endereco,
         cep: data.cep,
         telefone: data.telefone,
         idade: data.idade,
-        genero: data.genero,
-        necessidades: selectedNecessidades,
-        ...coordinates,
+        condicoesSaude: selectedCondicoesSaude,
+        latitude: coordinates.latitude,
+        longitude: coordinates.longitude,
+        ativo: true,
       };
       
       console.log('Objeto paciente criado:', newPatient);
@@ -167,13 +162,12 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
         onAdd(newPatient);
       } else {
         console.log('Usando addPaciente do hook...');
-        const result = addPaciente(newPatient);
-        console.log('Resultado addPaciente:', result);
+        addPaciente(newPatient); // addPaciente uses mutation with automatic toast handling
       }
       
       toast.success('Paciente cadastrado com sucesso!');
       form.reset();
-      setSelectedNecessidades([]);
+      setSelectedCondicoesSaude([]);
       setCurrentLocation(null);
       onOpenChange(false);
       console.log('=== FIM onSubmit (sucesso) ===');
@@ -184,24 +178,24 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
     }
   };
 
-  const handleNecessidadeChange = (necessidade: string, checked: boolean) => {
-    console.log('handleNecessidadeChange:', { necessidade, checked });
+  const handleCondicaoSaudeChange = (condicao: string, checked: boolean) => {
+    console.log('handleCondicaoSaudeChange:', { condicao, checked });
     
-    let newNecessidades: string[];
+    let newCondicoes: string[];
     if (checked) {
-      newNecessidades = [...selectedNecessidades, necessidade];
+      newCondicoes = [...selectedCondicoesSaude, condicao];
     } else {
-      newNecessidades = selectedNecessidades.filter(n => n !== necessidade);
+      newCondicoes = selectedCondicoesSaude.filter(c => c !== condicao);
     }
     
-    console.log('Novas necessidades:', newNecessidades);
-    setSelectedNecessidades(newNecessidades);
+    console.log('Novas condições:', newCondicoes);
+    setSelectedCondicoesSaude(newCondicoes);
     
-    // Atualizar o formulário com as novas necessidades
-    form.setValue('necessidades', newNecessidades);
+    // Atualizar o formulário com as novas condições
+    form.setValue('condicoesSaude', newCondicoes);
     
     // Trigger validation manually
-    form.trigger('necessidades');
+    form.trigger('condicoesSaude');
   };
 
   return (
@@ -231,23 +225,6 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="cns"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Cartão Nacional de Saúde (CNS)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="000000000000000" 
-                        maxLength={15}
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
             <FormField
@@ -341,53 +318,31 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
               </Button>
             </div>
 
-            <FormField
-              control={form.control}
-              name="genero"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Gênero</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o gênero" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="F">Feminino</SelectItem>
-                      <SelectItem value="M">Masculino</SelectItem>
-                      <SelectItem value="Outro">Outro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
             <div>
-              <Label className="text-sm font-medium">Necessidades de Saúde</Label>
+              <Label className="text-sm font-medium">Condições de Saúde</Label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
-                {necessidadesOptions.map((necessidade) => (
-                  <div key={necessidade} className="flex items-center space-x-2">
+                {condicoesSaudeOptions.map((condicao) => (
+                  <div key={condicao} className="flex items-center space-x-2">
                     <Checkbox
-                      id={necessidade}
-                      checked={selectedNecessidades.includes(necessidade)}
+                      id={condicao}
+                      checked={selectedCondicoesSaude.includes(condicao)}
                       onCheckedChange={(checked) => 
-                        handleNecessidadeChange(necessidade, checked as boolean)
+                        handleCondicaoSaudeChange(condicao, checked as boolean)
                       }
                     />
                     <Label 
-                      htmlFor={necessidade}
+                      htmlFor={condicao}
                       className="text-sm font-normal cursor-pointer"
                     >
-                      {necessidade}
+                      {condicao}
                     </Label>
                   </div>
                 ))}
               </div>
-              {form.formState.errors.necessidades && (
+              {form.formState.errors.condicoesSaude && (
                 <p className="text-sm text-destructive mt-1">
-                  {form.formState.errors.necessidades.message}
+                  {form.formState.errors.condicoesSaude.message}
                 </p>
               )}
             </div>

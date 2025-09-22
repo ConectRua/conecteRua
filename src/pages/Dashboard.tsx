@@ -1,4 +1,3 @@
-import { useMockData } from '@/hooks/useMockData';
 import { useApiData } from '@/hooks/useApiData';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { StatsCard } from '@/components/Dashboard/StatsCard';
@@ -23,15 +22,8 @@ import {
 } from 'lucide-react';
 
 const Dashboard = () => {
-  // Try to use real API data first, fallback to mock data
-  const apiData = useApiData();
-  const mockData = useMockData();
-  
-  // Use API data if available and not errored, otherwise use mock data
-  const useRealData = import.meta.env.VITE_USE_REAL_API === 'true' || false;
-  
-  const dataSource = useRealData && !apiData.error ? apiData : mockData;
-  const { ubsList, ongsList, pacientesList, equipamentosSociais, getEstatisticas, loading } = dataSource;
+  // Use real API data directly
+  const { ubsList, ongsList, pacientesList, equipamentosSociais, getEstatisticas, loading, error } = useApiData();
   
   const analytics = useAnalytics(ubsList, pacientesList, equipamentosSociais);
   const stats = getEstatisticas();
