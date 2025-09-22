@@ -12,12 +12,15 @@ import {
   pacientes, 
   equipamentosSociais,
   auditLog,
+  geocodingCache,
   type User, 
   type InsertUser,
   type UBS,
   type ONG,
   type Paciente,
-  type EquipamentoSocial
+  type EquipamentoSocial,
+  type GeocodingCache,
+  type InsertGeocodingCache
 } from "../shared/schema";
 import { eq, sql } from "drizzle-orm";
 import { IStorage } from "./storage";
@@ -239,6 +242,28 @@ export class PostgreSQLStorage implements IStorage {
       Math.sin(dLng / 2) * Math.sin(dLng / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
+  }
+
+  // ============ GEOCODING CACHE METHODS ============
+  async getGeocodingCache(addressHash: string): Promise<GeocodingCache | null> {
+    const result = await db.select().from(geocodingCache).where(eq(geocodingCache.addressHash, addressHash)).limit(1);
+    return result[0] || null;
+  }
+
+  async setGeocodingCache(cacheData: InsertGeocodingCache): Promise<GeocodingCache> {
+    const result = await db.insert(geocodingCache).values(cacheData).returning();
+    return result[0];
+  }
+
+  async clearOldGeocodingCache(daysOld: number = 30): Promise<number> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+    
+    const result = await db.delete(geocodingCache).where(
+      sql`${geocodingCache.createdAt} < ${cutoffDate.toISOString()}`
+    );
+    
+    return result.rowCount || 0;
   }
 
   // ============ UTILITY METHODS ============

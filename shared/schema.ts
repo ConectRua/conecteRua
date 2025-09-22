@@ -163,6 +163,29 @@ export const auditLog = pgTable("audit_log", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// ============ GEOCODING CACHE ============
+export const geocodingCache = pgTable("geocoding_cache", {
+  id: serial("id").primaryKey(),
+  addressHash: varchar("address_hash", { length: 64 }).unique().notNull(),
+  address: text("address").notNull(),
+  cep: varchar("cep", { length: 10 }).notNull(),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
+  source: varchar("source", { length: 20 }).notNull(), // 'nominatim', 'viacep', 'error'
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertGeocodingCacheSchema = createInsertSchema(geocodingCache).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const selectGeocodingCacheSchema = createSelectSchema(geocodingCache);
+
+export type GeocodingCache = typeof geocodingCache.$inferSelect;
+export type InsertGeocodingCache = z.infer<typeof insertGeocodingCacheSchema>;
+
 // ============ RELATIONS ============
 export const usersRelations = relations(users, ({ many }) => ({
   auditLogs: many(auditLog),

@@ -3,7 +3,7 @@
 
 import session from "express-session";
 import createMemoryStore from "memorystore";
-import { User, InsertUser, UBS, ONG, Paciente, EquipamentoSocial } from "../shared/schema";
+import { User, InsertUser, UBS, ONG, Paciente, EquipamentoSocial, GeocodingCache, InsertGeocodingCache } from "../shared/schema";
 
 const MemoryStore = createMemoryStore(session);
 
@@ -50,6 +50,11 @@ export interface IStorage {
   // Geographic queries
   findNearbyUBS(latitude: number, longitude: number, radiusKm?: number): Promise<UBS[]>;
   calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number;
+  
+  // Geocoding cache methods
+  getGeocodingCache(addressHash: string): Promise<GeocodingCache | null>;
+  setGeocodingCache(cache: InsertGeocodingCache): Promise<GeocodingCache>;
+  clearOldGeocodingCache(daysOld?: number): Promise<number>;
 }
 
 export class MemStorage implements IStorage {
@@ -64,6 +69,10 @@ export class MemStorage implements IStorage {
   private ongsList: ONG[] = [];
   private pacientesList: Paciente[] = [];
   private equipamentosSociais: EquipamentoSocial[] = [];
+  
+  // Geocoding cache storage
+  private geocodingCache: Map<string, GeocodingCache> = new Map();
+  private nextCacheId = 1;
 
   public sessionStore: session.Store;
 
@@ -536,6 +545,35 @@ export class MemStorage implements IStorage {
       Math.sin(dLng / 2) * Math.sin(dLng / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
+  }
+  
+  // Geocoding cache methods
+  async getGeocodingCache(addressHash: string): Promise<GeocodingCache | null> {
+    return this.geocodingCache.get(addressHash) || null;
+  }
+  
+  async setGeocodingCache(cacheData: InsertGeocodingCache): Promise<GeocodingCache> {
+    const cache: GeocodingCache = {
+      id: this.nextCacheId++,
+      ...cacheData,
+      createdAt: new Date(),
+    };
+    this.geocodingCache.set(cacheData.addressHash, cache);
+    return cache;
+  }
+  
+  async clearOldGeocodingCache(daysOld: number = 30): Promise<number> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+    
+    let deletedCount = 0;
+    for (const [hash, cache] of this.geocodingCache) {
+      if (cache.createdAt && cache.createdAt < cutoffDate) {
+        this.geocodingCache.delete(hash);
+        deletedCount++;
+      }
+    }
+    return deletedCount;
   }
 }
 
