@@ -1,5 +1,5 @@
 // Protected route component for authentication
-// Mock implementation for frontend-only authentication
+// Real backend authentication integration
 
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2 } from "lucide-react";
