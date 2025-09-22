@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { IStorage } from '../storage';
 
 export interface Coordinates {
   latitude: number;
@@ -20,13 +21,13 @@ export interface GeocodeResult {
 /**
  * Serviço de geocodificação que utiliza Nominatim (OpenStreetMap) como fonte principal
  * e ViaCEP como fallback para CEPs brasileiros.
- * Implementa cache para evitar chamadas repetidas às APIs.
+ * Implementa cache persistente no banco de dados para evitar chamadas repetidas às APIs.
  */
 export class GeocodingService {
-  private cache = new Map<string, GeocodeResult>();
+  private memoryCache = new Map<string, GeocodeResult>();
   
-  constructor() {
-    // Constructor vazio - o cache será implementado na próxima tarefa
+  constructor(private storage: IStorage) {
+    // Agora usa o storage para cache persistente no banco
   }
 
   /**
@@ -37,26 +38,48 @@ export class GeocodingService {
     const cacheKey = this.generateCacheKey(address);
     
     // Verificar cache em memória primeiro
-    if (this.cache.has(cacheKey)) {
-      return this.cache.get(cacheKey)!;
+    if (this.memoryCache.has(cacheKey)) {
+      return this.memoryCache.get(cacheKey)!;
+    }
+    
+    // Verificar cache do banco de dados
+    try {
+      const cached = await this.storage.getGeocodingCache(cacheKey);
+      if (cached) {
+        const cachedResult: GeocodeResult = {
+          address,
+          coordinates: cached.latitude && cached.longitude ? {
+            latitude: cached.latitude,
+            longitude: cached.longitude
+          } : null,
+          source: 'cache',
+          error: cached.errorMessage || undefined
+        };
+        
+        // Adicionar ao cache em memória para próximas consultas
+        this.memoryCache.set(cacheKey, cachedResult);
+        return cachedResult;
+      }
+    } catch (error) {
+      console.warn('Erro ao consultar cache de geocodificação:', error);
     }
     
     try {
       // 1. Tentar Nominatim primeiro
       const nominatimResult = await this.tryNominatim(endereco, cep);
       if (nominatimResult.coordinates) {
-        this.cache.set(cacheKey, nominatimResult);
+        await this.saveToCaches(cacheKey, address, nominatimResult);
         return nominatimResult;
       }
       
       // 2. Fallback para ViaCEP se Nominatim falhar
       const viacepResult = await this.tryViaCEP(cep);
       if (viacepResult.coordinates) {
-        this.cache.set(cacheKey, viacepResult);
+        await this.saveToCaches(cacheKey, address, viacepResult);
         return viacepResult;
       }
       
-      // 3. Se ambos falharem
+      // 3. Se ambos falharem, ainda salvar no cache para evitar consultas repetidas
       const errorResult: GeocodeResult = {
         address,
         coordinates: null,
@@ -64,6 +87,7 @@ export class GeocodingService {
         error: 'Não foi possível geocodificar o endereço'
       };
       
+      await this.saveToCaches(cacheKey, address, errorResult);
       return errorResult;
       
     } catch (error) {
@@ -261,10 +285,33 @@ export class GeocodingService {
   }
 
   /**
+   * Salva resultado nos caches (memória e banco de dados)
+   */
+  private async saveToCaches(cacheKey: string, address: Address, result: GeocodeResult): Promise<void> {
+    // Salvar no cache em memória
+    this.memoryCache.set(cacheKey, result);
+    
+    // Salvar no cache do banco de dados
+    try {
+      await this.storage.setGeocodingCache({
+        addressHash: cacheKey,
+        address: `${address.endereco}, ${address.cep}`,
+        cep: address.cep,
+        latitude: result.coordinates?.latitude || null,
+        longitude: result.coordinates?.longitude || null,
+        source: result.source,
+        errorMessage: result.error || null
+      });
+    } catch (error) {
+      console.warn('Erro ao salvar no cache de geocodificação:', error);
+    }
+  }
+
+  /**
    * Limpa o cache em memória (útil para testes)
    */
   clearCache(): void {
-    this.cache.clear();
+    this.memoryCache.clear();
   }
 
   /**
@@ -272,11 +319,25 @@ export class GeocodingService {
    */
   getCacheStats() {
     return {
-      size: this.cache.size,
-      keys: Array.from(this.cache.keys())
+      size: this.memoryCache.size,
+      keys: Array.from(this.memoryCache.keys())
     };
+  }
+
+  /**
+   * Limpa cache antigo do banco de dados
+   */
+  async clearOldCache(daysOld: number = 30): Promise<number> {
+    try {
+      return await this.storage.clearOldGeocodingCache(daysOld);
+    } catch (error) {
+      console.warn('Erro ao limpar cache antigo:', error);
+      return 0;
+    }
   }
 }
 
-// Instância singleton do serviço
-export const geocodingService = new GeocodingService();
+// Factory function para criar instância do serviço com storage
+export function createGeocodingService(storage: IStorage): GeocodingService {
+  return new GeocodingService(storage);
+}
