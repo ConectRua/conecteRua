@@ -1,4 +1,5 @@
 import { useMockData } from '@/hooks/useMockData';
+import { useApiData } from '@/hooks/useApiData';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { StatsCard } from '@/components/Dashboard/StatsCard';
 import { MapComponent } from '@/components/Map/MapComponent';
@@ -22,7 +23,16 @@ import {
 } from 'lucide-react';
 
 const Dashboard = () => {
-  const { ubsList, ongsList, pacientesList, equipamentosSociais, getEstatisticas, loading } = useMockData();
+  // Try to use real API data first, fallback to mock data
+  const apiData = useApiData();
+  const mockData = useMockData();
+  
+  // Use API data if available and not errored, otherwise use mock data
+  const useRealData = import.meta.env.VITE_USE_REAL_API === 'true' || false;
+  
+  const dataSource = useRealData && !apiData.error ? apiData : mockData;
+  const { ubsList, ongsList, pacientesList, equipamentosSociais, getEstatisticas, loading } = dataSource;
+  
   const analytics = useAnalytics(ubsList, pacientesList, equipamentosSociais);
   const stats = getEstatisticas();
 
@@ -163,7 +173,7 @@ const Dashboard = () => {
                   {Object.entries(stats.coberturaPorRegiao).map(([regiao, count]) => (
                     <div key={regiao} className="flex items-center justify-between">
                       <span className="text-sm font-medium">{regiao}</span>
-                      <Badge variant="secondary">{count} pacientes</Badge>
+                      <Badge variant="secondary">{Number(count) || 0} pacientes</Badge>
                     </div>
                   ))}
                   <div className="mt-4 p-3 bg-accent rounded-lg">
