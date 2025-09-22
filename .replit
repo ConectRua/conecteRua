@@ -45,6 +45,10 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
+localPort = 5001
+externalPort = 8099
+
+[[ports]]
 localPort = 8081
 externalPort = 8081
 
@@ -94,13 +98,13 @@ externalPort = 4200
 exposeLocalhost = true
 
 [[ports]]
-localPort = 42719
-externalPort = 9000
-
-[[ports]]
 localPort = 44047
 externalPort = 6800
 exposeLocalhost = true
+
+[[ports]]
+localPort = 44519
+externalPort = 9000
 
 [agent]
 integrations = ["javascript_auth_all_persistance:1.0.0", "javascript_database:1.0.0"]
