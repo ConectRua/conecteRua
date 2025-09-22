@@ -1045,6 +1045,56 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Estatísticas endpoint
+  app.get("/api/estatisticas", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      // Buscar dados de todas as entidades
+      const [ubsList, ongsList, pacientesList, equipamentosSociais] = await Promise.all([
+        storage.getUBSList(),
+        storage.getONGList(),
+        storage.getPacientesList(),
+        storage.getEquipamentosSociais()
+      ]);
+      
+      // Calcular estatísticas básicas
+      const pacientesVinculados = pacientesList.filter(p => p.ubsMaisProximaId).length;
+      
+      // Calcular cobertura por região (simplificado)
+      const coberturaPorRegiao: Record<string, number> = {};
+      pacientesList.forEach(paciente => {
+        const regiao = paciente.endereco.includes('Samambaia') ? 'Samambaia' : 
+                      paciente.endereco.includes('Recanto') ? 'Recanto das Emas' :
+                      paciente.endereco.includes('Águas Claras') ? 'Águas Claras' : 'Outras';
+        coberturaPorRegiao[regiao] = (coberturaPorRegiao[regiao] || 0) + 1;
+      });
+      
+      // Calcular distância média
+      const pacientesComDistancia = pacientesList.filter(p => p.distanciaUbs !== null);
+      const distanciaMedia = pacientesComDistancia.length > 0 
+        ? pacientesComDistancia.reduce((acc, p) => acc + (p.distanciaUbs || 0), 0) / pacientesComDistancia.length
+        : 0;
+      
+      const estatisticas = {
+        totalUBS: ubsList.length,
+        totalONGs: ongsList.length,
+        totalPacientes: pacientesList.length,
+        totalEquipamentosSociais: equipamentosSociais.length,
+        pacientesVinculados,
+        coberturaPorRegiao,
+        distanciaMedia: Math.round(distanciaMedia * 100) / 100
+      };
+      
+      res.json(estatisticas);
+    } catch (error) {
+      console.error("Error fetching statistics:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
