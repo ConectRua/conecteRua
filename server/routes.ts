@@ -186,7 +186,65 @@ export function registerRoutes(app: Express): Server {
           .sort((a, b) => a.distancia_km - b.distancia_km);
       }
       
-      res.json(result);
+      // Transformar resultado para formato unificado esperado pelo frontend
+      const servicosUnificados: any[] = [];
+      
+      // Adicionar UBS
+      if (result.ubs) {
+        result.ubs.forEach((ubs: any) => {
+          servicosUnificados.push({
+            id: ubs.id.toString(),
+            nome: ubs.nome,
+            endereco: ubs.endereco,
+            telefone: ubs.telefone || '',
+            tipo: 'UBS' as const,
+            distancia: ubs.distancia_km || 0,
+            horarioFuncionamento: ubs.horarioFuncionamento,
+            especialidades: ubs.especialidades || []
+          });
+        });
+      }
+      
+      // Adicionar ONGs
+      if (result.ongs) {
+        result.ongs.forEach((ong: any) => {
+          servicosUnificados.push({
+            id: ong.id.toString(),
+            nome: ong.nome,
+            endereco: ong.endereco,
+            telefone: ong.telefone || '',
+            tipo: 'ONG' as const,
+            distancia: ong.distancia_km || 0,
+            horarioFuncionamento: ong.horarioFuncionamento,
+            servicos: ong.servicos || []
+          });
+        });
+      }
+      
+      // Adicionar Equipamentos Sociais
+      if (result.equipamentos) {
+        result.equipamentos.forEach((eq: any) => {
+          servicosUnificados.push({
+            id: eq.id.toString(),
+            nome: eq.nome,
+            endereco: eq.endereco,
+            telefone: eq.telefone || '',
+            tipo: 'Equipamento Social' as const,
+            distancia: eq.distancia_km || 0,
+            horarioFuncionamento: eq.horarioFuncionamento,
+            servicos: eq.servicos || []
+          });
+        });
+      }
+      
+      // Ordenar por distância
+      servicosUnificados.sort((a, b) => a.distancia - b.distancia);
+      
+      res.json({
+        ...result,
+        servicos: servicosUnificados,
+        total: servicosUnificados.length
+      });
     } catch (error) {
       console.error("Erro na busca por proximidade:", error);
       res.status(500).json({ error: "Erro interno do servidor" });

@@ -58,13 +58,19 @@ export const ubs = pgTable("ubs", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const insertUBSSchema = createInsertSchema(ubs).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
+export const insertUBSSchema = z.object({
+  nome: z.string().min(1),
+  endereco: z.string().min(1),
+  cep: z.string().regex(/^\d{5}-?\d{3}$/),
+  latitude: z.number().nullable().optional(),
+  longitude: z.number().nullable().optional(),
+  telefone: z.string().nullable().optional(),
+  email: z.string().email().nullable().optional(),
+  horarioFuncionamento: z.string().nullable().optional(),
+  especialidades: z.array(z.string()).optional(),
+  gestor: z.string().nullable().optional(),
+  ativo: z.boolean().optional().default(true),
 });
-
-export const selectUBSSchema = createSelectSchema(ubs);
 
 export type UBS = typeof ubs.$inferSelect;
 export type InsertUBS = z.infer<typeof insertUBSSchema>;
@@ -87,13 +93,19 @@ export const ongs = pgTable("ongs", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const insertONGSchema = createInsertSchema(ongs).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
+export const insertONGSchema = z.object({
+  nome: z.string().min(1),
+  endereco: z.string().min(1),
+  cep: z.string().regex(/^\d{5}-?\d{3}$/),
+  latitude: z.number().nullable().optional(),
+  longitude: z.number().nullable().optional(),
+  telefone: z.string().nullable().optional(),
+  email: z.string().email().nullable().optional(),
+  site: z.string().nullable().optional(),
+  servicos: z.array(z.string()).optional(),
+  responsavel: z.string().nullable().optional(),
+  ativo: z.boolean().optional().default(true),
 });
-
-export const selectONGSchema = createSelectSchema(ongs);
 
 export type ONG = typeof ongs.$inferSelect;
 export type InsertONG = z.infer<typeof insertONGSchema>;
@@ -116,13 +128,19 @@ export const pacientes = pgTable("pacientes", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const insertPacienteSchema = createInsertSchema(pacientes).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
+export const insertPacienteSchema = z.object({
+  nome: z.string().min(1),
+  endereco: z.string().min(1),
+  cep: z.string().regex(/^\d{5}-?\d{3}$/),
+  latitude: z.number().nullable().optional(),
+  longitude: z.number().nullable().optional(),
+  telefone: z.string().nullable().optional(),
+  idade: z.number().min(0).optional(),
+  condicoesSaude: z.array(z.string()).optional(),
+  ubsMaisProximaId: z.number().nullable().optional(),
+  distanciaUbs: z.number().nullable().optional(),
+  ativo: z.boolean().optional().default(true),
 });
-
-export const selectPacienteSchema = createSelectSchema(pacientes);
 
 export type Paciente = typeof pacientes.$inferSelect;
 export type InsertPaciente = z.infer<typeof insertPacienteSchema>;
@@ -145,13 +163,19 @@ export const equipamentosSociais = pgTable("equipamentos_sociais", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const insertEquipamentoSocialSchema = createInsertSchema(equipamentosSociais).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
+export const insertEquipamentoSocialSchema = z.object({
+  nome: z.string().min(1),
+  tipo: z.string().min(1),
+  endereco: z.string().min(1),
+  cep: z.string().regex(/^\d{5}-?\d{3}$/),
+  latitude: z.number().nullable().optional(),
+  longitude: z.number().nullable().optional(),
+  telefone: z.string().nullable().optional(),
+  email: z.string().email().nullable().optional(),
+  horarioFuncionamento: z.string().nullable().optional(),
+  servicos: z.array(z.string()).optional(),
+  ativo: z.boolean().optional().default(true),
 });
-
-export const selectEquipamentoSocialSchema = createSelectSchema(equipamentosSociais);
 
 export type EquipamentoSocial = typeof equipamentosSociais.$inferSelect;
 export type InsertEquipamentoSocial = z.infer<typeof insertEquipamentoSocialSchema>;
@@ -183,12 +207,15 @@ export const geocodingCache = pgTable("geocoding_cache", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const insertGeocodingCacheSchema = createInsertSchema(geocodingCache).omit({
-  id: true,
-  createdAt: true,
+export const insertGeocodingCacheSchema = z.object({
+  addressHash: z.string().min(1),
+  address: z.string().min(1),
+  cep: z.string().regex(/^\d{5}-?\d{3}$/),
+  latitude: z.number().nullable().optional(),
+  longitude: z.number().nullable().optional(),
+  source: z.string().min(1),
+  errorMessage: z.string().nullable().optional(),
 });
-
-export const selectGeocodingCacheSchema = createSelectSchema(geocodingCache);
 
 export type GeocodingCache = typeof geocodingCache.$inferSelect;
 export type InsertGeocodingCache = z.infer<typeof insertGeocodingCacheSchema>;
