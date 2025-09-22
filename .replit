@@ -98,6 +98,10 @@ localPort = 44047
 externalPort = 6800
 exposeLocalhost = true
 
+[[ports]]
+localPort = 44529
+externalPort = 8008
+
 [agent]
 integrations = ["javascript_auth_all_persistance:1.0.0", "javascript_database:1.0.0"]
 expertMode = true
