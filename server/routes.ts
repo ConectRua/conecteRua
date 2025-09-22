@@ -5,6 +5,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
+import { createGeocodingService } from "./services/geocoding";
 import { insertUBSSchema, insertONGSchema, insertPacienteSchema, insertEquipamentoSocialSchema } from "../shared/schema";
 import { z } from "zod";
 import multer from "multer";
@@ -71,7 +72,10 @@ export function registerRoutes(app: Express): Server {
   // Setup authentication routes: /api/register, /api/login, /api/logout, /api/user
   setupAuth(app);
 
-  // ============ ENDPOINTS GEOGRÁFICOS (FASE 3) ============
+  // Criar instância do serviço de geocodificação
+  const geocodingService = createGeocodingService(storage);
+
+  // ============ ENDPOINTS GEOGRÁFICOS (FASE 4) ============
   
   // Geocodificar endereço
   app.post("/api/geocode", async (req, res) => {
@@ -87,15 +91,28 @@ export function registerRoutes(app: Express): Server {
       
       const { endereco, cep } = validation.data;
       
-      // Implementação básica - em produção usar Nominatim/ViaCEP
-      const mockCoords = {
-        latitude: -15.7942 + (Math.random() - 0.5) * 0.1,
-        longitude: -47.8822 + (Math.random() - 0.5) * 0.1,
+      // Usar serviço real de geocodificação com Nominatim e ViaCEP
+      const result = await geocodingService.geocodeAddress(endereco, cep);
+      
+      // Transformar resultado para formato compatível com API anterior
+      const response = {
+        latitude: result.coordinates?.latitude || null,
+        longitude: result.coordinates?.longitude || null,
         endereco_completo: `${endereco}, CEP: ${cep}`,
-        fonte: "mock"
+        fonte: result.source,
+        sucesso: !!result.coordinates,
+        erro: result.error || null
       };
       
-      res.json(mockCoords);
+      if (!result.coordinates) {
+        return res.status(404).json({
+          error: "Não foi possível geocodificar o endereço",
+          details: result.error || "Coordenadas não encontradas",
+          ...response
+        });
+      }
+      
+      res.json(response);
     } catch (error) {
       console.error("Erro na geocodificação:", error);
       res.status(500).json({ error: "Erro interno do servidor" });
@@ -232,6 +249,81 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: "Erro interno do servidor" });
     }
   });
+
+  // Geocodificação em lote
+  app.post("/api/geocode/batch", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      const addressesSchema = z.object({
+        addresses: z.array(z.object({
+          id: z.string().optional(),
+          endereco: z.string().min(1, "Endereço é obrigatório"),
+          cep: z.string().regex(/^\d{5}-?\d{3}$/, "CEP deve estar no formato 00000-000")
+        })).min(1).max(100) // Máximo 100 endereços por vez
+      });
+      
+      const validation = addressesSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ error: "Dados inválidos", details: validation.error.issues });
+      }
+      
+      const { addresses } = validation.data;
+      const results = [];
+      
+      // Processar em lotes pequenos para não sobrecarregar as APIs
+      for (const address of addresses) {
+        try {
+          const result = await geocodingService.geocodeAddress(address.endereco, address.cep);
+          
+          results.push({
+            id: address.id,
+            endereco: address.endereco,
+            cep: address.cep,
+            latitude: result.coordinates?.latitude || null,
+            longitude: result.coordinates?.longitude || null,
+            fonte: result.source,
+            sucesso: !!result.coordinates,
+            erro: result.error || null
+          });
+          
+          // Pequeno delay entre requisições para ser respeitoso com as APIs
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+        } catch (error) {
+          results.push({
+            id: address.id,
+            endereco: address.endereco,
+            cep: address.cep,
+            latitude: null,
+            longitude: null,
+            fonte: 'error',
+            sucesso: false,
+            erro: (error as Error).message || 'Erro desconhecido'
+          });
+        }
+      }
+      
+      const successCount = results.filter(r => r.sucesso).length;
+      const errorCount = results.length - successCount;
+      
+      res.json({
+        resultados: results,
+        estatisticas: {
+          total: results.length,
+          sucessos: successCount,
+          erros: errorCount,
+          taxa_sucesso: Math.round((successCount / results.length) * 100)
+        }
+      });
+      
+    } catch (error) {
+      console.error("Erro na geocodificação em lote:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
   
   // Upload de planilhas
   app.post("/api/upload/planilha", upload.single('arquivo'), async (req, res) => {
@@ -268,7 +360,7 @@ export function registerRoutes(app: Express): Server {
             
             switch (tipo) {
               case 'ubs':
-                validacao = insertUBSSchema.safeParse({
+                const ubsData = {
                   nome: row['nome'] || row['Nome'] || row['NOME'],
                   endereco: row['endereco'] || row['Endereco'] || row['ENDERECO'],
                   cep: row['cep'] || row['CEP'],
@@ -276,7 +368,23 @@ export function registerRoutes(app: Express): Server {
                   email: row['email'] || row['Email'],
                   especialidades: row['especialidades'] ? [row['especialidades']] : [],
                   gestor: row['gestor'] || row['Gestor']
-                });
+                };
+                
+                // Geocodificar se endereço e CEP estão presentes
+                if (ubsData.endereco && ubsData.cep) {
+                  try {
+                    const geocodeResult = await geocodingService.geocodeAddress(ubsData.endereco, ubsData.cep);
+                    if (geocodeResult.coordinates) {
+                      (ubsData as any).latitude = geocodeResult.coordinates.latitude;
+                      (ubsData as any).longitude = geocodeResult.coordinates.longitude;
+                    }
+                  } catch (geoError) {
+                    // Continuar mesmo se geocodificação falhar
+                    console.warn(`Erro ao geocodificar UBS ${ubsData.nome}:`, geoError);
+                  }
+                }
+                
+                validacao = insertUBSSchema.safeParse(ubsData);
                 if (validacao.success) {
                   await storage.createUBS(validacao.data);
                   registrosImportados++;
@@ -284,7 +392,7 @@ export function registerRoutes(app: Express): Server {
                 break;
                 
               case 'ongs':
-                validacao = insertONGSchema.safeParse({
+                const ongData = {
                   nome: row['nome'] || row['Nome'] || row['NOME'],
                   endereco: row['endereco'] || row['Endereco'] || row['ENDERECO'],
                   cep: row['cep'] || row['CEP'],
@@ -293,7 +401,22 @@ export function registerRoutes(app: Express): Server {
                   site: row['site'] || row['Site'],
                   servicos: row['servicos'] ? [row['servicos']] : [],
                   responsavel: row['responsavel'] || row['Responsavel']
-                });
+                };
+                
+                // Geocodificar se endereço e CEP estão presentes
+                if (ongData.endereco && ongData.cep) {
+                  try {
+                    const geocodeResult = await geocodingService.geocodeAddress(ongData.endereco, ongData.cep);
+                    if (geocodeResult.coordinates) {
+                      (ongData as any).latitude = geocodeResult.coordinates.latitude;
+                      (ongData as any).longitude = geocodeResult.coordinates.longitude;
+                    }
+                  } catch (geoError) {
+                    console.warn(`Erro ao geocodificar ONG ${ongData.nome}:`, geoError);
+                  }
+                }
+                
+                validacao = insertONGSchema.safeParse(ongData);
                 if (validacao.success) {
                   await storage.createONG(validacao.data);
                   registrosImportados++;
@@ -301,14 +424,29 @@ export function registerRoutes(app: Express): Server {
                 break;
                 
               case 'pacientes':
-                validacao = insertPacienteSchema.safeParse({
+                const pacienteData = {
                   nome: row['nome'] || row['Nome'] || row['NOME'],
                   endereco: row['endereco'] || row['Endereco'] || row['ENDERECO'],
                   cep: row['cep'] || row['CEP'],
                   telefone: row['telefone'] || row['Telefone'],
                   idade: parseInt(row['idade'] || row['Idade'] || '0'),
                   condicoesSaude: row['condicoes'] ? [row['condicoes']] : []
-                });
+                };
+                
+                // Geocodificar se endereço e CEP estão presentes
+                if (pacienteData.endereco && pacienteData.cep) {
+                  try {
+                    const geocodeResult = await geocodingService.geocodeAddress(pacienteData.endereco, pacienteData.cep);
+                    if (geocodeResult.coordinates) {
+                      (pacienteData as any).latitude = geocodeResult.coordinates.latitude;
+                      (pacienteData as any).longitude = geocodeResult.coordinates.longitude;
+                    }
+                  } catch (geoError) {
+                    console.warn(`Erro ao geocodificar paciente ${pacienteData.nome}:`, geoError);
+                  }
+                }
+                
+                validacao = insertPacienteSchema.safeParse(pacienteData);
                 if (validacao.success) {
                   await storage.createPaciente(validacao.data);
                   registrosImportados++;
@@ -316,7 +454,7 @@ export function registerRoutes(app: Express): Server {
                 break;
                 
               case 'equipamentos':
-                validacao = insertEquipamentoSocialSchema.safeParse({
+                const equipamentoData = {
                   nome: row['nome'] || row['Nome'] || row['NOME'],
                   tipo: row['tipo'] || row['Tipo'] || 'CRAS',
                   endereco: row['endereco'] || row['Endereco'] || row['ENDERECO'],
@@ -324,7 +462,22 @@ export function registerRoutes(app: Express): Server {
                   telefone: row['telefone'] || row['Telefone'],
                   email: row['email'] || row['Email'],
                   servicos: row['servicos'] ? [row['servicos']] : []
-                });
+                };
+                
+                // Geocodificar se endereço e CEP estão presentes
+                if (equipamentoData.endereco && equipamentoData.cep) {
+                  try {
+                    const geocodeResult = await geocodingService.geocodeAddress(equipamentoData.endereco, equipamentoData.cep);
+                    if (geocodeResult.coordinates) {
+                      (equipamentoData as any).latitude = geocodeResult.coordinates.latitude;
+                      (equipamentoData as any).longitude = geocodeResult.coordinates.longitude;
+                    }
+                  } catch (geoError) {
+                    console.warn(`Erro ao geocodificar equipamento ${equipamentoData.nome}:`, geoError);
+                  }
+                }
+                
+                validacao = insertEquipamentoSocialSchema.safeParse(equipamentoData);
                 if (validacao.success) {
                   await storage.createEquipamentoSocial(validacao.data);
                   registrosImportados++;

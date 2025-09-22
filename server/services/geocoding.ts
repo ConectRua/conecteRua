@@ -21,13 +21,89 @@ export interface GeocodeResult {
 /**
  * Serviço de geocodificação que utiliza Nominatim (OpenStreetMap) como fonte principal
  * e ViaCEP como fallback para CEPs brasileiros.
- * Implementa cache persistente no banco de dados para evitar chamadas repetidas às APIs.
+ * Implementa cache persistente no banco de dados e rate limiting para evitar bloqueio das APIs.
  */
 export class GeocodingService {
   private memoryCache = new Map<string, GeocodeResult>();
+  private requestQueue: Array<() => Promise<any>> = [];
+  private isProcessingQueue = false;
+  private lastRequestTime = 0;
+  private readonly minRequestInterval = 1100; // 1.1 segundos entre requisições (respeitando limite Nominatim)
   
   constructor(private storage: IStorage) {
-    // Agora usa o storage para cache persistente no banco
+    // Agora usa o storage para cache persistente no banco e rate limiting
+  }
+
+  /**
+   * Processa a fila de requisições com rate limiting
+   */
+  private async processQueue(): Promise<void> {
+    if (this.isProcessingQueue || this.requestQueue.length === 0) return;
+    
+    this.isProcessingQueue = true;
+    
+    while (this.requestQueue.length > 0) {
+      const request = this.requestQueue.shift();
+      if (!request) break;
+      
+      // Garantir intervalo mínimo entre requisições
+      const timeSinceLastRequest = Date.now() - this.lastRequestTime;
+      if (timeSinceLastRequest < this.minRequestInterval) {
+        await this.delay(this.minRequestInterval - timeSinceLastRequest);
+      }
+      
+      try {
+        await request();
+      } catch (error) {
+        console.warn('Erro ao processar requisição da fila:', error);
+      }
+      
+      this.lastRequestTime = Date.now();
+    }
+    
+    this.isProcessingQueue = false;
+  }
+
+  /**
+   * Adiciona requisição à fila com rate limiting
+   */
+  private queueRequest<T>(requestFn: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const wrappedRequest = async () => {
+        try {
+          const result = await requestFn();
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      
+      this.requestQueue.push(wrappedRequest);
+      this.processQueue();
+    });
+  }
+
+  /**
+   * Faz requisição HTTP com timeout usando AbortController
+   */
+  private async fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs: number = 8000): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error(`Timeout após ${timeoutMs}ms`);
+      }
+      throw error;
+    }
   }
 
   /**
@@ -140,63 +216,65 @@ export class GeocodingService {
   }
 
   /**
-   * Tenta geocodificar usando a API do Nominatim (OpenStreetMap)
+   * Tenta geocodificar usando a API do Nominatim (OpenStreetMap) com rate limiting
    */
   private async tryNominatim(endereco: string, cep: string): Promise<GeocodeResult> {
     const address: Address = { endereco, cep };
     
-    try {
-      // Construir query de busca otimizada para Brasil
-      const query = `${endereco}, ${cep}, Brasil`;
-      const encodedQuery = encodeURIComponent(query);
-      
-      const url = `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&limit=1&countrycodes=br&addressdetails=1`;
-      
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': 'Georeferenciamento-Saude-DF/1.0 (https://geosaude.replit.app)'
+    return this.queueRequest(async () => {
+      try {
+        // Construir query de busca otimizada para Brasil
+        const query = `${endereco}, ${cep}, Brasil`;
+        const encodedQuery = encodeURIComponent(query);
+        
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&limit=1&countrycodes=br&addressdetails=1`;
+        
+        const response = await this.fetchWithTimeout(url, {
+          headers: {
+            'User-Agent': 'Georeferenciamento-Saude-DF/1.0 (https://geosaude.replit.app)'
+          }
+        }, 8000);
+        
+        if (!response.ok) {
+          throw new Error(`Nominatim API error: ${response.status}`);
         }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Nominatim API error: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data && data.length > 0) {
-        const result = data[0];
-        const coordinates: Coordinates = {
-          latitude: parseFloat(result.lat),
-          longitude: parseFloat(result.lon)
-        };
+        
+        const data = await response.json();
+        
+        if (data && data.length > 0) {
+          const result = data[0];
+          const coordinates: Coordinates = {
+            latitude: parseFloat(result.lat),
+            longitude: parseFloat(result.lon)
+          };
+          
+          return {
+            address,
+            coordinates,
+            source: 'nominatim'
+          };
+        }
         
         return {
           address,
-          coordinates,
-          source: 'nominatim'
+          coordinates: null,
+          source: 'nominatim',
+          error: 'Endereço não encontrado no Nominatim'
+        };
+        
+      } catch (error) {
+        return {
+          address,
+          coordinates: null,
+          source: 'nominatim',
+          error: `Erro Nominatim: ${error.message}`
         };
       }
-      
-      return {
-        address,
-        coordinates: null,
-        source: 'nominatim',
-        error: 'Endereço não encontrado no Nominatim'
-      };
-      
-    } catch (error) {
-      return {
-        address,
-        coordinates: null,
-        source: 'nominatim',
-        error: `Erro Nominatim: ${error.message}`
-      };
-    }
+    });
   }
 
   /**
-   * Tenta geocodificar usando a API do ViaCEP
+   * Tenta geocodificar usando a API do ViaCEP (sem fila para evitar deadlock)
    */
   private async tryViaCEP(cep: string): Promise<GeocodeResult> {
     const address: Address = { endereco: '', cep };
@@ -216,7 +294,7 @@ export class GeocodingService {
       
       const url = `https://viacep.com.br/ws/${cleanCep}/json/`;
       
-      const response = await fetch(url);
+      const response = await this.fetchWithTimeout(url, {}, 5000);
       
       if (!response.ok) {
         throw new Error(`ViaCEP API error: ${response.status}`);
