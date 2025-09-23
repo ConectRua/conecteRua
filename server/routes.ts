@@ -13,10 +13,15 @@ import * as XLSX from "xlsx";
 
 // Função para detectar automaticamente o tipo de entidade baseado nos dados
 function detectEntityType(row: any): 'ubs' | 'ongs' | 'equipamentos' | null {
-  // Campos comuns para verificar o tipo
-  const nome = (row['nome'] || row['Nome'] || row['NOME'] || row['name'] || '').toString().toUpperCase();
-  const tipo = (row['tipo'] || row['Tipo'] || row['TIPO'] || row['type'] || '').toString().toUpperCase();
-  const descricao = (row['descricao'] || row['Descricao'] || row['description'] || '').toString().toUpperCase();
+  // Campos comuns para verificar o tipo - expandido para incluir variações
+  const nome = (row['nome'] || row['Nome'] || row['NOME'] || row['name'] || 
+                row['Nome da Instituição'] || row['Nome da instituição'] || 
+                row['Nome do Estabelecimento'] || row['Instituição'] || '').toString().toUpperCase();
+  const tipo = (row['tipo'] || row['Tipo'] || row['TIPO'] || row['type'] || 
+                row['Tipo de Equipamento'] || row['Tipo de Serviço'] || 
+                row['Categoria'] || row['Classificação'] || '').toString().toUpperCase();
+  const descricao = (row['descricao'] || row['Descricao'] || row['description'] || 
+                     row['Descrição'] || row['Serviços'] || '').toString().toUpperCase();
   
   // Combinar todos os campos para análise
   const textoCombinado = `${nome} ${tipo} ${descricao}`.toUpperCase();
@@ -491,12 +496,16 @@ export function registerRoutes(app: Express): Server {
             switch (tipoFinal) {
               case 'ubs':
                 const ubsData = {
-                  nome: row['nome'] || row['Nome'] || row['NOME'] || row['name'] || row['Name'],
-                  endereco: row['endereco'] || row['Endereco'] || row['ENDERECO'] || row['endereço'] || row['Endereço'] || row['address'],
-                  cep: row['cep'] || row['CEP'] || row['codigo_postal'] || row['postal_code'],
-                  telefone: row['telefone'] || row['Telefone'] || row['fone'] || row['phone'] || row['celular'],
-                  email: row['email'] || row['Email'] || row['e-mail'] || row['E-mail'],
-                  horarioFuncionamento: row['horario'] || row['horario_funcionamento'] || row['horarioFuncionamento'] || row['Horario'] || row['funcionamento'],
+                  nome: row['nome'] || row['Nome'] || row['NOME'] || row['name'] || row['Name'] ||
+                        row['Nome da Instituição'] || row['Nome do Estabelecimento'] || row['Instituição'],
+                  endereco: row['endereco'] || row['Endereco'] || row['ENDERECO'] || row['endereço'] || row['Endereço'] || row['address'] ||
+                            row['Endereço'] || row['Localização'] || row['Local'],
+                  cep: row['cep'] || row['CEP'] || row['codigo_postal'] || row['postal_code'] || row['CEP/Código Postal'],
+                  telefone: row['telefone'] || row['Telefone'] || row['fone'] || row['phone'] || row['celular'] ||
+                           row['Contato'] || row['Tel'] || row['Fone'],
+                  email: row['email'] || row['Email'] || row['e-mail'] || row['E-mail'] || row['E-Mail'],
+                  horarioFuncionamento: row['horario'] || row['horario_funcionamento'] || row['horarioFuncionamento'] || 
+                                       row['Horario'] || row['funcionamento'] || row['Horário de Funcionamento'] || row['Horário'],
                   especialidades: row['especialidades'] || row['Especialidades'] || row['especialidade'] || row['servicos_medicos'] ? 
                     String(row['especialidades'] || row['Especialidades'] || row['especialidade'] || row['servicos_medicos']).split(',').map(s => s.trim()) : [],
                   gestor: row['gestor'] || row['Gestor'] || row['responsavel'] || row['gerente'] || row['coordenador']
@@ -527,11 +536,14 @@ export function registerRoutes(app: Express): Server {
                 
               case 'ongs':
                 const ongData = {
-                  nome: row['nome'] || row['Nome'] || row['NOME'] || row['name'] || row['organizacao'],
-                  endereco: row['endereco'] || row['Endereco'] || row['ENDERECO'] || row['endereço'] || row['Endereço'] || row['address'],
-                  cep: row['cep'] || row['CEP'] || row['codigo_postal'] || row['postal_code'],
-                  telefone: row['telefone'] || row['Telefone'] || row['fone'] || row['phone'] || row['celular'] || row['contato'],
-                  email: row['email'] || row['Email'] || row['e-mail'] || row['E-mail'] || row['contato_email'],
+                  nome: row['nome'] || row['Nome'] || row['NOME'] || row['name'] || row['organizacao'] ||
+                        row['Nome da Instituição'] || row['Nome da ONG'] || row['Organização'] || row['Instituição'],
+                  endereco: row['endereco'] || row['Endereco'] || row['ENDERECO'] || row['endereço'] || row['Endereço'] || row['address'] ||
+                            row['Endereço'] || row['Localização'] || row['Local'],
+                  cep: row['cep'] || row['CEP'] || row['codigo_postal'] || row['postal_code'] || row['CEP/Código Postal'],
+                  telefone: row['telefone'] || row['Telefone'] || row['fone'] || row['phone'] || row['celular'] || row['contato'] ||
+                           row['Contato'] || row['Tel'] || row['Fone'],
+                  email: row['email'] || row['Email'] || row['e-mail'] || row['E-mail'] || row['contato_email'] || row['E-Mail'],
                   site: row['site'] || row['Site'] || row['website'] || row['url'] || row['pagina'],
                   servicos: row['servicos'] || row['Servicos'] || row['atividades'] || row['areas_atuacao'] ? 
                     String(row['servicos'] || row['Servicos'] || row['atividades'] || row['areas_atuacao']).split(',').map(s => s.trim()) : [],
@@ -594,15 +606,28 @@ export function registerRoutes(app: Express): Server {
                 break;
                 
               case 'equipamentos':
+                // Para endereço, incluir o bairro se ele vier separado
+                const bairro = row['Bairro'] || row['Bairro/Região'] || row['Região'] || row['Regional'] || '';
+                const enderecoBase = row['endereco'] || row['Endereco'] || row['ENDERECO'] || row['endereço'] || row['Endereço'] || row['address'] ||
+                                    row['Endereço'] || row['Localização'] || row['Local'] || '';
+                const enderecoCompleto = bairro && !enderecoBase.includes(bairro) ? `${enderecoBase}, ${bairro}`.trim() : enderecoBase;
+                
                 const equipamentoData = {
-                  nome: row['nome'] || row['Nome'] || row['NOME'] || row['name'] || row['equipamento'],
-                  tipo: row['tipo'] || row['Tipo'] || row['category'] || row['categoria'] || 'CRAS',
-                  endereco: row['endereco'] || row['Endereco'] || row['ENDERECO'] || row['endereço'] || row['Endereço'] || row['address'],
-                  cep: row['cep'] || row['CEP'] || row['codigo_postal'] || row['postal_code'],
-                  telefone: row['telefone'] || row['Telefone'] || row['fone'] || row['phone'] || row['celular'] || row['contato'],
-                  email: row['email'] || row['Email'] || row['e-mail'] || row['E-mail'] || row['contato_email'],
-                  servicos: row['servicos'] || row['Servicos'] || row['atividades'] || row['programas'] || row['areas_atuacao'] ? 
-                    String(row['servicos'] || row['Servicos'] || row['atividades'] || row['programas'] || row['areas_atuacao']).split(',').map(s => s.trim()) : []
+                  nome: row['nome'] || row['Nome'] || row['NOME'] || row['name'] || row['equipamento'] ||
+                        row['Nome da Instituição'] || row['Nome do Equipamento'] || row['Instituição'],
+                  tipo: row['tipo'] || row['Tipo'] || row['category'] || row['categoria'] || 
+                        row['Tipo de Equipamento'] || row['Tipo de Serviço'] || row['Classificação'] || 'Equipamento Social',
+                  endereco: enderecoCompleto || 'Endereço não informado',
+                  cep: row['cep'] || row['CEP'] || row['codigo_postal'] || row['postal_code'] || row['CEP/Código Postal'] || '00000-000',
+                  telefone: row['telefone'] || row['Telefone'] || row['fone'] || row['phone'] || row['celular'] || row['contato'] ||
+                           row['Contato'] || row['Tel'] || row['Fone'],
+                  email: row['email'] || row['Email'] || row['e-mail'] || row['E-mail'] || row['contato_email'] || row['E-Mail'],
+                  servicos: row['servicos'] || row['Servicos'] || row['atividades'] || row['programas'] || row['areas_atuacao'] || 
+                           row['Tipo de Equipamento'] || row['Serviços Oferecidos'] ? 
+                    String(row['servicos'] || row['Servicos'] || row['atividades'] || row['programas'] || row['areas_atuacao'] || 
+                           row['Tipo de Equipamento'] || row['Serviços Oferecidos']).split(',').map(s => s.trim()) : [],
+                  capacidade: row['capacidade'] || row['Capacidade'] || row['vagas'] || row['Vagas'] ? 
+                    parseInt(row['capacidade'] || row['Capacidade'] || row['vagas'] || row['Vagas']) : null
                 };
                 
                 // Geocodificar se endereço e CEP estão presentes
