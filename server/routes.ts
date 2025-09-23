@@ -434,6 +434,321 @@ export function registerRoutes(app: Express): Server {
     }
   });
   
+  // Rota para preview da planilha
+  app.post('/api/upload/preview', upload.single('arquivo'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: 'Nenhum arquivo enviado' });
+      }
+
+      const tipo = req.body.tipo as 'ubs' | 'ongs' | 'pacientes' | 'equipamentos' | 'auto' | undefined;
+      const permitirDetecaoAutomatica = tipo === 'auto' || tipo === undefined || !['ubs', 'ongs', 'pacientes', 'equipamentos'].includes(tipo);
+
+      const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+      const registrosProcessados: any[] = [];
+      const erros: string[] = [];
+
+      for (const [index, rowData] of jsonData.entries()) {
+        const row = rowData as any;
+        
+        // Detectar tipo automaticamente se permitido
+        let tipoFinal = tipo;
+        if (permitirDetecaoAutomatica) {
+          const tipoDetectado = detectEntityType(row);
+          if (tipoDetectado) {
+            tipoFinal = tipoDetectado;
+          } else if (!tipo || tipo === 'auto') {
+            erros.push(`Linha ${index + 2}: Não foi possível detectar o tipo automaticamente`);
+            continue;
+          }
+        }
+
+        // Extrair dados baseado no tipo com campos expandidos
+        let dadosExtraidos: any = {
+          id: `preview_${index}`,
+          tipo: tipoFinal,
+          linha: index + 2,
+          valido: true
+        };
+
+        // Função helper para extrair endereço completo
+        const extrairEndereco = () => {
+          const bairro = row['Bairro'] || row['Bairro/Região'] || row['Região'] || row['Regional'] || '';
+          const enderecoBase = row['endereco'] || row['Endereco'] || row['ENDERECO'] || row['endereço'] || 
+                              row['Endereço'] || row['address'] || row['Endereço'] || row['Localização'] || row['Local'] || '';
+          return bairro && !enderecoBase.includes(bairro) ? `${enderecoBase}, ${bairro}`.trim() : enderecoBase;
+        };
+
+        switch (tipoFinal) {
+          case 'ubs':
+            dadosExtraidos = {
+              ...dadosExtraidos,
+              nome: row['nome'] || row['Nome'] || row['NOME'] || row['name'] || row['Name'] ||
+                    row['Nome da Instituição'] || row['Nome do Estabelecimento'] || row['Instituição'] || '',
+              endereco: extrairEndereco(),
+              cep: row['cep'] || row['CEP'] || row['codigo_postal'] || row['postal_code'] || row['CEP/Código Postal'] || '',
+              telefone: row['telefone'] || row['Telefone'] || row['fone'] || row['phone'] || row['celular'] ||
+                       row['Contato'] || row['Tel'] || row['Fone'] || '',
+              email: row['email'] || row['Email'] || row['e-mail'] || row['E-mail'] || row['E-Mail'] || '',
+              horarioFuncionamento: row['horario'] || row['horario_funcionamento'] || row['horarioFuncionamento'] || 
+                                   row['Horario'] || row['funcionamento'] || row['Horário de Funcionamento'] || row['Horário'] || ''
+            };
+            break;
+            
+          case 'ongs':
+            dadosExtraidos = {
+              ...dadosExtraidos,
+              nome: row['nome'] || row['Nome'] || row['NOME'] || row['name'] || row['organizacao'] ||
+                    row['Nome da Instituição'] || row['Nome da ONG'] || row['Organização'] || row['Instituição'] || '',
+              endereco: extrairEndereco(),
+              cep: row['cep'] || row['CEP'] || row['codigo_postal'] || row['postal_code'] || row['CEP/Código Postal'] || '',
+              telefone: row['telefone'] || row['Telefone'] || row['fone'] || row['phone'] || row['celular'] || 
+                       row['contato'] || row['Contato'] || row['Tel'] || row['Fone'] || '',
+              email: row['email'] || row['Email'] || row['e-mail'] || row['E-mail'] || row['contato_email'] || row['E-Mail'] || '',
+              site: row['site'] || row['Site'] || row['website'] || row['url'] || row['pagina'] || '',
+              responsavel: row['responsavel'] || row['Responsavel'] || row['coordenador'] || row['diretor'] || row['presidente'] || ''
+            };
+            break;
+            
+          case 'equipamentos':
+            dadosExtraidos = {
+              ...dadosExtraidos,
+              nome: row['nome'] || row['Nome'] || row['NOME'] || row['name'] || row['equipamento'] ||
+                    row['Nome da Instituição'] || row['Nome do Equipamento'] || row['Instituição'] || '',
+              tipoEquipamento: row['tipo'] || row['Tipo'] || row['category'] || row['categoria'] || 
+                    row['Tipo de Equipamento'] || row['Tipo de Serviço'] || row['Classificação'] || 'Equipamento Social',
+              endereco: extrairEndereco(),
+              cep: row['cep'] || row['CEP'] || row['codigo_postal'] || row['postal_code'] || row['CEP/Código Postal'] || '',
+              telefone: row['telefone'] || row['Telefone'] || row['fone'] || row['phone'] || row['celular'] || 
+                       row['contato'] || row['Contato'] || row['Tel'] || row['Fone'] || '',
+              email: row['email'] || row['Email'] || row['e-mail'] || row['E-mail'] || row['contato_email'] || row['E-Mail'] || '',
+              horarioFuncionamento: row['horario'] || row['horario_funcionamento'] || row['Horário'] || 
+                                   row['Horário de Funcionamento'] || row['funcionamento'] || ''
+            };
+            break;
+            
+          case 'pacientes':
+            dadosExtraidos = {
+              ...dadosExtraidos,
+              nome: row['nome'] || row['Nome'] || row['NOME'] || row['name'] || row['paciente'] || '',
+              endereco: extrairEndereco(),
+              cep: row['cep'] || row['CEP'] || row['codigo_postal'] || row['postal_code'] || '',
+              telefone: row['telefone'] || row['Telefone'] || row['fone'] || row['phone'] || row['celular'] || row['contato'] || '',
+              idade: parseInt(row['idade'] || row['Idade'] || row['age'] || '0') || null
+            };
+            break;
+        }
+
+        // Validar dados extraídos
+        if (!dadosExtraidos.nome) {
+          dadosExtraidos.valido = false;
+          dadosExtraidos.erro = 'Nome não encontrado';
+          erros.push(`Linha ${index + 2}: Nome não encontrado`);
+        }
+
+        registrosProcessados.push(dadosExtraidos);
+      }
+
+      res.json({
+        success: true,
+        registrosProcessados,
+        totalLinhas: jsonData.length,
+        totalValidos: registrosProcessados.filter(r => r.valido).length,
+        erros
+      });
+    } catch (error: any) {
+      console.error('[PREVIEW] Erro ao processar planilha:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Erro ao processar planilha para preview',
+        error: error.message 
+      });
+    }
+  });
+
+  // Rota para salvar registros selecionados
+  app.post('/api/upload/confirmar', async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      const { registros } = req.body;
+      
+      if (!registros || !Array.isArray(registros)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Nenhum registro enviado para importação' 
+        });
+      }
+
+      let registrosImportados = 0;
+      const erros: string[] = [];
+
+      for (const registro of registros) {
+        try {
+          let validacao: any;
+          
+          switch (registro.tipo) {
+            case 'ubs':
+              const ubsData = {
+                nome: registro.nome,
+                endereco: registro.endereco,
+                cep: registro.cep,
+                telefone: registro.telefone,
+                email: registro.email,
+                horarioFuncionamento: registro.horarioFuncionamento,
+                especialidades: registro.especialidades || [],
+                gestor: registro.gestor
+              };
+              
+              // Geocodificar se endereço e CEP estão presentes
+              if (ubsData.endereco && ubsData.cep) {
+                try {
+                  const geocodeResult = await geocodingService.geocodeAddress(ubsData.endereco, ubsData.cep);
+                  if (geocodeResult.coordinates) {
+                    (ubsData as any).latitude = geocodeResult.coordinates.latitude;
+                    (ubsData as any).longitude = geocodeResult.coordinates.longitude;
+                  }
+                } catch (geoError) {
+                  console.warn(`Erro ao geocodificar UBS ${ubsData.nome}:`, geoError);
+                }
+              }
+              
+              validacao = insertUBSSchema.safeParse(ubsData);
+              if (validacao.success) {
+                await storage.createUBS(validacao.data);
+                registrosImportados++;
+              } else {
+                erros.push(`${registro.nome}: ${validacao.error.issues.map(i => i.message).join(', ')}`);
+              }
+              break;
+              
+            case 'ongs':
+              const ongData = {
+                nome: registro.nome,
+                endereco: registro.endereco,
+                cep: registro.cep,
+                telefone: registro.telefone,
+                email: registro.email,
+                site: registro.site,
+                servicos: registro.servicos || [],
+                responsavel: registro.responsavel
+              };
+              
+              // Geocodificar
+              if (ongData.endereco && ongData.cep) {
+                try {
+                  const geocodeResult = await geocodingService.geocodeAddress(ongData.endereco, ongData.cep);
+                  if (geocodeResult.coordinates) {
+                    (ongData as any).latitude = geocodeResult.coordinates.latitude;
+                    (ongData as any).longitude = geocodeResult.coordinates.longitude;
+                  }
+                } catch (geoError) {
+                  console.warn(`Erro ao geocodificar ONG ${ongData.nome}:`, geoError);
+                }
+              }
+              
+              validacao = insertONGSchema.safeParse(ongData);
+              if (validacao.success) {
+                await storage.createONG(validacao.data);
+                registrosImportados++;
+              } else {
+                erros.push(`${registro.nome}: ${validacao.error.issues.map(i => i.message).join(', ')}`);
+              }
+              break;
+              
+            case 'equipamentos':
+              const equipamentoData = {
+                nome: registro.nome,
+                tipo: registro.tipoEquipamento || 'Equipamento Social',
+                endereco: registro.endereco,
+                cep: registro.cep,
+                telefone: registro.telefone,
+                email: registro.email,
+                servicos: registro.servicos || [],
+                capacidade: registro.capacidade
+              };
+              
+              // Geocodificar
+              if (equipamentoData.endereco && equipamentoData.cep) {
+                try {
+                  const geocodeResult = await geocodingService.geocodeAddress(equipamentoData.endereco, equipamentoData.cep);
+                  if (geocodeResult.coordinates) {
+                    (equipamentoData as any).latitude = geocodeResult.coordinates.latitude;
+                    (equipamentoData as any).longitude = geocodeResult.coordinates.longitude;
+                  }
+                } catch (geoError) {
+                  console.warn(`Erro ao geocodificar equipamento ${equipamentoData.nome}:`, geoError);
+                }
+              }
+              
+              validacao = insertEquipamentoSocialSchema.safeParse(equipamentoData);
+              if (validacao.success) {
+                await storage.createEquipamentoSocial(validacao.data);
+                registrosImportados++;
+              } else {
+                erros.push(`${registro.nome}: ${validacao.error.issues.map(i => i.message).join(', ')}`);
+              }
+              break;
+              
+            case 'pacientes':
+              const pacienteData = {
+                nome: registro.nome,
+                endereco: registro.endereco,
+                cep: registro.cep,
+                telefone: registro.telefone,
+                idade: registro.idade,
+                condicoesSaude: registro.condicoesSaude || []
+              };
+              
+              // Geocodificar
+              if (pacienteData.endereco && pacienteData.cep) {
+                try {
+                  const geocodeResult = await geocodingService.geocodeAddress(pacienteData.endereco, pacienteData.cep);
+                  if (geocodeResult.coordinates) {
+                    (pacienteData as any).latitude = geocodeResult.coordinates.latitude;
+                    (pacienteData as any).longitude = geocodeResult.coordinates.longitude;
+                  }
+                } catch (geoError) {
+                  console.warn(`Erro ao geocodificar paciente ${pacienteData.nome}:`, geoError);
+                }
+              }
+              
+              validacao = insertPacienteSchema.safeParse(pacienteData);
+              if (validacao.success) {
+                await storage.createPaciente(validacao.data);
+                registrosImportados++;
+              } else {
+                erros.push(`${registro.nome}: ${validacao.error.issues.map(i => i.message).join(', ')}`);
+              }
+              break;
+          }
+        } catch (error: any) {
+          erros.push(`${registro.nome}: ${error.message}`);
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `${registrosImportados} de ${registros.length} registros importados com sucesso`,
+        registrosImportados,
+        erros
+      });
+    } catch (error: any) {
+      console.error('[CONFIRMAR] Erro ao importar registros:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Erro ao importar registros selecionados',
+        error: error.message 
+      });
+    }
+  });
+
   // Upload de planilhas
   app.post("/api/upload/planilha", upload.single('arquivo'), async (req, res) => {
     try {
