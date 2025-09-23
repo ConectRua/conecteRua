@@ -136,7 +136,7 @@ const Pacientes = () => {
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <UserCheck className="h-4 w-4 text-muted-foreground" />
-                  {paciente.necessidades.join(', ')}
+                  {(paciente.condicoesSaude || []).join(', ') || 'Nenhuma condição registrada'}
                 </div>
               </div>
             </CardContent>
