@@ -771,17 +771,11 @@ export function registerRoutes(app: Express): Server {
       
       // Processamento real da planilha
       try {
-        console.log(`[UPLOAD] Processando arquivo: ${req.file.originalname} (${req.file.size} bytes)`);
-        console.log(`[UPLOAD] Tipo especificado: ${tipo}`);
-        console.log(`[UPLOAD] Detecção automática permitida: ${permitirDetecaoAutomatica}`);
         
         const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
-        
-        console.log(`[UPLOAD] ${jsonData.length} linhas encontradas na planilha`);
-        console.log(`[UPLOAD] Primeira linha de dados:`, jsonData[0]);
         
         let registrosProcessados = 0;
         let registrosImportados = 0;
@@ -797,13 +791,11 @@ export function registerRoutes(app: Express): Server {
             let tipoFinal = tipo;
             if (permitirDetecaoAutomatica) {
               const tipoDetectado = detectEntityType(row);
-              console.log(`[UPLOAD] Linha ${index + 2}: Tipo detectado = ${tipoDetectado}, Nome = ${row['nome'] || row['Nome']}`);
               if (tipoDetectado) {
                 tipoFinal = tipoDetectado;
               } else if (!tipo || tipo === 'auto') {
                 // Se não foi possível detectar e não tem tipo padrão, pular esta linha
                 erros.push(`Linha ${index + 2}: Não foi possível detectar o tipo automaticamente`);
-                console.log(`[UPLOAD] Linha ${index + 2}: Não foi possível detectar tipo`);
                 continue;
               }
             }
