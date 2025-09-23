@@ -419,13 +419,15 @@ export function registerRoutes(app: Express): Server {
             switch (tipo) {
               case 'ubs':
                 const ubsData = {
-                  nome: row['nome'] || row['Nome'] || row['NOME'],
-                  endereco: row['endereco'] || row['Endereco'] || row['ENDERECO'],
-                  cep: row['cep'] || row['CEP'],
-                  telefone: row['telefone'] || row['Telefone'],
-                  email: row['email'] || row['Email'],
-                  especialidades: row['especialidades'] ? [row['especialidades']] : [],
-                  gestor: row['gestor'] || row['Gestor']
+                  nome: row['nome'] || row['Nome'] || row['NOME'] || row['name'] || row['Name'],
+                  endereco: row['endereco'] || row['Endereco'] || row['ENDERECO'] || row['endereço'] || row['Endereço'] || row['address'],
+                  cep: row['cep'] || row['CEP'] || row['codigo_postal'] || row['postal_code'],
+                  telefone: row['telefone'] || row['Telefone'] || row['fone'] || row['phone'] || row['celular'],
+                  email: row['email'] || row['Email'] || row['e-mail'] || row['E-mail'],
+                  horarioFuncionamento: row['horario'] || row['horario_funcionamento'] || row['horarioFuncionamento'] || row['Horario'] || row['funcionamento'],
+                  especialidades: row['especialidades'] || row['Especialidades'] || row['especialidade'] || row['servicos_medicos'] ? 
+                    String(row['especialidades'] || row['Especialidades'] || row['especialidade'] || row['servicos_medicos']).split(',').map(s => s.trim()) : [],
+                  gestor: row['gestor'] || row['Gestor'] || row['responsavel'] || row['gerente'] || row['coordenador']
                 };
                 
                 // Geocodificar se endereço e CEP estão presentes
@@ -451,14 +453,15 @@ export function registerRoutes(app: Express): Server {
                 
               case 'ongs':
                 const ongData = {
-                  nome: row['nome'] || row['Nome'] || row['NOME'],
-                  endereco: row['endereco'] || row['Endereco'] || row['ENDERECO'],
-                  cep: row['cep'] || row['CEP'],
-                  telefone: row['telefone'] || row['Telefone'],
-                  email: row['email'] || row['Email'],
-                  site: row['site'] || row['Site'],
-                  servicos: row['servicos'] ? [row['servicos']] : [],
-                  responsavel: row['responsavel'] || row['Responsavel']
+                  nome: row['nome'] || row['Nome'] || row['NOME'] || row['name'] || row['organizacao'],
+                  endereco: row['endereco'] || row['Endereco'] || row['ENDERECO'] || row['endereço'] || row['Endereço'] || row['address'],
+                  cep: row['cep'] || row['CEP'] || row['codigo_postal'] || row['postal_code'],
+                  telefone: row['telefone'] || row['Telefone'] || row['fone'] || row['phone'] || row['celular'] || row['contato'],
+                  email: row['email'] || row['Email'] || row['e-mail'] || row['E-mail'] || row['contato_email'],
+                  site: row['site'] || row['Site'] || row['website'] || row['url'] || row['pagina'],
+                  servicos: row['servicos'] || row['Servicos'] || row['atividades'] || row['areas_atuacao'] ? 
+                    String(row['servicos'] || row['Servicos'] || row['atividades'] || row['areas_atuacao']).split(',').map(s => s.trim()) : [],
+                  responsavel: row['responsavel'] || row['Responsavel'] || row['coordenador'] || row['diretor'] || row['presidente']
                 };
                 
                 // Geocodificar se endereço e CEP estão presentes
@@ -483,12 +486,13 @@ export function registerRoutes(app: Express): Server {
                 
               case 'pacientes':
                 const pacienteData = {
-                  nome: row['nome'] || row['Nome'] || row['NOME'],
-                  endereco: row['endereco'] || row['Endereco'] || row['ENDERECO'],
-                  cep: row['cep'] || row['CEP'],
-                  telefone: row['telefone'] || row['Telefone'],
-                  idade: parseInt(row['idade'] || row['Idade'] || '0'),
-                  condicoesSaude: row['condicoes'] ? [row['condicoes']] : []
+                  nome: row['nome'] || row['Nome'] || row['NOME'] || row['name'] || row['paciente'],
+                  endereco: row['endereco'] || row['Endereco'] || row['ENDERECO'] || row['endereço'] || row['Endereço'] || row['address'],
+                  cep: row['cep'] || row['CEP'] || row['codigo_postal'] || row['postal_code'],
+                  telefone: row['telefone'] || row['Telefone'] || row['fone'] || row['phone'] || row['celular'] || row['contato'],
+                  idade: parseInt(row['idade'] || row['Idade'] || row['age'] || '0') || undefined,
+                  condicoesSaude: row['condicoes'] || row['condicoesSaude'] || row['condicoes_saude'] || row['problemas_saude'] || row['doencas'] ? 
+                    String(row['condicoes'] || row['condicoesSaude'] || row['condicoes_saude'] || row['problemas_saude'] || row['doencas']).split(',').map(s => s.trim()) : []
                 };
                 
                 // Geocodificar se endereço e CEP estão presentes
@@ -513,13 +517,14 @@ export function registerRoutes(app: Express): Server {
                 
               case 'equipamentos':
                 const equipamentoData = {
-                  nome: row['nome'] || row['Nome'] || row['NOME'],
-                  tipo: row['tipo'] || row['Tipo'] || 'CRAS',
-                  endereco: row['endereco'] || row['Endereco'] || row['ENDERECO'],
-                  cep: row['cep'] || row['CEP'],
-                  telefone: row['telefone'] || row['Telefone'],
-                  email: row['email'] || row['Email'],
-                  servicos: row['servicos'] ? [row['servicos']] : []
+                  nome: row['nome'] || row['Nome'] || row['NOME'] || row['name'] || row['equipamento'],
+                  tipo: row['tipo'] || row['Tipo'] || row['category'] || row['categoria'] || 'CRAS',
+                  endereco: row['endereco'] || row['Endereco'] || row['ENDERECO'] || row['endereço'] || row['Endereço'] || row['address'],
+                  cep: row['cep'] || row['CEP'] || row['codigo_postal'] || row['postal_code'],
+                  telefone: row['telefone'] || row['Telefone'] || row['fone'] || row['phone'] || row['celular'] || row['contato'],
+                  email: row['email'] || row['Email'] || row['e-mail'] || row['E-mail'] || row['contato_email'],
+                  servicos: row['servicos'] || row['Servicos'] || row['atividades'] || row['programas'] || row['areas_atuacao'] ? 
+                    String(row['servicos'] || row['Servicos'] || row['atividades'] || row['programas'] || row['areas_atuacao']).split(',').map(s => s.trim()) : []
                 };
                 
                 // Geocodificar se endereço e CEP estão presentes
