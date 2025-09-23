@@ -396,9 +396,10 @@ export const useUploadPlanilha = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async (file: File) => {
+    mutationFn: async ({ file, tipo }: { file: File; tipo: 'ubs' | 'ongs' | 'pacientes' | 'equipamentos' }) => {
       const formData = new FormData();
-      formData.append('planilha', file);
+      formData.append('arquivo', file);
+      formData.append('tipo', tipo);
 
       const response = await fetch('/api/upload/planilha', {
         method: 'POST',
@@ -423,7 +424,7 @@ export const useUploadPlanilha = () => {
       
       toast({
         title: "Sucesso",
-        description: `Planilha processada! ${data.totalProcessed || 0} registros importados.`,
+        description: `Planilha processada! ${data.registros_importados}/${data.registros_processados} registros importados com sucesso.`,
       });
     },
     onError: (error: Error) => {

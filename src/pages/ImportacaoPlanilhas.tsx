@@ -1,14 +1,18 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Upload, FileSpreadsheet, Download, AlertCircle, X, CheckCircle } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useUploadPlanilha } from '@/hooks/useApiData';
 
 const ImportacaoPlanilhas = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [selectedType, setSelectedType] = useState<'ubs' | 'ongs' | 'pacientes' | 'equipamentos' | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const uploadMutation = useUploadPlanilha();
 
   const acceptedTypes = [
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
@@ -82,7 +86,7 @@ const ImportacaoPlanilhas = () => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (selectedFiles.length === 0) {
       toast({
         title: "Nenhum arquivo selecionado",
@@ -92,20 +96,26 @@ const ImportacaoPlanilhas = () => {
       return;
     }
 
-    // Simular upload
-    toast({
-      title: "Importação iniciada",
-      description: `Processando ${selectedFiles.length} arquivo(s)...`,
-    });
-
-    // Aqui seria implementada a lógica real de upload
-    setTimeout(() => {
+    if (!selectedType) {
       toast({
-        title: "Importação concluída",
-        description: "Todos os arquivos foram processados com sucesso",
+        title: "Tipo não selecionado",
+        description: "Por favor, selecione o tipo de dados da planilha",
+        variant: "destructive"
       });
-      setSelectedFiles([]);
-    }, 2000);
+      return;
+    }
+
+    // Processar cada arquivo
+    for (const file of selectedFiles) {
+      try {
+        await uploadMutation.mutateAsync({ file, tipo: selectedType });
+      } catch (error) {
+        console.error(`Erro ao processar ${file.name}:`, error);
+      }
+    }
+
+    // Limpar arquivos após processamento
+    setSelectedFiles([]);
   };
 
   return (
@@ -129,6 +139,23 @@ const ImportacaoPlanilhas = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Tipo de Dados</label>
+                <Select value={selectedType || ''} onValueChange={(value) => setSelectedType(value as any)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo de dados da planilha" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ubs" data-testid="option-ubs">UBS - Unidades Básicas de Saúde</SelectItem>
+                    <SelectItem value="ongs" data-testid="option-ongs">ONGs - Organizações Não Governamentais</SelectItem>
+                    <SelectItem value="pacientes" data-testid="option-pacientes">Pacientes</SelectItem>
+                    <SelectItem value="equipamentos" data-testid="option-equipamentos">Equipamentos Sociais</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
             <div 
               className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
                 isDragOver 
@@ -177,9 +204,14 @@ const ImportacaoPlanilhas = () => {
                     </Button>
                   </div>
                 ))}
-                <Button onClick={handleUpload} className="w-full mt-4">
+                <Button 
+                  onClick={handleUpload} 
+                  className="w-full mt-4"
+                  disabled={selectedFiles.length === 0 || !selectedType || uploadMutation.isPending}
+                  data-testid="button-upload"
+                >
                   <Upload className="h-4 w-4 mr-2" />
-                  Importar Arquivos ({selectedFiles.length})
+                  {uploadMutation.isPending ? 'Processando...' : `Importar Arquivos (${selectedFiles.length})`}
                 </Button>
               </div>
             )}
