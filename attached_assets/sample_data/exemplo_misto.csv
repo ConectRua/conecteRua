@@ -1,0 +1,7 @@
+nome,endereco,cep,telefone,email,tipo,responsavel
+UBS Samambaia Norte,QN 101 Área Especial Samambaia Norte,72320-101,(61) 3318-1234,ubs.samambaia@saude.df.gov.br,Unidade Básica de Saúde,Dr. João Silva
+CAPS Samambaia,QS 101 Lote 1 Samambaia Sul,72320-201,(61) 3318-2234,caps.samambaia@saude.df.gov.br,Centro de Atenção Psicossocial,Dra. Maria Santos
+CRAS Recanto das Emas,Quadra 104 Lote 15 Recanto das Emas,72610-104,(61) 3318-3234,cras.recanto@social.df.gov.br,Centro de Referência da Assistência Social,Ana Paula Costa
+Instituto Social Verde,QN 201 Casa 45 Águas Claras,71900-201,(61) 3318-4234,contato@institutoverde.org.br,ONG,Roberto Mendes
+UBS Águas Claras Central,Rua das Pitangueiras Lote 3 Águas Claras,71900-301,(61) 3318-5234,ubs.aguasclaras@saude.df.gov.br,Centro de Saúde,Dra. Fernanda Lima
+Casa de Apoio Esperança,QN 301 Lote 12 Samambaia Norte,72320-301,(61) 3318-6234,contato@casaesperanca.org.br,Organização Social,Marcos Oliveira

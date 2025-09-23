@@ -1163,6 +1163,135 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Endpoints para reclassificação de registros
+  app.post("/api/reclassificar", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      const { id, tipoOrigem, tipoDestino } = req.body;
+      
+      if (!id || !tipoOrigem || !tipoDestino) {
+        return res.status(400).json({ error: "ID, tipo de origem e tipo de destino são obrigatórios" });
+      }
+      
+      if (!['ubs', 'ongs', 'equipamentos'].includes(tipoOrigem) || 
+          !['ubs', 'ongs', 'equipamentos'].includes(tipoDestino)) {
+        return res.status(400).json({ error: "Tipos inválidos. Use: ubs, ongs, equipamentos" });
+      }
+      
+      if (tipoOrigem === tipoDestino) {
+        return res.status(400).json({ error: "Tipo de origem e destino não podem ser iguais" });
+      }
+      
+      // Buscar registro original
+      let registroOriginal: any;
+      switch (tipoOrigem) {
+        case 'ubs':
+          registroOriginal = await storage.getUBS(id);
+          break;
+        case 'ongs':
+          registroOriginal = await storage.getONG(id);
+          break;
+        case 'equipamentos':
+          registroOriginal = await storage.getEquipamentoSocial(id);
+          break;
+      }
+      
+      if (!registroOriginal) {
+        return res.status(404).json({ error: "Registro não encontrado" });
+      }
+      
+      // Mapear dados para o novo tipo
+      const dadosBase = {
+        nome: registroOriginal.nome,
+        endereco: registroOriginal.endereco,
+        cep: registroOriginal.cep,
+        telefone: registroOriginal.telefone,
+        email: registroOriginal.email,
+        latitude: registroOriginal.latitude,
+        longitude: registroOriginal.longitude
+      };
+      
+      let novoRegistro: any;
+      switch (tipoDestino) {
+        case 'ubs':
+          novoRegistro = {
+            ...dadosBase,
+            horarioFuncionamento: registroOriginal.horarioFuncionamento || registroOriginal.horario || "08:00-17:00",
+            especialidades: registroOriginal.especialidades || registroOriginal.servicos || [],
+            gestor: registroOriginal.gestor || registroOriginal.responsavel || ""
+          };
+          const ubsValidacao = insertUBSSchema.safeParse(novoRegistro);
+          if (!ubsValidacao.success) {
+            return res.status(400).json({ 
+              error: "Dados inválidos para UBS", 
+              detalhes: ubsValidacao.error.issues 
+            });
+          }
+          await storage.createUBS(ubsValidacao.data);
+          break;
+          
+        case 'ongs':
+          novoRegistro = {
+            ...dadosBase,
+            responsavel: registroOriginal.responsavel || registroOriginal.gestor || "",
+            servicos: registroOriginal.servicos || registroOriginal.especialidades || [],
+            site: registroOriginal.site || ""
+          };
+          const ongValidacao = insertONGSchema.safeParse(novoRegistro);
+          if (!ongValidacao.success) {
+            return res.status(400).json({ 
+              error: "Dados inválidos para ONG", 
+              detalhes: ongValidacao.error.issues 
+            });
+          }
+          await storage.createONG(ongValidacao.data);
+          break;
+          
+        case 'equipamentos':
+          novoRegistro = {
+            ...dadosBase,
+            tipo: registroOriginal.tipo || "Equipamento Social",
+            capacidade: registroOriginal.capacidade || null,
+            servicos: registroOriginal.servicos || registroOriginal.especialidades || []
+          };
+          const equipValidacao = insertEquipamentoSocialSchema.safeParse(novoRegistro);
+          if (!equipValidacao.success) {
+            return res.status(400).json({ 
+              error: "Dados inválidos para Equipamento Social", 
+              detalhes: equipValidacao.error.issues 
+            });
+          }
+          await storage.createEquipamentoSocial(equipValidacao.data);
+          break;
+      }
+      
+      // Deletar registro original
+      switch (tipoOrigem) {
+        case 'ubs':
+          await storage.deleteUBS(id);
+          break;
+        case 'ongs':
+          await storage.deleteONG(id);
+          break;
+        case 'equipamentos':
+          await storage.deleteEquipamentoSocial(id);
+          break;
+      }
+      
+      res.json({ 
+        sucesso: true, 
+        mensagem: `Registro reclassificado de ${tipoOrigem} para ${tipoDestino} com sucesso` 
+      });
+      
+    } catch (error) {
+      console.error("Erro na reclassificação:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

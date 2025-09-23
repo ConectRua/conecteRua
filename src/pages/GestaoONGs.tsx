@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ReclassificationModal } from '@/components/ReclassificationModal';
 import { useApiData } from '@/hooks/useApiData';
 import { 
   Heart, 
@@ -128,6 +129,10 @@ const GestaoONGs = () => {
                   <Button variant="outline" size="sm">
                     <Edit className="h-4 w-4" />
                   </Button>
+                  <ReclassificationModal 
+                    registro={{ id: ong.id, nome: ong.nome }}
+                    tipoAtual="ongs"
+                  />
                   <Button variant="outline" size="sm" className="text-destructive">
                     <Trash2 className="h-4 w-4" />
                   </Button>

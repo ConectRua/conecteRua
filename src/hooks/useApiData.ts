@@ -437,6 +437,48 @@ export const useUploadPlanilha = () => {
   });
 };
 
+// ============ RECLASSIFICATION HOOKS ============
+
+export const useReclassificar = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, tipoOrigem, tipoDestino }: { 
+      id: string; 
+      tipoOrigem: 'ubs' | 'ongs' | 'equipamentos'; 
+      tipoDestino: 'ubs' | 'ongs' | 'equipamentos' 
+    }) => {
+      return apiRequest('/api/reclassificar', {
+        method: 'POST',
+        body: JSON.stringify({ id, tipoOrigem, tipoDestino }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    },
+    onSuccess: (data) => {
+      // Invalidate all relevant caches
+      queryClient.invalidateQueries({ queryKey: queryKeys.ubs.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.ongs.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipamentos.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.stats.all });
+      
+      toast({
+        title: "Sucesso",
+        description: data.mensagem,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao reclassificar registro",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
 // ============ COMPOSITE HOOK FOR BACKWARD COMPATIBILITY ============
 
 export const useApiData = () => {
