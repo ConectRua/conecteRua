@@ -11,6 +11,47 @@ import { z } from "zod";
 import multer from "multer";
 import * as XLSX from "xlsx";
 
+// Função para detectar automaticamente o tipo de entidade baseado nos dados
+function detectEntityType(row: any): 'ubs' | 'ongs' | 'equipamentos' | null {
+  // Campos comuns para verificar o tipo
+  const nome = (row['nome'] || row['Nome'] || row['NOME'] || row['name'] || '').toString().toUpperCase();
+  const tipo = (row['tipo'] || row['Tipo'] || row['TIPO'] || row['type'] || '').toString().toUpperCase();
+  const descricao = (row['descricao'] || row['Descricao'] || row['description'] || '').toString().toUpperCase();
+  
+  // Combinar todos os campos para análise
+  const textoCombinado = `${nome} ${tipo} ${descricao}`.toUpperCase();
+  
+  // Detectar UBS
+  if (textoCombinado.includes('UBS') || 
+      textoCombinado.includes('UNIDADE BÁSICA') ||
+      textoCombinado.includes('UNIDADE BASICA') ||
+      textoCombinado.includes('POSTO DE SAÚDE') ||
+      textoCombinado.includes('POSTO DE SAUDE') ||
+      textoCombinado.includes('CENTRO DE SAÚDE') ||
+      textoCombinado.includes('CENTRO DE SAUDE')) {
+    return 'ubs';
+  }
+  
+  // Detectar Equipamentos Sociais (CAPS, CRAS, etc.)
+  if (textoCombinado.includes('CAPS') ||
+      textoCombinado.includes('CRAS') ||
+      textoCombinado.includes('CENTRO DE ATENÇÃO PSICOSSOCIAL') ||
+      textoCombinado.includes('CENTRO DE REFERÊNCIA') ||
+      textoCombinado.includes('EQUIPAMENTO SOCIAL') ||
+      textoCombinado.includes('CENTRO SOCIAL')) {
+    return 'equipamentos';
+  }
+  
+  // Se tem campos típicos de ONG (responsavel, servicos, site) mas não é UBS nem equipamento
+  if ((row['responsavel'] || row['presidente'] || row['diretor'] || 
+       row['servicos'] || row['atividades'] || row['site'] || row['website']) &&
+      !textoCombinado.includes('UBS') && !textoCombinado.includes('CAPS') && !textoCombinado.includes('CRAS')) {
+    return 'ongs';
+  }
+  
+  return null; // Não foi possível detectar automaticamente
+}
+
 // Configuração do multer para upload de arquivos
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -399,8 +440,12 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Nenhum arquivo enviado" });
       }
       
-      const tipo = req.body.tipo as 'ubs' | 'ongs' | 'pacientes' | 'equipamentos';
-      if (!['ubs', 'ongs', 'pacientes', 'equipamentos'].includes(tipo)) {
+      let tipo = req.body.tipo as 'ubs' | 'ongs' | 'pacientes' | 'equipamentos' | 'auto';
+      
+      // Se tipo não for especificado ou for 'auto', tentar detecção automática
+      const permitirDetecaoAutomatica = !tipo || tipo === 'auto' || !['ubs', 'ongs', 'pacientes', 'equipamentos'].includes(tipo);
+      
+      if (!permitirDetecaoAutomatica && !['ubs', 'ongs', 'pacientes', 'equipamentos'].includes(tipo)) {
         return res.status(400).json({ error: "Tipo de entidade inválido" });
       }
       
@@ -421,7 +466,20 @@ export function registerRoutes(app: Express): Server {
             let validacao: any;
             const row = rowData as any; // Type assertion para acessar propriedades
             
-            switch (tipo) {
+            // Detectar tipo automaticamente se permitido
+            let tipoFinal = tipo;
+            if (permitirDetecaoAutomatica) {
+              const tipoDetectado = detectEntityType(row);
+              if (tipoDetectado) {
+                tipoFinal = tipoDetectado;
+              } else if (!tipo || tipo === 'auto') {
+                // Se não foi possível detectar e não tem tipo padrão, pular esta linha
+                erros.push(`Linha ${index + 2}: Não foi possível detectar o tipo automaticamente`);
+                continue;
+              }
+            }
+            
+            switch (tipoFinal) {
               case 'ubs':
                 const ubsData = {
                   nome: row['nome'] || row['Nome'] || row['NOME'] || row['name'] || row['Name'],

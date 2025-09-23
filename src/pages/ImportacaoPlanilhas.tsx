@@ -9,7 +9,7 @@ import { useUploadPlanilha } from '@/hooks/useApiData';
 const ImportacaoPlanilhas = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [selectedType, setSelectedType] = useState<'ubs' | 'ongs' | 'pacientes' | 'equipamentos' | null>(null);
+  const [selectedType, setSelectedType] = useState<'ubs' | 'ongs' | 'pacientes' | 'equipamentos' | 'auto' | null>('auto');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const uploadMutation = useUploadPlanilha();
@@ -147,6 +147,7 @@ const ImportacaoPlanilhas = () => {
                     <SelectValue placeholder="Selecione o tipo de dados da planilha" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="auto" data-testid="option-auto">🤖 Detecção Automática (UBS, CAPS, CRAS)</SelectItem>
                     <SelectItem value="ubs" data-testid="option-ubs">UBS - Unidades Básicas de Saúde</SelectItem>
                     <SelectItem value="ongs" data-testid="option-ongs">ONGs - Organizações Não Governamentais</SelectItem>
                     <SelectItem value="pacientes" data-testid="option-pacientes">Pacientes</SelectItem>

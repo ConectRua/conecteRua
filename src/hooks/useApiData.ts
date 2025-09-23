@@ -396,7 +396,7 @@ export const useUploadPlanilha = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ file, tipo }: { file: File; tipo: 'ubs' | 'ongs' | 'pacientes' | 'equipamentos' }) => {
+    mutationFn: async ({ file, tipo }: { file: File; tipo: 'ubs' | 'ongs' | 'pacientes' | 'equipamentos' | 'auto' }) => {
       const formData = new FormData();
       formData.append('arquivo', file);
       formData.append('tipo', tipo);
