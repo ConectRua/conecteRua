@@ -8,7 +8,7 @@ import { useReclassificar } from "@/hooks/useApiData";
 
 interface ReclassificationModalProps {
   registro: {
-    id: string;
+    id: string | number;
     nome: string;
   };
   tipoAtual: 'ubs' | 'ongs' | 'equipamentos';
@@ -31,7 +31,7 @@ export function ReclassificationModal({ registro, tipoAtual, onReclassified }: R
 
     try {
       await reclassificarMutation.mutateAsync({
-        id: registro.id,
+        id: typeof registro.id === 'string' ? parseInt(registro.id) : registro.id, // Converter para número pois os IDs são serial
         tipoOrigem: tipoAtual,
         tipoDestino: novoTipo
       });

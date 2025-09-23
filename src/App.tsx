@@ -14,6 +14,7 @@ import CadastroManual from "./pages/CadastroManual";
 import ImportacaoPlanilhas from "./pages/ImportacaoPlanilhas";
 import BuscaCEP from "./pages/BuscaCEP";
 import GestaoUBS from "./pages/GestaoUBS";
+import GestaoEquipamentos from "./pages/GestaoEquipamentos";
 import Pacientes from "./pages/Pacientes";
 import Relatorios from "./pages/Relatorios";
 import Configuracoes from "./pages/Configuracoes";
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="busca" element={<BuscaCEP />} />
               <Route path="ubs" element={<GestaoUBS />} />
               <Route path="ongs" element={<GestaoONGs />} />
+              <Route path="equipamentos" element={<GestaoEquipamentos />} />
               <Route path="relatorios" element={<Relatorios />} />
               <Route path="configuracoes" element={<Configuracoes />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

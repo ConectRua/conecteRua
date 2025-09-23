@@ -445,7 +445,7 @@ export const useReclassificar = () => {
 
   return useMutation({
     mutationFn: async ({ id, tipoOrigem, tipoDestino }: { 
-      id: string; 
+      id: number; 
       tipoOrigem: 'ubs' | 'ongs' | 'equipamentos'; 
       tipoDestino: 'ubs' | 'ongs' | 'equipamentos' 
     }) => {
