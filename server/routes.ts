@@ -21,9 +21,14 @@ const upload = multer({
     const allowedTypes = [
       'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'text/csv'
+      'text/csv',
+      'application/csv'
     ];
-    if (allowedTypes.includes(file.mimetype)) {
+    // Permitir arquivos com extensões corretas mesmo se o MIME type não for detectado corretamente
+    const allowedExtensions = ['.xlsx', '.xls', '.csv'];
+    const hasValidExtension = allowedExtensions.some(ext => file.originalname.toLowerCase().endsWith(ext));
+    
+    if (allowedTypes.includes(file.mimetype) || hasValidExtension) {
       cb(null, true);
     } else {
       cb(new Error('Tipo de arquivo não suportado. Use Excel ou CSV.'));

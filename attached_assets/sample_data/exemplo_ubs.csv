@@ -1,0 +1,4 @@
+nome,endereco,cep,telefone,email,especialidades,gestor,horario
+UBS Centro,Rua das Flores 100,72000-000,61-3333-1111,ubs.centro@saude.gov.br,Clínica Geral,Dr. João Silva,08:00-17:00
+UBS Norte,Av. Principal 200,72010-000,61-3333-2222,ubs.norte@saude.gov.br,"Pediatria, Ginecologia",Dra. Maria Santos,07:30-16:30
+UBS Sul,Praça da Saúde 300,72020-000,61-3333-3333,ubs.sul@saude.gov.br,Cardiologia,Dr. Pedro Oliveira,08:30-17:30
