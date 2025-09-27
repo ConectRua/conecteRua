@@ -219,6 +219,15 @@ export const MapComponent = ({
     // Add patient markers
     if (showPacientes) {
       dataRef.current.pacientesList.forEach((paciente: Paciente) => {
+        // Verificar se as coordenadas são válidas antes de criar o marcador
+        if (paciente.latitude == null || paciente.longitude == null || 
+            !Number.isFinite(paciente.latitude) || !Number.isFinite(paciente.longitude) ||
+            paciente.latitude < -90 || paciente.latitude > 90 || 
+            paciente.longitude < -180 || paciente.longitude > 180) {
+          console.log(`Paciente ${paciente.nome} não possui coordenadas válidas - ignorando no mapa`);
+          return;
+        }
+        
         const marker = new google.maps.Marker({
           position: { lat: paciente.latitude, lng: paciente.longitude },
           map: map,
