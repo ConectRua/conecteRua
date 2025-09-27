@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ReclassificationModal } from '@/components/ReclassificationModal';
+import { AddONGModal } from '@/components/Forms/AddONGModal';
 import { useApiData } from '@/hooks/useApiData';
+import type { InsertONG } from '../../shared/schema';
 import { 
   Heart, 
   Phone, 
@@ -16,7 +19,13 @@ import {
 } from 'lucide-react';
 
 const GestaoONGs = () => {
-  const { ongsList, loading } = useApiData();
+  const { ongsList, loading, addONG } = useApiData();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  const handleAddONG = (ong: InsertONG) => {
+    addONG(ong);
+    setIsAddModalOpen(false);
+  };
 
   if (loading) {
     return (
@@ -40,7 +49,7 @@ const GestaoONGs = () => {
           </p>
         </div>
         
-        <Button className="bg-green-600 hover:bg-green-700">
+        <Button className="bg-green-600 hover:bg-green-700" onClick={() => setIsAddModalOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Nova ONG
         </Button>
@@ -198,6 +207,12 @@ const GestaoONGs = () => {
           </Card>
         ))}
       </div>
+      
+      <AddONGModal 
+        open={isAddModalOpen}
+        onOpenChange={setIsAddModalOpen}
+        onAdd={handleAddONG}
+      />
     </div>
   );
 };

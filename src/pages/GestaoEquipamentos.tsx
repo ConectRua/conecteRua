@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ReclassificationModal } from '@/components/ReclassificationModal';
+import { AddEquipamentoModal } from '@/components/Forms/AddEquipamentoModal';
 import { useApiData } from '@/hooks/useApiData';
+import type { InsertEquipamentoSocial } from '../../shared/schema';
 import { 
   Building, 
   Phone, 
@@ -15,7 +18,13 @@ import {
 } from 'lucide-react';
 
 const GestaoEquipamentos = () => {
-  const { equipamentosSociais, loading } = useApiData();
+  const { equipamentosSociais, loading, addEquipamentoSocial } = useApiData();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  const handleAddEquipamento = (equipamento: InsertEquipamentoSocial) => {
+    addEquipamentoSocial(equipamento);
+    setIsAddModalOpen(false);
+  };
 
   if (loading) {
     return (
@@ -39,7 +48,7 @@ const GestaoEquipamentos = () => {
           </p>
         </div>
         
-        <Button className="bg-purple-600 hover:bg-purple-700">
+        <Button className="bg-purple-600 hover:bg-purple-700" onClick={() => setIsAddModalOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Novo Equipamento
         </Button>
@@ -225,6 +234,12 @@ const GestaoEquipamentos = () => {
           </CardContent>
         </Card>
       )}
+      
+      <AddEquipamentoModal 
+        open={isAddModalOpen}
+        onOpenChange={setIsAddModalOpen}
+        onAdd={handleAddEquipamento}
+      />
     </div>
   );
 };

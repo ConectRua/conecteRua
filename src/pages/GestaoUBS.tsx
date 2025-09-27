@@ -1,13 +1,22 @@
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { ReclassificationModal } from '@/components/ReclassificationModal';
+import { AddUBSModal } from '@/components/Forms/AddUBSModal';
 import { useApiData } from '@/hooks/useApiData';
 import { Building2, Search, Plus, Edit, MapPin, Phone, Users } from 'lucide-react';
+import type { InsertUBS } from '../../shared/schema';
 
 const GestaoUBS = () => {
-  const { ubsList, loading } = useApiData();
+  const { ubsList, loading, addUBS } = useApiData();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  const handleAddUBS = (ubs: InsertUBS) => {
+    addUBS(ubs);
+    setIsAddModalOpen(false);
+  };
 
   if (loading) {
     return (
@@ -26,7 +35,7 @@ const GestaoUBS = () => {
             Gerencie as Unidades Básicas de Saúde cadastradas
           </p>
         </div>
-        <Button>
+        <Button onClick={() => setIsAddModalOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Nova UBS
         </Button>
@@ -116,6 +125,12 @@ const GestaoUBS = () => {
           </Card>
         ))}
       </div>
+      
+      <AddUBSModal 
+        open={isAddModalOpen}
+        onOpenChange={setIsAddModalOpen}
+        onAdd={handleAddUBS}
+      />
     </div>
   );
 };
