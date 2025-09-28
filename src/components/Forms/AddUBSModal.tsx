@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Geolocation } from '@capacitor/geolocation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,17 @@ export const AddUBSModal = ({ open, onOpenChange, onAdd }: AddUBSModalProps) => 
   const { toast: useToastHook } = useToast();
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [isGeocodingAddress, setIsGeocodingAddress] = useState(false);
+  const geocodingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const geocodingRequestIdRef = useRef<number>(0);
+
+  // Cleanup timeout quando modal fecha
+  useEffect(() => {
+    return () => {
+      if (geocodingTimeoutRef.current) {
+        clearTimeout(geocodingTimeoutRef.current);
+      }
+    };
+  }, []);
   const [formData, setFormData] = useState({
     nome: '',
     endereco: '',
@@ -131,9 +142,21 @@ export const AddUBSModal = ({ open, onOpenChange, onAdd }: AddUBSModalProps) => 
     }));
   };
 
-  // Função para geocoding de endereço
-  const geocodeAddress = async (endereco: string, cep: string) => {
-    if (!endereco || !cep) return;
+  // Função para geocoding de endereço com melhor tratamento
+  const geocodeAddress = async (endereco: string, cep: string, requestId: number) => {
+    if (!endereco.trim() || !cep.trim()) return;
+    
+    // Verificar se Google Maps API está disponível
+    if (typeof window === 'undefined' || !window.google || !window.google.maps) {
+      toast.error('Google Maps não está disponível. Tente novamente.');
+      return;
+    }
+    
+    // Validar formato do CEP
+    const cepPattern = /^\d{5}-?\d{3}$/;
+    if (!cepPattern.test(cep)) {
+      return; // CEP inválido, não faz geocoding
+    }
     
     setIsGeocodingAddress(true);
     try {
@@ -144,6 +167,12 @@ export const AddUBSModal = ({ open, onOpenChange, onAdd }: AddUBSModalProps) => 
         geocoder.geocode(
           { address: fullAddress },
           (results, status) => {
+            // Verificar se esta resposta ainda é relevante
+            if (geocodingRequestIdRef.current !== requestId) {
+              reject(new Error('Request obsoleto'));
+              return;
+            }
+            
             if (status === 'OK' && results && results.length > 0) {
               resolve(results);
             } else {
@@ -153,39 +182,64 @@ export const AddUBSModal = ({ open, onOpenChange, onAdd }: AddUBSModalProps) => 
         );
       });
 
-      const location = result[0].geometry.location;
-      const lat = location.lat();
-      const lng = location.lng();
-      
-      setFormData(prev => ({
-        ...prev,
-        latitude: lat.toString(),
-        longitude: lng.toString()
-      }));
-      
-      toast.success('Localização encontrada automaticamente!');
+      // Verificar novamente se esta resposta ainda é relevante
+      if (geocodingRequestIdRef.current === requestId) {
+        const location = result[0].geometry.location;
+        const lat = location.lat();
+        const lng = location.lng();
+        
+        setFormData(prev => ({
+          ...prev,
+          latitude: lat.toString(),
+          longitude: lng.toString()
+        }));
+        
+        toast.success('Localização encontrada automaticamente!');
+      }
     } catch (error) {
-      console.warn('Erro no geocoding:', error);
+      if (geocodingRequestIdRef.current === requestId) {
+        console.warn('Erro no geocoding:', error);
+        // Só mostrar erro se não for um request obsoleto
+        if (!error.message.includes('obsoleto')) {
+          toast.error('Não foi possível encontrar a localização. Verifique o endereço e CEP.');
+        }
+      }
     } finally {
-      setIsGeocodingAddress(false);
+      if (geocodingRequestIdRef.current === requestId) {
+        setIsGeocodingAddress(false);
+      }
+    }
+  };
+
+  // Função para trigger geocoding com debounce adequado
+  const triggerGeocoding = (endereco: string, cep: string) => {
+    // Cancelar timeout anterior se existir
+    if (geocodingTimeoutRef.current) {
+      clearTimeout(geocodingTimeoutRef.current);
+      geocodingTimeoutRef.current = null;
+    }
+    
+    // Incrementar request ID para invalidar requests anteriores
+    geocodingRequestIdRef.current += 1;
+    const currentRequestId = geocodingRequestIdRef.current;
+    
+    // Só fazer geocoding se ambos campos estão preenchidos e endereço tem tamanho mínimo
+    if (endereco.trim().length >= 10 && cep.trim().length >= 8) {
+      geocodingTimeoutRef.current = setTimeout(() => {
+        geocodeAddress(endereco, cep, currentRequestId);
+      }, 1500); // 1.5 segundos de debounce
     }
   };
 
   // Handlers para inputs com geocoding automático
   const handleEnderecoChange = (value: string) => {
     setFormData(prev => ({ ...prev, endereco: value }));
-    // Trigger geocoding if both address and CEP are filled
-    if (value.trim() && formData.cep.trim()) {
-      setTimeout(() => geocodeAddress(value, formData.cep), 1000);
-    }
+    triggerGeocoding(value, formData.cep);
   };
 
   const handleCepChange = (value: string) => {
     setFormData(prev => ({ ...prev, cep: value }));
-    // Trigger geocoding if both address and CEP are filled
-    if (value.trim() && formData.endereco.trim()) {
-      setTimeout(() => geocodeAddress(formData.endereco, value), 1000);
-    }
+    triggerGeocoding(formData.endereco, value);
   };
 
   // Função para obter localização atual
