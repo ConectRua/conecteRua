@@ -38,6 +38,7 @@ const especialidadesDisponiveis = [
 export const AddUBSModal = ({ open, onOpenChange, onAdd }: AddUBSModalProps) => {
   const { toast: useToastHook } = useToast();
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [isGeocodingAddress, setIsGeocodingAddress] = useState(false);
   const [formData, setFormData] = useState({
     nome: '',
     endereco: '',
@@ -130,6 +131,64 @@ export const AddUBSModal = ({ open, onOpenChange, onAdd }: AddUBSModalProps) => 
     }));
   };
 
+  // Função para geocoding de endereço
+  const geocodeAddress = async (endereco: string, cep: string) => {
+    if (!endereco || !cep) return;
+    
+    setIsGeocodingAddress(true);
+    try {
+      const fullAddress = `${endereco}, ${cep}, Brasil`;
+      const geocoder = new google.maps.Geocoder();
+      
+      const result = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
+        geocoder.geocode(
+          { address: fullAddress },
+          (results, status) => {
+            if (status === 'OK' && results && results.length > 0) {
+              resolve(results);
+            } else {
+              reject(new Error(`Geocoding failed: ${status}`));
+            }
+          }
+        );
+      });
+
+      const location = result[0].geometry.location;
+      const lat = location.lat();
+      const lng = location.lng();
+      
+      setFormData(prev => ({
+        ...prev,
+        latitude: lat.toString(),
+        longitude: lng.toString()
+      }));
+      
+      toast.success('Localização encontrada automaticamente!');
+    } catch (error) {
+      console.warn('Erro no geocoding:', error);
+    } finally {
+      setIsGeocodingAddress(false);
+    }
+  };
+
+  // Handlers para inputs com geocoding automático
+  const handleEnderecoChange = (value: string) => {
+    setFormData(prev => ({ ...prev, endereco: value }));
+    // Trigger geocoding if both address and CEP are filled
+    if (value.trim() && formData.cep.trim()) {
+      setTimeout(() => geocodeAddress(value, formData.cep), 1000);
+    }
+  };
+
+  const handleCepChange = (value: string) => {
+    setFormData(prev => ({ ...prev, cep: value }));
+    // Trigger geocoding if both address and CEP are filled
+    if (value.trim() && formData.endereco.trim()) {
+      setTimeout(() => geocodeAddress(formData.endereco, value), 1000);
+    }
+  };
+
+  // Função para obter localização atual
   const getCurrentLocation = async () => {
     setIsGettingLocation(true);
     try {
@@ -239,7 +298,7 @@ export const AddUBSModal = ({ open, onOpenChange, onAdd }: AddUBSModalProps) => 
                 <Textarea
                   id="endereco"
                   value={formData.endereco}
-                  onChange={(e) => setFormData(prev => ({ ...prev, endereco: e.target.value }))}
+                  onChange={(e) => handleEnderecoChange(e.target.value)}
                   placeholder="Ex: Quadra 302, Conjunto 05, Lote 01 - Samambaia"
                   className={errors.endereco ? 'border-red-500' : ''}
                   rows={2}
@@ -253,11 +312,17 @@ export const AddUBSModal = ({ open, onOpenChange, onAdd }: AddUBSModalProps) => 
                   <Input
                     id="cep"
                     value={formData.cep}
-                    onChange={(e) => setFormData(prev => ({ ...prev, cep: e.target.value }))}
+                    onChange={(e) => handleCepChange(e.target.value)}
                     placeholder="72302-101"
                     className={errors.cep ? 'border-red-500' : ''}
                   />
                   {errors.cep && <p className="text-sm text-red-500 mt-1">{errors.cep}</p>}
+                {isGeocodingAddress && (
+                  <p className="text-xs text-blue-600 mt-1 flex items-center">
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    Buscando localização automaticamente...
+                  </p>
+                )}
                 </div>
 
                 <div>
