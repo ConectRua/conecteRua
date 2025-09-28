@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import type { InsertEquipamentoSocial } from '@shared/schema';
+import type { InsertEquipamentoSocial } from '../../../shared/schema';
 import { MapPin, Building, Phone, Clock, Users, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { toast } from 'sonner';
@@ -67,6 +67,7 @@ export const AddEquipamentoModal = ({ open, onOpenChange, onAdd }: AddEquipament
     email: '',
     latitude: '',
     longitude: '',
+    plusCode: '',
     tipo: 'CRAS - Centro de Referência de Assistência Social',
     servicos: [] as string[],
     responsavel: '',
@@ -84,8 +85,6 @@ export const AddEquipamentoModal = ({ open, onOpenChange, onAdd }: AddEquipament
     if (!formData.endereco.trim()) newErrors.endereco = 'Endereço é obrigatório';
     if (!formData.cep.trim()) newErrors.cep = 'CEP é obrigatório';
     if (!formData.telefone.trim()) newErrors.telefone = 'Telefone é obrigatório';
-    if (!formData.latitude.trim()) newErrors.latitude = 'Latitude é obrigatória';
-    if (!formData.longitude.trim()) newErrors.longitude = 'Longitude é obrigatória';
     if (!formData.responsavel.trim()) newErrors.responsavel = 'Responsável é obrigatório';
 
     // Validar formato do CEP
@@ -94,14 +93,18 @@ export const AddEquipamentoModal = ({ open, onOpenChange, onAdd }: AddEquipament
       newErrors.cep = 'CEP deve ter o formato 12345-678';
     }
 
-    // Validar coordenadas
-    const lat = parseFloat(formData.latitude);
-    const lng = parseFloat(formData.longitude);
-    if (formData.latitude && (isNaN(lat) || lat < -90 || lat > 90)) {
-      newErrors.latitude = 'Latitude deve estar entre -90 e 90';
+    // Validar coordenadas (opcionais)
+    if (formData.latitude) {
+      const lat = parseFloat(formData.latitude);
+      if (isNaN(lat) || lat < -90 || lat > 90) {
+        newErrors.latitude = 'Latitude deve estar entre -90 e 90';
+      }
     }
-    if (formData.longitude && (isNaN(lng) || lng < -180 || lng > 180)) {
-      newErrors.longitude = 'Longitude deve estar entre -180 e 180';
+    if (formData.longitude) {
+      const lng = parseFloat(formData.longitude);
+      if (isNaN(lng) || lng < -180 || lng > 180) {
+        newErrors.longitude = 'Longitude deve estar entre -180 e 180';
+      }
     }
 
     setErrors(newErrors);
@@ -115,8 +118,8 @@ export const AddEquipamentoModal = ({ open, onOpenChange, onAdd }: AddEquipament
 
     const newEquipamento: InsertEquipamentoSocial = {
       ...formData,
-      latitude: parseFloat(formData.latitude),
-      longitude: parseFloat(formData.longitude),
+      latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+      longitude: formData.longitude ? parseFloat(formData.longitude) : null,
       capacidade: formData.capacidade ? parseInt(formData.capacidade) : null,
       cep: formData.cep.replace(/\D/g, '').replace(/(\d{5})(\d{3})/, '$1-$2')
     };
@@ -134,6 +137,7 @@ export const AddEquipamentoModal = ({ open, onOpenChange, onAdd }: AddEquipament
       email: '',
       latitude: '',
       longitude: '',
+      plusCode: '',
       tipo: 'CRAS - Centro de Referência de Assistência Social',
       servicos: [],
       responsavel: '',
@@ -369,14 +373,27 @@ export const AddEquipamentoModal = ({ open, onOpenChange, onAdd }: AddEquipament
                 <p className="text-xs text-muted-foreground">
                   {formData.latitude && formData.longitude 
                     ? `Lat: ${parseFloat(formData.latitude).toFixed(6)}, Long: ${parseFloat(formData.longitude).toFixed(6)}`
-                    : 'Clique para capturar sua localização atual via GPS'
+                    : 'Clique para capturar sua localização atual via GPS (opcional)'
                   }
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="plusCode">Plus Code (Opcional)</Label>
+                <Input
+                  id="plusCode"
+                  value={formData.plusCode}
+                  onChange={(e) => setFormData(prev => ({ ...prev, plusCode: e.target.value }))}
+                  placeholder="Ex: 8FRP5QXG+XH"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Plus Code é um sistema de códigos para localização
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Label htmlFor="latitude">Latitude *</Label>
+                  <Label htmlFor="latitude">Latitude (Opcional)</Label>
                   <Input
                     id="latitude"
                     value={formData.latitude}
@@ -388,7 +405,7 @@ export const AddEquipamentoModal = ({ open, onOpenChange, onAdd }: AddEquipament
                 </div>
 
                 <div>
-                  <Label htmlFor="longitude">Longitude *</Label>
+                  <Label htmlFor="longitude">Longitude (Opcional)</Label>
                   <Input
                     id="longitude"
                     value={formData.longitude}

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import type { InsertUBS } from '@shared/schema';
+import type { InsertUBS } from '../../../shared/schema';
 import { MapPin, Building2, Phone, Clock, Stethoscope, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { toast } from 'sonner';
@@ -45,6 +45,7 @@ export const AddUBSModal = ({ open, onOpenChange, onAdd }: AddUBSModalProps) => 
     telefone: '',
     latitude: '',
     longitude: '',
+    plusCode: '',
     tipo: 'UBS' as 'UBS' | 'Hospital' | 'Clínica',
     especialidades: [] as string[],
     horarioFuncionamento: '07:00 - 17:00',
@@ -60,8 +61,6 @@ export const AddUBSModal = ({ open, onOpenChange, onAdd }: AddUBSModalProps) => 
     if (!formData.endereco.trim()) newErrors.endereco = 'Endereço é obrigatório';
     if (!formData.cep.trim()) newErrors.cep = 'CEP é obrigatório';
     if (!formData.telefone.trim()) newErrors.telefone = 'Telefone é obrigatório';
-    if (!formData.latitude.trim()) newErrors.latitude = 'Latitude é obrigatória';
-    if (!formData.longitude.trim()) newErrors.longitude = 'Longitude é obrigatória';
     if (formData.especialidades.length === 0) newErrors.especialidades = 'Pelo menos uma especialidade é obrigatória';
 
     // Validar formato do CEP
@@ -70,14 +69,18 @@ export const AddUBSModal = ({ open, onOpenChange, onAdd }: AddUBSModalProps) => 
       newErrors.cep = 'CEP deve ter o formato 12345-678';
     }
 
-    // Validar coordenadas
-    const lat = parseFloat(formData.latitude);
-    const lng = parseFloat(formData.longitude);
-    if (formData.latitude && (isNaN(lat) || lat < -90 || lat > 90)) {
-      newErrors.latitude = 'Latitude deve estar entre -90 e 90';
+    // Validar coordenadas (opcionais)
+    if (formData.latitude) {
+      const lat = parseFloat(formData.latitude);
+      if (isNaN(lat) || lat < -90 || lat > 90) {
+        newErrors.latitude = 'Latitude deve estar entre -90 e 90';
+      }
     }
-    if (formData.longitude && (isNaN(lng) || lng < -180 || lng > 180)) {
-      newErrors.longitude = 'Longitude deve estar entre -180 e 180';
+    if (formData.longitude) {
+      const lng = parseFloat(formData.longitude);
+      if (isNaN(lng) || lng < -180 || lng > 180) {
+        newErrors.longitude = 'Longitude deve estar entre -180 e 180';
+      }
     }
 
     setErrors(newErrors);
@@ -91,8 +94,8 @@ export const AddUBSModal = ({ open, onOpenChange, onAdd }: AddUBSModalProps) => 
 
     const newUBS: InsertUBS = {
       ...formData,
-      latitude: parseFloat(formData.latitude),
-      longitude: parseFloat(formData.longitude),
+      latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+      longitude: formData.longitude ? parseFloat(formData.longitude) : null,
       cep: formData.cep.replace(/\D/g, '').replace(/(\d{5})(\d{3})/, '$1-$2')
     };
 
@@ -108,6 +111,7 @@ export const AddUBSModal = ({ open, onOpenChange, onAdd }: AddUBSModalProps) => 
       telefone: '',
       latitude: '',
       longitude: '',
+      plusCode: '',
       tipo: 'UBS',
       especialidades: [],
       horarioFuncionamento: '07:00 - 17:00',
@@ -305,14 +309,27 @@ export const AddUBSModal = ({ open, onOpenChange, onAdd }: AddUBSModalProps) => 
                 <p className="text-xs text-muted-foreground">
                   {formData.latitude && formData.longitude 
                     ? `Lat: ${parseFloat(formData.latitude).toFixed(6)}, Long: ${parseFloat(formData.longitude).toFixed(6)}`
-                    : 'Clique para capturar sua localização atual via GPS'
+                    : 'Clique para capturar sua localização atual via GPS (opcional)'
                   }
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="plusCode">Plus Code (Opcional)</Label>
+                <Input
+                  id="plusCode"
+                  value={formData.plusCode}
+                  onChange={(e) => setFormData(prev => ({ ...prev, plusCode: e.target.value }))}
+                  placeholder="Ex: 8FRP5QXG+XH"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Plus Code é um sistema de códigos para localização
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Label htmlFor="latitude">Latitude *</Label>
+                  <Label htmlFor="latitude">Latitude (Opcional)</Label>
                   <Input
                     id="latitude"
                     value={formData.latitude}
@@ -324,7 +341,7 @@ export const AddUBSModal = ({ open, onOpenChange, onAdd }: AddUBSModalProps) => 
                 </div>
 
                 <div>
-                  <Label htmlFor="longitude">Longitude *</Label>
+                  <Label htmlFor="longitude">Longitude (Opcional)</Label>
                   <Input
                     id="longitude"
                     value={formData.longitude}
