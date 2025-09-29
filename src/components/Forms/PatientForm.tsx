@@ -1768,162 +1768,833 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
                 </AccordionContent>
               </AccordionItem>
 
-              {/* EXAME FÍSICO BÁSICO */}
+              {/* EXAME FÍSICO DETALHADO */}
               <AccordionItem value="exame-fisico">
                 <AccordionTrigger className="flex items-center gap-2">
                   <Stethoscope className="h-4 w-4" />
-                  <span>Exame Físico Básico</span>
+                  <span>Exame Físico Detalhado</span>
                 </AccordionTrigger>
-                <AccordionContent className="space-y-4 pt-4">
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <FormField
-                      control={form.control}
-                      name="estadoGeral"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Estado Geral</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-estado-geral">
-                                <SelectValue placeholder="Selecione" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="beg">BEG</SelectItem>
-                              <SelectItem value="reg">REG</SelectItem>
-                              <SelectItem value="mau-estado">Mau Estado</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                <AccordionContent className="space-y-6 pt-4">
+                  
+                  {/* ESTADO GERAL BÁSICO */}
+                  <div>
+                    <h4 className="font-semibold text-sm mb-3 text-blue-600">Estado Geral</h4>
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <FormField
+                        control={form.control}
+                        name="estadoGeral"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Estado Geral</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-estado-geral">
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="beg">BEG</SelectItem>
+                                <SelectItem value="reg">REG</SelectItem>
+                                <SelectItem value="mau-estado">Mau Estado</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                    <FormField
-                      control={form.control}
-                      name="orientacao"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Orientação</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-orientacao">
-                                <SelectValue placeholder="Selecione" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="orientado">Orientado</SelectItem>
-                              <SelectItem value="desorientado-tempo">Desorientado no tempo</SelectItem>
-                              <SelectItem value="desorientado-espaco">Desorientado no espaço</SelectItem>
-                              <SelectItem value="desorientado-ambos">Desorientado tempo/espaço</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                      <FormField
+                        control={form.control}
+                        name="orientacao"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Orientação</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-orientacao">
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="orientado">Orientado</SelectItem>
+                                <SelectItem value="desorientado-tempo">Desorientado no tempo</SelectItem>
+                                <SelectItem value="desorientado-espaco">Desorientado no espaço</SelectItem>
+                                <SelectItem value="desorientado-ambos">Desorientado tempo/espaço</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                    <FormField
-                      control={form.control}
-                      name="consciencia"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Consciência</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-consciencia">
-                                <SelectValue placeholder="Selecione" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="vigil">Vigil</SelectItem>
-                              <SelectItem value="sonolento">Sonolento</SelectItem>
-                              <SelectItem value="obnubilado">Obnubilado</SelectItem>
-                              <SelectItem value="estupor">Estupor</SelectItem>
-                              <SelectItem value="coma">Coma</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                      <FormField
+                        control={form.control}
+                        name="consciencia"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Consciência</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-consciencia">
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="vigil">Vigil</SelectItem>
+                                <SelectItem value="sonolento">Sonolento</SelectItem>
+                                <SelectItem value="obnubilado">Obnubilado</SelectItem>
+                                <SelectItem value="estupor">Estupor</SelectItem>
+                                <SelectItem value="coma">Coma</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                    <FormField
-                      control={form.control}
-                      name="hidratacao"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Hidratação</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-hidratacao">
-                                <SelectValue placeholder="Selecione" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="hidratado">Hidratado</SelectItem>
-                              <SelectItem value="desidratado-leve">Desidratado +/4+</SelectItem>
-                              <SelectItem value="desidratado-moderado">Desidratado ++/4+</SelectItem>
-                              <SelectItem value="desidratado-grave">Desidratado +++/4+</SelectItem>
-                              <SelectItem value="desidratado-severo">Desidratado ++++/4+</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                      <FormField
+                        control={form.control}
+                        name="hidratacao"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Hidratação</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-hidratacao">
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="hidratado">Hidratado</SelectItem>
+                                <SelectItem value="desidratado-leve">Desidratado +/4+</SelectItem>
+                                <SelectItem value="desidratado-moderado">Desidratado ++/4+</SelectItem>
+                                <SelectItem value="desidratado-grave">Desidratado +++/4+</SelectItem>
+                                <SelectItem value="desidratado-severo">Desidratado ++++/4+</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                    <FormField
-                      control={form.control}
-                      name="nutricao"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nutrição</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-nutricao">
-                                <SelectValue placeholder="Selecione" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="nutrido">Nutrido</SelectItem>
-                              <SelectItem value="desnutrido-leve">Desnutrido +/4+</SelectItem>
-                              <SelectItem value="desnutrido-moderado">Desnutrido ++/4+</SelectItem>
-                              <SelectItem value="desnutrido-grave">Desnutrido +++/4+</SelectItem>
-                              <SelectItem value="desnutrido-severo">Desnutrido ++++/4+</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                      <FormField
+                        control={form.control}
+                        name="nutricao"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Nutrição</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-nutricao">
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="nutrido">Nutrido</SelectItem>
+                                <SelectItem value="desnutrido-leve">Desnutrido +/4+</SelectItem>
+                                <SelectItem value="desnutrido-moderado">Desnutrido ++/4+</SelectItem>
+                                <SelectItem value="desnutrido-grave">Desnutrido +++/4+</SelectItem>
+                                <SelectItem value="desnutrido-severo">Desnutrido ++++/4+</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                    <FormField
-                      control={form.control}
-                      name="coloracao"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Coloração</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-coloracao">
-                                <SelectValue placeholder="Selecione" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="normocorado">Normocorado</SelectItem>
-                              <SelectItem value="hipocromico">Hipocrômico</SelectItem>
-                              <SelectItem value="acianotico">Acianótico</SelectItem>
-                              <SelectItem value="cianotico">Cianótico</SelectItem>
-                              <SelectItem value="anicterico">Anictérico</SelectItem>
-                              <SelectItem value="icterico">Ictérico</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                      <FormField
+                        control={form.control}
+                        name="coloracao"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Coloração</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-coloracao">
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="normocorado">Normocorado</SelectItem>
+                                <SelectItem value="hipocromico">Hipocrômico</SelectItem>
+                                <SelectItem value="acianotico">Acianótico</SelectItem>
+                                <SelectItem value="cianotico">Cianótico</SelectItem>
+                                <SelectItem value="anicterico">Anictérico</SelectItem>
+                                <SelectItem value="icterico">Ictérico</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                   </div>
+
+                  {/* FACIES */}
+                  <div>
+                    <h4 className="font-semibold text-sm mb-3 text-blue-600">Fácies</h4>
+                    <div className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="facies"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Fácies</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-facies">
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="tipica">TÍPICA</SelectItem>
+                                <SelectItem value="atipica">ATÍPICA</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      {form.watch('facies') === 'atipica' && (
+                        <FormField
+                          control={form.control}
+                          name="faciesDescricao"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Descrição da Fácies Atípica</FormLabel>
+                              <FormControl>
+                                <Textarea 
+                                  placeholder="Descreva as características atípicas da fácies"
+                                  rows={2}
+                                  {...field} 
+                                  data-testid="textarea-facies-descricao"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* PULSOS */}
+                  <div>
+                    <h4 className="font-semibold text-sm mb-3 text-blue-600">Pulsos</h4>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="pulsosPresenca"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Presença dos Pulsos</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-pulsos-presenca">
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="presentes">PRESENTES</SelectItem>
+                                <SelectItem value="ausentes">AUSENTES</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="pulsosSimetria"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Simetria dos Pulsos</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-pulsos-simetria">
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="simetricos">SIMÉTRICOS</SelectItem>
+                                <SelectItem value="assimetricos">ASSIMÉTRICOS</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  {/* MEMBROS INFERIORES (MMII) */}
+                  <div>
+                    <h4 className="font-semibold text-sm mb-3 text-blue-600">Membros Inferiores (MMII)</h4>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="mmiiPerfusao"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Perfusão</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-mmii-perfusao">
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="bem-perfundidos">BEM PERFUNDIDOS</SelectItem>
+                                <SelectItem value="pouco-perfundidos">POUCO PERFUNDIDOS</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="mmiiTvp"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Sinais de TVP</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-mmii-tvp">
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="sem-sinais-tvp">SEM SINAIS DE TVP /4+</SelectItem>
+                                <SelectItem value="com-sinais-tvp">COM SINAIS DE TVP /4+</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  {/* LINFONODOMEGALIAS */}
+                  <div>
+                    <h4 className="font-semibold text-sm mb-3 text-blue-600">Linfonodomegalias</h4>
+                    <div className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="linfonodomegalias"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Linfonodomegalias</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-linfonodomegalias">
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="sem">SEM</SelectItem>
+                                <SelectItem value="com">COM</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      {form.watch('linfonodomegalias') === 'com' && (
+                        <FormField
+                          control={form.control}
+                          name="linfonodomegaliasDescricao"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Descrição das Linfonodomegalias</FormLabel>
+                              <FormControl>
+                                <Textarea 
+                                  placeholder="Descreva localização, tamanho e características"
+                                  rows={2}
+                                  {...field} 
+                                  data-testid="textarea-linfonodomegalias-descricao"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* TVP - PANTURRILHAS */}
+                  <div>
+                    <h4 className="font-semibold text-sm mb-3 text-blue-600">TVP - Panturrilhas</h4>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="tvpPanturrilhas"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Panturrilhas</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-tvp-panturrilhas">
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="empastadas">EMPASTADAS</SelectItem>
+                                <SelectItem value="normais">NORMAIS</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="tvpSinalHomans"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Sinal de Homans</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-tvp-sinal-homans">
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="positivo">POSITIVO</SelectItem>
+                                <SelectItem value="negativo">NEGATIVO</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  {/* EDEMA */}
+                  <div>
+                    <h4 className="font-semibold text-sm mb-3 text-blue-600">Edema</h4>
+                    <div className="grid gap-4 md:grid-cols-4">
+                      <FormField
+                        control={form.control}
+                        name="edemaFacies"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                data-testid="checkbox-edema-facies"
+                              />
+                            </FormControl>
+                            <FormLabel className="text-sm font-normal">Fácies</FormLabel>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="edemaMaos"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                data-testid="checkbox-edema-maos"
+                              />
+                            </FormControl>
+                            <FormLabel className="text-sm font-normal">Mãos</FormLabel>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="edemaPes"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                data-testid="checkbox-edema-pes"
+                              />
+                            </FormControl>
+                            <FormLabel className="text-sm font-normal">Pés</FormLabel>
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="edemaGeneralizado"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                data-testid="checkbox-edema-generalizado"
+                              />
+                            </FormControl>
+                            <FormLabel className="text-sm font-normal">Generalizado</FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+
+                  {/* ABDOME DETALHADO */}
+                  <div>
+                    <h4 className="font-semibold text-sm mb-3 text-blue-600">Abdome</h4>
+                    <div className="space-y-4">
+                      <div className="grid gap-4 md:grid-cols-3">
+                        <FormField
+                          control={form.control}
+                          name="abdomenTipo"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Tipo de Abdome</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-abdomen-tipo">
+                                    <SelectValue placeholder="Selecione" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="globo">GLOBO</SelectItem>
+                                  <SelectItem value="escavado">ESCAVADO</SelectItem>
+                                  <SelectItem value="pendular">PENDULAR</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="abdomenMassas"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Massas Abdominais</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-abdomen-massas">
+                                    <SelectValue placeholder="Selecione" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="ausencia">AUSÊNCIA DE MASSAS</SelectItem>
+                                  <SelectItem value="presenca">PRESENÇA DE MASSAS</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="abdomenCirculacaoColateral"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Circulação Colateral</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-abdomen-circulacao">
+                                    <SelectValue placeholder="Selecione" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="presente">PRESENTE</SelectItem>
+                                  <SelectItem value="ausente">AUSENTE</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <FormField
+                          control={form.control}
+                          name="abdomenHerniaUmbilical"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                  data-testid="checkbox-hernia-umbilical"
+                                />
+                              </FormControl>
+                              <FormLabel className="text-sm font-normal">Hérnia Umbilical</FormLabel>
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="abdomenHerniaInguinal"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                  data-testid="checkbox-hernia-inguinal"
+                                />
+                              </FormControl>
+                              <FormLabel className="text-sm font-normal">Hérnia Inguinal</FormLabel>
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="abdomenRetracoes"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                  data-testid="checkbox-abdomen-retracoes"
+                                />
+                              </FormControl>
+                              <FormLabel className="text-sm font-normal">Retrações</FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-4">
+                        <FormField
+                          control={form.control}
+                          name="abdomenRuidosHidroaereos"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Ruídos Hidroaéreos</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-ruidos-hidroaereos">
+                                    <SelectValue placeholder="Selecione" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="+">+</SelectItem>
+                                  <SelectItem value="-">-</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="abdomenSopros"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Sopros</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-abdomen-sopros">
+                                    <SelectValue placeholder="Selecione" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="+">+</SelectItem>
+                                  <SelectItem value="-">-</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="abdomenDistendido"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Distendido</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-abdomen-distendido">
+                                    <SelectValue placeholder="Selecione" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="+">+</SelectItem>
+                                  <SelectItem value="-">-</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="abdomenDor"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Dor</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-abdomen-dor">
+                                    <SelectValue placeholder="Selecione" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="doloroso">DOLOROSO</SelectItem>
+                                  <SelectItem value="indolor">INDOLOR</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-4">
+                        <FormField
+                          control={form.control}
+                          name="abdomenSinalMurphy"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Sinal de Murphy</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-sinal-murphy">
+                                    <SelectValue placeholder="Selecione" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="+">+</SelectItem>
+                                  <SelectItem value="-">-</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="abdomenSinalBlumberg"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Sinal de Blumberg</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-sinal-blumberg">
+                                    <SelectValue placeholder="Selecione" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="+">+</SelectItem>
+                                  <SelectItem value="-">-</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="abdomenSinalGiordano"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Sinal de Giordano</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-sinal-giordano">
+                                    <SelectValue placeholder="Selecione" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="+">+</SelectItem>
+                                  <SelectItem value="-">-</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="abdomenVisceromegalias"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Visceromegalias</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-visceromegalias">
+                                    <SelectValue placeholder="Selecione" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="+">+</SelectItem>
+                                  <SelectItem value="-">-</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name="abdomenPeristalse"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Peristalse</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="Descrever peristalse (presente, ausente, aumentada, diminuída)"
+                                {...field} 
+                                data-testid="input-abdomen-peristalse"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="abdomenLesoesCutaneas"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Lesões Cutâneas</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                placeholder="Descrever lesões cutâneas abdominais se presentes"
+                                rows={2}
+                                {...field} 
+                                data-testid="textarea-lesoes-cutaneas"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+
                 </AccordionContent>
               </AccordionItem>
 
