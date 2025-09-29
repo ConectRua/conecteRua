@@ -4,17 +4,32 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Users, Search, Plus, UserCheck, MapPin, Phone, Calendar, CreditCard, Trash2 } from 'lucide-react';
+import { Users, Search, Plus, UserCheck, MapPin, Phone, Calendar, CreditCard, Trash2, Edit } from 'lucide-react';
 import { PatientForm } from '@/components/Forms/PatientForm';
+import { EditPatientModal } from '@/components/Forms/EditPatientModal';
 import { useApiData } from '@/hooks/useApiData';
+import type { Paciente } from '../../shared/schema';
 
 const Pacientes = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const { pacientesList, getEstatisticas, deletePaciente } = useApiData();
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedPaciente, setSelectedPaciente] = useState<Paciente | null>(null);
+  const { pacientesList, getEstatisticas, deletePaciente, updatePaciente } = useApiData();
   const stats = getEstatisticas();
 
   const handleDeletePaciente = (id: number) => {
     deletePaciente(id);
+  };
+
+  const handleEditPaciente = (paciente: Paciente) => {
+    setSelectedPaciente(paciente);
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdatePaciente = (id: number, pacienteData: Partial<Paciente>) => {
+    updatePaciente(id, pacienteData);
+    setIsEditModalOpen(false);
+    setSelectedPaciente(null);
   };
 
   return (
@@ -122,8 +137,14 @@ const Pacientes = () => {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline">
-                    Ver Detalhes
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => handleEditPaciente(paciente)}
+                    data-testid={`button-edit-paciente-${paciente.id}`}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Editar
                   </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -182,6 +203,12 @@ const Pacientes = () => {
       </div>
 
       <PatientForm open={isFormOpen} onOpenChange={setIsFormOpen} />
+      <EditPatientModal 
+        open={isEditModalOpen} 
+        onOpenChange={setIsEditModalOpen}
+        onEdit={handleUpdatePaciente}
+        paciente={selectedPaciente}
+      />
     </div>
   );
 };
