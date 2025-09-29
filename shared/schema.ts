@@ -267,6 +267,10 @@ export const pacientes = pgTable("pacientes", {
   evolucao: text("evolucao"),
   observacoes: text("observacoes"),
   
+  // CONTROLE DE ATENDIMENTOS
+  ultimoAtendimento: timestamp("ultimo_atendimento"),
+  proximoAtendimento: timestamp("proximo_atendimento"),
+  
   // SISTEMA
   ativo: boolean("ativo").default(true),
   createdAt: timestamp("created_at").defaultNow(),
@@ -427,12 +431,45 @@ export const insertPacienteSchema = z.object({
   evolucao: z.string().nullable().optional(),
   observacoes: z.string().nullable().optional(),
   
+  // CONTROLE DE ATENDIMENTOS
+  ultimoAtendimento: z.date().nullable().optional(),
+  proximoAtendimento: z.date().nullable().optional(),
+  
   // SISTEMA
   ativo: z.boolean().optional().default(true),
 });
 
 export type Paciente = typeof pacientes.$inferSelect;
 export type InsertPaciente = z.infer<typeof insertPacienteSchema>;
+
+// ============ ORIENTAÇÕES DE ENCAMINHAMENTO ============
+export const orientacoesEncaminhamento = pgTable("orientacoes_encaminhamento", {
+  id: serial("id").primaryKey(),
+  pacienteId: integer("paciente_id").references(() => pacientes.id).notNull(),
+  orientacaoAnterior: text("orientacao_anterior"),
+  proximaOrientacao: text("proxima_orientacao").notNull(),
+  observacoesSeguimento: text("observacoes_seguimento"),
+  seguiuOrientacao: boolean("seguiu_orientacao"),
+  dataOrientacao: timestamp("data_orientacao").defaultNow(),
+  usuarioId: integer("usuario_id").references(() => users.id),
+  ativo: boolean("ativo").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertOrientacaoEncaminhamentoSchema = z.object({
+  pacienteId: z.number(),
+  orientacaoAnterior: z.string().nullable().optional(),
+  proximaOrientacao: z.string().min(1),
+  observacoesSeguimento: z.string().nullable().optional(),
+  seguiuOrientacao: z.boolean().nullable().optional(),
+  dataOrientacao: z.date().optional(),
+  usuarioId: z.number().nullable().optional(),
+  ativo: z.boolean().optional().default(true),
+});
+
+export type OrientacaoEncaminhamento = typeof orientacoesEncaminhamento.$inferSelect;
+export type InsertOrientacaoEncaminhamento = z.infer<typeof insertOrientacaoEncaminhamentoSchema>;
 
 // ============ EQUIPAMENTOS SOCIAIS ============
 export const equipamentosSociais = pgTable("equipamentos_sociais", {
