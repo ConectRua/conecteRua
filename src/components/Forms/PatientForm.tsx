@@ -7,22 +7,41 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Textarea } from '@/components/ui/textarea';
-import { MapPin, Loader2, User, Phone, Calendar, Heart } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { 
+  MapPin, 
+  Loader2, 
+  User, 
+  Phone, 
+  Calendar, 
+  Heart,
+  Brain,
+  Activity,
+  TestTube,
+  Pill,
+  Users,
+  Stethoscope,
+  FileText,
+  Building2
+} from 'lucide-react';
 import { useApiData } from '@/hooks/useApiData';
 import type { InsertPaciente } from '../../../shared/schema';
 import { insertPacienteSchema } from '../../../shared/schema';
 import { toast } from 'sonner';
 
-// Use the shared schema from the backend for consistency
-const patientSchema = insertPacienteSchema.extend({
-  condicoesSaude: z.array(z.string()).min(1, 'Selecione pelo menos uma condição de saúde'),
+// Schema para validação do formulário completo
+const pacienteCompletoSchema = insertPacienteSchema.extend({
+  // Campos obrigatórios básicos
+  nome: z.string().min(1, 'Nome é obrigatório'),
+  endereco: z.string().min(1, 'Endereço é obrigatório'),
+  cep: z.string().regex(/^\d{5}-?\d{3}$/, 'CEP deve ter formato 00000-000'),
 });
 
-type PatientFormData = z.infer<typeof patientSchema>;
+type PacienteFormData = z.infer<typeof pacienteCompletoSchema>;
 
 interface PatientFormProps {
   open: boolean;
@@ -30,39 +49,118 @@ interface PatientFormProps {
   onAdd?: (paciente: InsertPaciente) => void;
 }
 
-const condicoesSaudeOptions = [
-  'Hipertensão',
-  'Diabetes',
-  'Cardiopatia',
-  'Asma',
-  'Obesidade',
-  'Depressão',
-  'Ansiedade',
-  'Artrite',
-  'Osteoporose',
-  'Problemas Renais',
-  'Problemas Visuais',
-  'Problemas Auditivos'
-];
-
 export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => {
   const { addPaciente } = useApiData();
-  const [selectedCondicoesSaude, setSelectedCondicoesSaude] = useState<string[]>([]);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [isGeocodingAddress, setIsGeocodingAddress] = useState(false);
   const [formData, setFormData] = useState({ endereco: '', cep: '', latitude: '', longitude: '' });
   const geocodingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const geocodingRequestIdRef = useRef<number>(0);
 
-  const form = useForm<PatientFormData>({
-    resolver: zodResolver(patientSchema),
+  const form = useForm<PacienteFormData>({
+    resolver: zodResolver(pacienteCompletoSchema),
     defaultValues: {
+      // Local de atendimento
+      localAtendimento: '',
+      dataAtendimento: new Date(),
+      equipe: 'Samambaia - DF',
+      
+      // Identificação
       nome: '',
+      nomeSocial: '',
+      nomeMae: '',
+      nomePai: '',
+      naturalidade: '',
+      dataNascimento: undefined,
+      idade: undefined,
+      cnsOuCpf: '',
+      
+      // Endereço
       endereco: '',
       cep: '',
       telefone: '',
-      idade: 0,
-      condicoesSaude: [],
+      
+      // Identidade e demografia
+      identidadeGenero: '',
+      corRaca: '',
+      orientacaoSexual: '',
+      
+      // Saúde mental
+      internacao: false,
+      ideacaoSuicida: false,
+      tentativaSuicidio: false,
+      
+      // Sinais vitais
+      pressaoArterial: '',
+      frequenciaCardiaca: '',
+      temperatura: '',
+      peso: '',
+      glicemiaCapilar: '',
+      
+      // Testes
+      testeGravidez: '',
+      testeSifilis: false,
+      testeHepB: false,
+      testeHepC: false,
+      testeHIV: false,
+      
+      // Substâncias
+      usoAlcool: false,
+      usoMaconha: false,
+      usoCocaina: false,
+      usoCrack: false,
+      usoSinteticos: false,
+      usoVolateis: false,
+      
+      // Histórico familiar
+      dmFamiliar: false,
+      haFamiliar: false,
+      avcFamiliar: false,
+      iamFamiliar: false,
+      caFamiliar: false,
+      depressaoFamiliar: false,
+      ansiedadeFamiliar: false,
+      esquizoFamiliar: false,
+      bipolarFamiliar: false,
+      alcoolFamiliar: false,
+      drogasFamiliar: false,
+      
+      // Comorbidades
+      dm: false,
+      ha: false,
+      avc: false,
+      iam: false,
+      ca: false,
+      depressao: false,
+      ansiedade: false,
+      esquizo: false,
+      bipolar: false,
+      alcoolismo: false,
+      asma: false,
+      
+      // Medicações e serviços
+      medicacaoEmUso: '',
+      kitOdonto: false,
+      kitHigiene: false,
+      vacina: false,
+      coletaSangue: false,
+      admMedicacao: false,
+      medicacaoAdministrada: '',
+      
+      // Exame físico
+      estadoGeral: '',
+      orientacao: '',
+      consciencia: '',
+      hidratacao: '',
+      nutricao: '',
+      coloracao: '',
+      
+      // Evolução
+      evolucao: '',
+      observacoes: '',
+      
+      // Sistema
+      ativo: true,
     },
   });
 
@@ -75,20 +173,18 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
     };
   }, []);
 
-  // Função para geocoding de endereço com melhor tratamento
+  // Função para geocoding de endereço
   const geocodeAddress = async (endereco: string, cep: string, requestId: number) => {
     if (!endereco.trim() || !cep.trim()) return;
     
-    // Verificar se Google Maps API está disponível
     if (typeof window === 'undefined' || !window.google || !window.google.maps) {
       toast.error('Google Maps não está disponível. Tente novamente.');
       return;
     }
     
-    // Validar formato do CEP
     const cepPattern = /^\d{5}-?\d{3}$/;
     if (!cepPattern.test(cep)) {
-      return; // CEP inválido, não faz geocoding
+      return;
     }
     
     setIsGeocodingAddress(true);
@@ -100,7 +196,6 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
         geocoder.geocode(
           { address: fullAddress },
           (results, status) => {
-            // Verificar se esta resposta ainda é relevante
             if (geocodingRequestIdRef.current !== requestId) {
               reject(new Error('Request obsoleto'));
               return;
@@ -115,7 +210,6 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
         );
       });
 
-      // Verificar novamente se esta resposta ainda é relevante
       if (geocodingRequestIdRef.current === requestId) {
         const location = result[0].geometry.location;
         const lat = location.lat();
@@ -132,7 +226,6 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
     } catch (error) {
       if (geocodingRequestIdRef.current === requestId) {
         console.warn('Erro no geocoding:', error);
-        // Só mostrar erro se não for um request obsoleto
         if (!error.message.includes('obsoleto')) {
           toast.error('Não foi possível encontrar a localização. Verifique o endereço e CEP.');
         }
@@ -144,23 +237,20 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
     }
   };
 
-  // Função para trigger geocoding com debounce adequado
+  // Trigger geocoding com debounce
   const triggerGeocoding = (endereco: string, cep: string) => {
-    // Cancelar timeout anterior se existir
     if (geocodingTimeoutRef.current) {
       clearTimeout(geocodingTimeoutRef.current);
       geocodingTimeoutRef.current = null;
     }
     
-    // Incrementar request ID para invalidar requests anteriores
     geocodingRequestIdRef.current += 1;
     const currentRequestId = geocodingRequestIdRef.current;
     
-    // Só fazer geocoding se ambos campos estão preenchidos e endereço tem tamanho mínimo
     if (endereco.trim().length >= 10 && cep.trim().length >= 8) {
       geocodingTimeoutRef.current = setTimeout(() => {
         geocodeAddress(endereco, cep, currentRequestId);
-      }, 1500); // 1.5 segundos de debounce
+      }, 1500);
     }
   };
 
@@ -177,55 +267,36 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
     triggerGeocoding(formData.endereco, value);
   };
 
+  // Obter localização atual
   const getCurrentLocation = async () => {
-    console.log('=== INICIO getCurrentLocation ===');
     setIsGettingLocation(true);
     try {
-      console.log('Solicitando localização...');
-      
-      // Primeiro tenta a API Capacitor (para mobile)
       try {
         const coordinates = await Geolocation.getCurrentPosition({
           enableHighAccuracy: true,
           timeout: 10000
         });
         
-        console.log('Coordenadas recebidas via Capacitor:', coordinates);
-        
-        const location = {
-          latitude: coordinates.coords.latitude,
-          longitude: coordinates.coords.longitude
-        };
-        
-        console.log('Localização formatada:', location);
         setFormData(prev => ({
           ...prev,
-          latitude: location.latitude.toString(),
-          longitude: location.longitude.toString()
+          latitude: coordinates.coords.latitude.toString(),
+          longitude: coordinates.coords.longitude.toString()
         }));
-        toast.success('Localização obtida com sucesso!');
-        console.log('=== FIM getCurrentLocation (sucesso via Capacitor) ===');
+        
+        toast.success('Localização atual obtida com sucesso!');
         return;
       } catch (capacitorError) {
         console.log('Capacitor failed, trying browser API:', capacitorError);
         
-        // Fallback para API do browser (para web)
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
             (position) => {
-              console.log('Coordenadas recebidas via Browser:', position);
-              const location = {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude
-              };
-              console.log('Localização formatada (browser):', location);
               setFormData(prev => ({
                 ...prev,
-                latitude: location.latitude.toString(),
-                longitude: location.longitude.toString()
+                latitude: position.coords.latitude.toString(),
+                longitude: position.coords.longitude.toString()
               }));
-              toast.success('Localização obtida com sucesso!');
-              console.log('=== FIM getCurrentLocation (sucesso via Browser) ===');
+              toast.success('Localização atual obtida com sucesso!');
               setIsGettingLocation(false);
             },
             (error) => {
@@ -242,20 +313,13 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
     } catch (error) {
       console.error('Erro ao obter localização:', error);
       toast.error('Não foi possível obter a localização. Verifique as permissões.');
-      console.log('=== FIM getCurrentLocation (erro) ===');
     } finally {
       setIsGettingLocation(false);
     }
   };
 
-  const onSubmit = async (data: PatientFormData) => {
-    console.log('=== INICIO onSubmit ===');
-    console.log('Dados do formulário:', data);
-    console.log('Condições de saúde selecionadas:', selectedCondicoesSaude);
-    console.log('Localização atual:', currentLocation);
-    
+  const onSubmit = async (data: PacienteFormData) => {
     try {
-
       // Usar coordenadas do geocoding se disponíveis
       const coordinates = formData.latitude && formData.longitude 
         ? { latitude: parseFloat(formData.latitude), longitude: parseFloat(formData.longitude) }
@@ -263,284 +327,1591 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
             latitude: -15.8781 + (Math.random() - 0.5) * 0.1,
             longitude: -48.0958 + (Math.random() - 0.5) * 0.1,
           };
-      
-      console.log('Coordenadas a serem usadas:', coordinates);
 
       const newPatient: InsertPaciente = {
-        nome: data.nome,
-        endereco: data.endereco,
-        cep: data.cep,
-        telefone: data.telefone,
-        idade: data.idade,
-        condicoesSaude: selectedCondicoesSaude,
+        ...data,
         latitude: coordinates.latitude,
         longitude: coordinates.longitude,
-        ativo: true,
       };
-      
-      console.log('Objeto paciente criado:', newPatient);
 
-      console.log('Chamando addPaciente...');
-      
-      // Usar o callback se fornecido, senão usar o hook diretamente
       if (onAdd) {
-        console.log('Usando callback onAdd...');
         onAdd(newPatient);
       } else {
-        console.log('Usando addPaciente do hook...');
-        addPaciente(newPatient); // addPaciente uses mutation with automatic toast handling
+        addPaciente(newPatient);
       }
-      
+
       toast.success('Paciente cadastrado com sucesso!');
       form.reset();
-      setSelectedCondicoesSaude([]);
       setFormData({ endereco: '', cep: '', latitude: '', longitude: '' });
       onOpenChange(false);
-      console.log('=== FIM onSubmit (sucesso) ===');
     } catch (error) {
-      console.error('Erro no onSubmit:', error);
-      toast.error('Erro ao cadastrar paciente');
-      console.log('=== FIM onSubmit (erro) ===');
+      console.error('Erro ao cadastrar paciente:', error);
+      toast.error('Erro ao cadastrar paciente. Tente novamente.');
     }
-  };
-
-  const handleCondicaoSaudeChange = (condicao: string, checked: boolean) => {
-    console.log('handleCondicaoSaudeChange:', { condicao, checked });
-    
-    let newCondicoes: string[];
-    if (checked) {
-      newCondicoes = [...selectedCondicoesSaude, condicao];
-    } else {
-      newCondicoes = selectedCondicoesSaude.filter(c => c !== condicao);
-    }
-    
-    console.log('Novas condições:', newCondicoes);
-    setSelectedCondicoesSaude(newCondicoes);
-    
-    // Atualizar o formulário com as novas condições
-    form.setValue('condicoesSaude', newCondicoes);
-    
-    // Trigger validation manually
-    form.trigger('condicoesSaude');
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Novo Paciente</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Ficha de Avaliação Multiprofissional
+          </DialogTitle>
           <DialogDescription>
-            Cadastre um novo paciente no sistema
+            Consultório Na Rua - Cadastro completo de paciente
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="nome"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome Completo</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Nome do paciente" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* LOCAL DE ATENDIMENTO - NO TOPO */}
+            <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div className="flex items-center gap-2 mb-4">
+                <Building2 className="h-5 w-5 text-blue-600" />
+                <h3 className="font-semibold text-blue-900 dark:text-blue-100">LOCAL DE ATENDIMENTO</h3>
+              </div>
+              
+              <div className="grid gap-4 md:grid-cols-3">
+                <FormField
+                  control={form.control}
+                  name="localAtendimento"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Local/Endereço de Atendimento</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: UBS Samambaia Norte" {...field} data-testid="input-local-atendimento" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
+                <FormField
+                  control={form.control}
+                  name="dataAtendimento"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Data do Atendimento</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date" 
+                          {...field} 
+                          value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                          onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
+                          data-testid="input-data-atendimento"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="equipe"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Equipe</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-equipe" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
-            <FormField
-              control={form.control}
-              name="endereco"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Endereço *</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Textarea
-                        placeholder="Rua, número, bairro"
-                        className="pl-10"
-                        rows={2}
-                        {...field}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          handleEnderecoChange(e.target.value);
-                        }}
-                        data-testid="input-endereco"
+            {/* SEÇÕES ORGANIZADAS EM ACCORDION */}
+            <Accordion type="multiple" defaultValue={["identificacao", "endereco"]} className="w-full">
+              
+              {/* IDENTIFICAÇÃO COMPLETA */}
+              <AccordionItem value="identificacao">
+                <AccordionTrigger className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  <span>Identificação Completa</span>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="nome"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nome Completo *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Nome completo do paciente" {...field} data-testid="input-nome" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="nomeSocial"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nome Social</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Nome social (se aplicável)" {...field} data-testid="input-nome-social" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="nomeMae"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nome Completo da Mãe</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Nome da mãe" {...field} data-testid="input-nome-mae" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="nomePai"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nome Completo do Pai</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Nome do pai" {...field} data-testid="input-nome-pai" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="naturalidade"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Naturalidade (Local de Nascimento)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: Brasília - DF" {...field} data-testid="input-naturalidade" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="dataNascimento"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Data de Nascimento</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="date" 
+                              {...field} 
+                              value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                              onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
+                              data-testid="input-data-nascimento"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="idade"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Idade</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              placeholder="Idade em anos" 
+                              {...field} 
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                              data-testid="input-idade"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="cnsOuCpf"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>CNS ou CPF</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Número do CNS ou CPF" {...field} data-testid="input-cns-cpf" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* ENDEREÇO E LOCALIZAÇÃO */}
+              <AccordionItem value="endereco">
+                <AccordionTrigger className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  <span>Endereço e Localização</span>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-4">
+                  <FormField
+                    control={form.control}
+                    name="endereco"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Endereço Completo *</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                            <Textarea
+                              placeholder="Rua, número, bairro"
+                              className="pl-10"
+                              rows={2}
+                              {...field}
+                              onChange={(e) => {
+                                field.onChange(e);
+                                handleEnderecoChange(e.target.value);
+                              }}
+                              data-testid="input-endereco"
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <FormField
+                      control={form.control}
+                      name="cep"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>CEP *</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="00000-000" 
+                              {...field} 
+                              onChange={(e) => {
+                                field.onChange(e);
+                                handleCepChange(e.target.value);
+                              }}
+                              data-testid="input-cep"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="telefone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Telefone</FormLabel>
+                          <FormControl>
+                            <Input placeholder="(61) 99999-9999" {...field} data-testid="input-telefone" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Coordenadas GPS */}
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="latitude" className="text-sm font-medium">
+                        Latitude {isGeocodingAddress && <Loader2 className="inline h-3 w-3 animate-spin ml-1" />}
+                      </Label>
+                      <Input
+                        id="latitude"
+                        value={formData.latitude}
+                        onChange={(e) => setFormData(prev => ({ ...prev, latitude: e.target.value }))}
+                        placeholder="-15.7942"
+                        type="number"
+                        step="any"
+                        data-testid="input-latitude"
                       />
                     </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="cep"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>CEP *</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="00000-000" 
-                        {...field} 
-                        onChange={(e) => {
-                          field.onChange(e);
-                          handleCepChange(e.target.value);
-                        }}
-                        data-testid="input-cep"
+                    <div className="space-y-2">
+                      <Label htmlFor="longitude" className="text-sm font-medium">
+                        Longitude
+                      </Label>
+                      <Input
+                        id="longitude"
+                        value={formData.longitude}
+                        onChange={(e) => setFormData(prev => ({ ...prev, longitude: e.target.value }))}
+                        placeholder="-47.8822"
+                        type="number"
+                        step="any"
+                        data-testid="input-longitude"
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                    </div>
 
-              <FormField
-                control={form.control}
-                name="telefone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Telefone</FormLabel>
-                    <FormControl>
-                      <Input placeholder="(00) 00000-0000" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="idade"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Idade</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        placeholder="0" 
-                        {...field} 
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* Coordenadas GPS */}
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="latitude" className="text-sm font-medium">
-                  Latitude {isGeocodingAddress && <Loader2 className="inline h-3 w-3 animate-spin ml-1" />}
-                </Label>
-                <Input
-                  id="latitude"
-                  data-testid="input-latitude"
-                  value={formData.latitude}
-                  onChange={(e) => setFormData(prev => ({ ...prev, latitude: e.target.value }))}
-                  placeholder="-15.7942"
-                  type="number"
-                  step="any"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="longitude" className="text-sm font-medium">
-                  Longitude
-                </Label>
-                <Input
-                  id="longitude"
-                  data-testid="input-longitude"
-                  value={formData.longitude}
-                  onChange={(e) => setFormData(prev => ({ ...prev, longitude: e.target.value }))}
-                  placeholder="-47.8822"
-                  type="number"
-                  step="any"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Localização Atual</Label>
-                <Button
-                  type="button"
-                  data-testid="button-get-location"
-                  onClick={getCurrentLocation}
-                  disabled={isGettingLocation}
-                  className="w-full"
-                  variant="outline"
-                >
-                  {isGettingLocation ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Obtendo...
-                    </>
-                  ) : (
-                    <>
-                      <MapPin className="h-4 w-4 mr-2" />
-                      Usar GPS
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            {(formData.latitude && formData.longitude) && (
-              <div className="bg-green-50 dark:bg-green-950 p-3 rounded-lg border border-green-200 dark:border-green-800">
-                <p className="text-sm text-green-700 dark:text-green-300">
-                  📍 Localização encontrada: {parseFloat(formData.latitude).toFixed(6)}, {parseFloat(formData.longitude).toFixed(6)}
-                </p>
-              </div>
-            )}
-
-            {/* Botão de Localização (removido - substituído pelos campos acima) */}
-
-
-            <div>
-              <Label className="text-sm font-medium flex items-center gap-2">
-                <Heart className="h-4 w-4" />
-                Condições de Saúde
-              </Label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
-                {condicoesSaudeOptions.map((condicao) => (
-                  <div key={condicao} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={condicao}
-                      checked={selectedCondicoesSaude.includes(condicao)}
-                      onCheckedChange={(checked) => 
-                        handleCondicaoSaudeChange(condicao, checked as boolean)
-                      }
-                    />
-                    <Label 
-                      htmlFor={condicao}
-                      className="text-sm font-normal cursor-pointer"
-                    >
-                      {condicao}
-                    </Label>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Localização Atual</Label>
+                      <Button
+                        type="button"
+                        onClick={getCurrentLocation}
+                        disabled={isGettingLocation}
+                        className="w-full"
+                        variant="outline"
+                        data-testid="button-get-location"
+                      >
+                        {isGettingLocation ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Obtendo...
+                          </>
+                        ) : (
+                          <>
+                            <MapPin className="h-4 w-4 mr-2" />
+                            Usar GPS
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </div>
-                ))}
-              </div>
-              {form.formState.errors.condicoesSaude && (
-                <p className="text-sm text-destructive mt-1">
-                  {form.formState.errors.condicoesSaude.message}
-                </p>
-              )}
-            </div>
 
-            <div className="flex justify-end gap-2 pt-4">
-              <Button
-                type="button"
-                variant="outline"
+                  {(formData.latitude && formData.longitude) && (
+                    <div className="bg-green-50 dark:bg-green-950 p-3 rounded-lg border border-green-200 dark:border-green-800">
+                      <p className="text-sm text-green-700 dark:text-green-300">
+                        📍 Localização encontrada: {parseFloat(formData.latitude).toFixed(6)}, {parseFloat(formData.longitude).toFixed(6)}
+                      </p>
+                    </div>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* IDENTIDADE E DEMOGRAFIA */}
+              <AccordionItem value="identidade">
+                <AccordionTrigger className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  <span>Identidade e Demografia</span>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-4">
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <FormField
+                      control={form.control}
+                      name="identidadeGenero"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Identidade de Gênero</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-identidade-genero">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="cisgênero">Cisgênero</SelectItem>
+                              <SelectItem value="transgênero">Transgênero</SelectItem>
+                              <SelectItem value="travesti">Travesti</SelectItem>
+                              <SelectItem value="nao-binario">Não Binário</SelectItem>
+                              <SelectItem value="outro">Outro</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="corRaca"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cor/Raça</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-cor-raca">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="preto">Preto</SelectItem>
+                              <SelectItem value="pardo">Pardo</SelectItem>
+                              <SelectItem value="branco">Branco</SelectItem>
+                              <SelectItem value="indigena">Indígena</SelectItem>
+                              <SelectItem value="amarelo">Amarelo</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="orientacaoSexual"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Orientação Sexual</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-orientacao-sexual">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="hetero">Hétero</SelectItem>
+                              <SelectItem value="homo">Homo</SelectItem>
+                              <SelectItem value="bissexual">Bissexual</SelectItem>
+                              <SelectItem value="outro">Outro</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* SAÚDE MENTAL */}
+              <AccordionItem value="saude-mental">
+                <AccordionTrigger className="flex items-center gap-2">
+                  <Brain className="h-4 w-4" />
+                  <span>Saúde Mental</span>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-4">
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <FormField
+                      control={form.control}
+                      name="internacao"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-internacao"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">
+                            Histórico de Internação
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="ideacaoSuicida"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-ideacao-suicida"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">
+                            Ideação Suicida
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="tentativaSuicidio"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-tentativa-suicidio"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">
+                            Tentativa de Suicídio
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* SINAIS VITAIS */}
+              <AccordionItem value="sinais-vitais">
+                <AccordionTrigger className="flex items-center gap-2">
+                  <Activity className="h-4 w-4" />
+                  <span>Sinais Vitais</span>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-4">
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <FormField
+                      control={form.control}
+                      name="pressaoArterial"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Pressão Arterial</FormLabel>
+                          <FormControl>
+                            <Input placeholder="120/80" {...field} data-testid="input-pressao-arterial" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="frequenciaCardiaca"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Frequência Cardíaca</FormLabel>
+                          <FormControl>
+                            <Input placeholder="72 bpm" {...field} data-testid="input-frequencia-cardiaca" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="temperatura"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Temperatura</FormLabel>
+                          <FormControl>
+                            <Input placeholder="36.5°C" {...field} data-testid="input-temperatura" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="peso"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Peso</FormLabel>
+                          <FormControl>
+                            <Input placeholder="70 kg" {...field} data-testid="input-peso" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="glicemiaCapilar"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Glicemia Capilar</FormLabel>
+                          <FormControl>
+                            <Input placeholder="90 mg/dl" {...field} data-testid="input-glicemia-capilar" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* TESTES E EXAMES */}
+              <AccordionItem value="testes">
+                <AccordionTrigger className="flex items-center gap-2">
+                  <TestTube className="h-4 w-4" />
+                  <span>Testes e Exames</span>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-4">
+                  <FormField
+                    control={form.control}
+                    name="testeGravidez"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Teste Rápido de Gravidez</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-teste-gravidez">
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="positivo">Positivo</SelectItem>
+                            <SelectItem value="negativo">Negativo</SelectItem>
+                            <SelectItem value="nao-se-aplica">Não se aplica</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid gap-4 md:grid-cols-4">
+                    <FormField
+                      control={form.control}
+                      name="testeSifilis"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-teste-sifilis"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">
+                            Sífilis
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="testeHepB"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-teste-hep-b"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">
+                            Hepatite B
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="testeHepC"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-teste-hep-c"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">
+                            Hepatite C
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="testeHIV"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-teste-hiv"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">
+                            HIV
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* PADRÃO DE USO DE SUBSTÂNCIAS */}
+              <AccordionItem value="substancias">
+                <AccordionTrigger className="flex items-center gap-2">
+                  <Pill className="h-4 w-4" />
+                  <span>Padrão de Uso de Substâncias</span>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-4">
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <FormField
+                      control={form.control}
+                      name="usoAlcool"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-uso-alcool"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">
+                            Álcool
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="usoMaconha"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-uso-maconha"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">
+                            Maconha
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="usoCocaina"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-uso-cocaina"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">
+                            Cocaína
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="usoCrack"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-uso-crack"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">
+                            Crack
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="usoSinteticos"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-uso-sinteticos"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">
+                            Sintéticos
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="usoVolateis"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-uso-volateis"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">
+                            Voláteis
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* HISTÓRICO FAMILIAR */}
+              <AccordionItem value="historico-familiar">
+                <AccordionTrigger className="flex items-center gap-2">
+                  <Heart className="h-4 w-4" />
+                  <span>Histórico de Doença Familiar</span>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-4">
+                  <div className="grid gap-4 md:grid-cols-4">
+                    <FormField
+                      control={form.control}
+                      name="dmFamiliar"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-dm-familiar"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">DM</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="haFamiliar"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-ha-familiar"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">HA</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="avcFamiliar"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-avc-familiar"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">AVC</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="iamFamiliar"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-iam-familiar"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">IAM</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="caFamiliar"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-ca-familiar"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">CA</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="depressaoFamiliar"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-depressao-familiar"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">Depressão</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="ansiedadeFamiliar"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-ansiedade-familiar"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">Ansiedade</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="esquizoFamiliar"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-esquizo-familiar"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">Esquizo</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="bipolarFamiliar"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-bipolar-familiar"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">Bipolar</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="alcoolFamiliar"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-alcool-familiar"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">Álcool</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="drogasFamiliar"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-drogas-familiar"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">Drogas</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* COMORBIDADES ATUAIS */}
+              <AccordionItem value="comorbidades">
+                <AccordionTrigger className="flex items-center gap-2">
+                  <Stethoscope className="h-4 w-4" />
+                  <span>Comorbidades Atuais</span>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-4">
+                  <div className="grid gap-4 md:grid-cols-4">
+                    <FormField
+                      control={form.control}
+                      name="dm"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-dm"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">DM</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="ha"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-ha"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">HA</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="avc"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-avc"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">AVC</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="iam"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-iam"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">IAM</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="ca"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-ca"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">CA</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="depressao"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-depressao"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">Depressão</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="ansiedade"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-ansiedade"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">Ansiedade</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="esquizo"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-esquizo"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">Esquizo</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="bipolar"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-bipolar"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">Bipolar</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="alcoolismo"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-alcoolismo"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">Álcool</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="asma"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-asma"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">Asma</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* MEDICAÇÕES E SERVIÇOS */}
+              <AccordionItem value="medicacoes">
+                <AccordionTrigger className="flex items-center gap-2">
+                  <Pill className="h-4 w-4" />
+                  <span>Medicações e Serviços</span>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-4">
+                  <FormField
+                    control={form.control}
+                    name="medicacaoEmUso"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Medicação em Uso</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Liste as medicações atuais do paciente"
+                            {...field} 
+                            data-testid="textarea-medicacao-uso"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <FormField
+                      control={form.control}
+                      name="kitOdonto"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-kit-odonto"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">Kit Odonto</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="kitHigiene"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-kit-higiene"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">Kit Higiene</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="vacina"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-vacina"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">Vacina</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="coletaSangue"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-coleta-sangue"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">Coleta de Sangue</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="admMedicacao"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-adm-medicacao"
+                            />
+                          </FormControl>
+                          <FormLabel className="text-sm font-normal">ADM Medicação</FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="medicacaoAdministrada"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Medicação Administrada</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Detalhar medicação administrada durante o atendimento"
+                            {...field} 
+                            data-testid="textarea-medicacao-administrada"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* EXAME FÍSICO BÁSICO */}
+              <AccordionItem value="exame-fisico">
+                <AccordionTrigger className="flex items-center gap-2">
+                  <Stethoscope className="h-4 w-4" />
+                  <span>Exame Físico Básico</span>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-4">
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <FormField
+                      control={form.control}
+                      name="estadoGeral"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Estado Geral</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-estado-geral">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="beg">BEG</SelectItem>
+                              <SelectItem value="reg">REG</SelectItem>
+                              <SelectItem value="mau-estado">Mau Estado</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="orientacao"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Orientação</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-orientacao">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="orientado">Orientado</SelectItem>
+                              <SelectItem value="desorientado-tempo">Desorientado no tempo</SelectItem>
+                              <SelectItem value="desorientado-espaco">Desorientado no espaço</SelectItem>
+                              <SelectItem value="desorientado-ambos">Desorientado tempo/espaço</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="consciencia"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Consciência</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-consciencia">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="vigil">Vigil</SelectItem>
+                              <SelectItem value="sonolento">Sonolento</SelectItem>
+                              <SelectItem value="obnubilado">Obnubilado</SelectItem>
+                              <SelectItem value="estupor">Estupor</SelectItem>
+                              <SelectItem value="coma">Coma</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="hidratacao"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Hidratação</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-hidratacao">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="hidratado">Hidratado</SelectItem>
+                              <SelectItem value="desidratado-leve">Desidratado +/4+</SelectItem>
+                              <SelectItem value="desidratado-moderado">Desidratado ++/4+</SelectItem>
+                              <SelectItem value="desidratado-grave">Desidratado +++/4+</SelectItem>
+                              <SelectItem value="desidratado-severo">Desidratado ++++/4+</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="nutricao"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nutrição</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-nutricao">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="nutrido">Nutrido</SelectItem>
+                              <SelectItem value="desnutrido-leve">Desnutrido +/4+</SelectItem>
+                              <SelectItem value="desnutrido-moderado">Desnutrido ++/4+</SelectItem>
+                              <SelectItem value="desnutrido-grave">Desnutrido +++/4+</SelectItem>
+                              <SelectItem value="desnutrido-severo">Desnutrido ++++/4+</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="coloracao"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Coloração</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-coloracao">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="normocorado">Normocorado</SelectItem>
+                              <SelectItem value="hipocromico">Hipocrômico</SelectItem>
+                              <SelectItem value="acianotico">Acianótico</SelectItem>
+                              <SelectItem value="cianotico">Cianótico</SelectItem>
+                              <SelectItem value="anicterico">Anictérico</SelectItem>
+                              <SelectItem value="icterico">Ictérico</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* EVOLUÇÃO E OBSERVAÇÕES */}
+              <AccordionItem value="evolucao">
+                <AccordionTrigger className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  <span>Evolução e Observações</span>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-4">
+                  <FormField
+                    control={form.control}
+                    name="evolucao"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Evolução</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Descrição da evolução do paciente"
+                            rows={4}
+                            {...field} 
+                            data-testid="textarea-evolucao"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="observacoes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Observações Gerais</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Observações complementares sobre o atendimento"
+                            rows={3}
+                            {...field} 
+                            data-testid="textarea-observacoes"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </AccordionContent>
+              </AccordionItem>
+
+            </Accordion>
+
+            {/* BOTÕES DE AÇÃO */}
+            <div className="flex justify-end space-x-4 pt-6 border-t">
+              <Button 
+                type="button" 
+                variant="outline" 
                 onClick={() => onOpenChange(false)}
+                data-testid="button-cancel"
               >
                 Cancelar
               </Button>
