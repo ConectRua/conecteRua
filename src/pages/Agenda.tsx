@@ -1,16 +1,24 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, User, MapPin, Phone } from 'lucide-react';
+import { Calendar, Clock, User, MapPin, Phone, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useApiData } from '@/hooks/useApiData';
-import { format } from 'date-fns';
+import { format, startOfMonth, startOfWeek, eachDayOfInterval, isSameDay, addMonths, subMonths, isSameMonth, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
+
+type EventType = {
+  paciente: any;
+  date: Date;
+  type: 'ultimo' | 'proximo';
+};
 
 const Agenda = () => {
   const { pacientesList, loading } = useApiData();
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | null>(null);
 
   if (loading) {
     return (
@@ -69,6 +77,86 @@ const Agenda = () => {
     const diferenca = dataAtendimento.getTime() - hoje.getTime();
     const dias = Math.ceil(diferenca / (1000 * 3600 * 24));
     return dias <= 7 && dias >= 0;
+  };
+
+  // Mapear eventos por data para o calendário
+  const eventsByDate = useMemo(() => {
+    const events: { [key: string]: EventType[] } = {};
+    
+    pacientesComAtendimento.forEach(paciente => {
+      if (paciente.ultimoAtendimento) {
+        const dateKey = format(new Date(paciente.ultimoAtendimento), 'yyyy-MM-dd');
+        if (!events[dateKey]) events[dateKey] = [];
+        events[dateKey].push({
+          paciente,
+          date: new Date(paciente.ultimoAtendimento),
+          type: 'ultimo'
+        });
+      }
+      
+      if (paciente.proximoAtendimento) {
+        const dateKey = format(new Date(paciente.proximoAtendimento), 'yyyy-MM-dd');
+        if (!events[dateKey]) events[dateKey] = [];
+        events[dateKey].push({
+          paciente,
+          date: new Date(paciente.proximoAtendimento),
+          type: 'proximo'
+        });
+      }
+    });
+    
+    return events;
+  }, [pacientesComAtendimento]);
+
+  // Obter eventos do dia selecionado
+  const selectedDateEvents = selectedCalendarDate 
+    ? eventsByDate[format(selectedCalendarDate, 'yyyy-MM-dd')] || []
+    : [];
+
+  // Navegar entre meses
+  const goToPreviousMonth = () => {
+    setCurrentMonth(subMonths(currentMonth, 1));
+  };
+
+  const goToNextMonth = () => {
+    setCurrentMonth(addMonths(currentMonth, 1));
+  };
+
+  // Componente customizado para os dias do calendário
+  const DayContent = ({ date, isCurrentMonth }: { date: Date; isCurrentMonth: boolean }) => {
+    const dateKey = format(date, 'yyyy-MM-dd');
+    const dayEvents = isCurrentMonth ? eventsByDate[dateKey] || [] : [];
+    const hasEvents = dayEvents.length > 0;
+    const proximoCount = dayEvents.filter(e => e.type === 'proximo').length;
+    const ultimoCount = dayEvents.filter(e => e.type === 'ultimo').length;
+    
+    return (
+      <div className="relative w-full h-full flex flex-col items-center justify-center">
+        <span className={cn(
+          "text-sm",
+          isSameDay(date, new Date()) && "font-bold",
+          hasEvents && "font-medium",
+          !isCurrentMonth && "opacity-50"
+        )}>
+          {format(date, 'd')}
+        </span>
+        {hasEvents && (
+          <div className="absolute bottom-0.5 flex items-center space-x-0.5">
+            {proximoCount > 0 && (
+              <div className="w-2 h-2 bg-blue-500 rounded-full" title={`${proximoCount} próximo(s) atendimento(s)`} />
+            )}
+            {ultimoCount > 0 && (
+              <div className="w-2 h-2 bg-green-500 rounded-full" title={`${ultimoCount} último(s) atendimento(s)`} />
+            )}
+            {dayEvents.length > 2 && (
+              <span className="text-xs bg-gray-500 text-white rounded-full px-1 min-w-4 h-4 flex items-center justify-center">
+                {dayEvents.length}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -138,12 +226,15 @@ const Agenda = () => {
 
       {/* Tabs Content */}
       <Tabs defaultValue="agendados" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="agendados" data-testid="tab-agendados">
             Próximos Atendimentos ({pacientesAgendados.length})
           </TabsTrigger>
           <TabsTrigger value="atendidos" data-testid="tab-atendidos">
             Últimos Atendimentos ({pacientesAtendidos.length})
+          </TabsTrigger>
+          <TabsTrigger value="calendario" data-testid="tab-calendario">
+            Calendário
           </TabsTrigger>
         </TabsList>
 
@@ -286,6 +377,156 @@ const Agenda = () => {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        {/* Calendário */}
+        <TabsContent value="calendario" className="space-y-4">
+          <div className="grid gap-6 lg:grid-cols-3">
+            {/* Calendário */}
+            <div className="lg:col-span-2">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center space-x-2">
+                      <Calendar className="h-5 w-5" />
+                      <span>{format(currentMonth, "MMMM 'de' yyyy", { locale: ptBR })}</span>
+                    </CardTitle>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={goToPreviousMonth}
+                        data-testid="btn-previous-month"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={goToNextMonth}
+                        data-testid="btn-next-month"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                    <div className="flex items-center space-x-1">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                      <span>Próximos atendimentos</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <div className="w-2 h-2 bg-green-500 rounded-full" />
+                      <span>Últimos atendimentos</span>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-7 gap-1 mb-4">
+                    {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
+                      <div key={day} className="p-2 text-center text-sm font-medium text-muted-foreground">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-7 gap-1">
+                    {eachDayOfInterval({
+                      start: startOfWeek(startOfMonth(currentMonth), { locale: ptBR, weekStartsOn: 0 }),
+                      end: addDays(startOfWeek(startOfMonth(currentMonth), { locale: ptBR, weekStartsOn: 0 }), 41)
+                    }).map((date, index) => {
+                      const dateKey = format(date, 'yyyy-MM-dd');
+                      const hasEvents = eventsByDate[dateKey]?.length > 0;
+                      const isSelected = selectedCalendarDate && isSameDay(date, selectedCalendarDate);
+                      const isToday = isSameDay(date, new Date());
+                      const isCurrentMonth = isSameMonth(date, currentMonth);
+                      
+                      return (
+                        <Button
+                          key={index}
+                          variant={isSelected ? "default" : "ghost"}
+                          className={cn(
+                            "h-16 p-1 relative",
+                            isToday && !isSelected && "border border-primary",
+                            hasEvents && "hover:bg-muted",
+                            !isCurrentMonth && "text-muted-foreground bg-muted/30"
+                          )}
+                          onClick={() => setSelectedCalendarDate(date)}
+                          data-testid={`day-${dateKey}`}
+                        >
+                          <DayContent date={date} isCurrentMonth={isCurrentMonth} />
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Painel de detalhes do dia selecionado */}
+            <div className="lg:col-span-1">
+              <Card className="h-fit">
+                <CardHeader>
+                  <CardTitle className="text-lg">
+                    {selectedCalendarDate 
+                      ? `Eventos de ${format(selectedCalendarDate, "dd 'de' MMMM", { locale: ptBR })}`
+                      : "Selecione um dia"
+                    }
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {!selectedCalendarDate ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      Clique em um dia no calendário para ver os eventos.
+                    </p>
+                  ) : selectedDateEvents.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      Nenhum evento neste dia.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {selectedDateEvents.map((event, index) => (
+                        <div
+                          key={index}
+                          className="p-3 rounded-lg border bg-muted/30"
+                          data-testid={`event-${event.type}-${event.paciente.id}`}
+                        >
+                          <div className="flex items-center space-x-2 mb-2">
+                            <div className={cn(
+                              "w-3 h-3 rounded-full",
+                              event.type === 'proximo' ? "bg-blue-500" : "bg-green-500"
+                            )} />
+                            <span className="font-medium text-sm">{event.paciente.nome}</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground space-y-1">
+                            <div className="flex items-center space-x-2">
+                              {event.type === 'proximo' ? (
+                                <Calendar className="h-3 w-3" />
+                              ) : (
+                                <Clock className="h-3 w-3" />
+                              )}
+                              <span>
+                                {event.type === 'proximo' ? 'Próximo atendimento' : 'Último atendimento'}
+                              </span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <User className="h-3 w-3" />
+                              <span>{event.paciente.idade} anos</span>
+                            </div>
+                            {event.paciente.telefone && (
+                              <div className="flex items-center space-x-2">
+                                <Phone className="h-3 w-3" />
+                                <span>{event.paciente.telefone}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
