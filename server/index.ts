@@ -50,7 +50,11 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 app.use(cors({
   origin: process.env.NODE_ENV === "production" 
     ? ["https://your-domain.com"] 
-    : ["http://localhost:5000", "http://localhost:5173"],
+    : [
+        "http://localhost:5000", 
+        "http://localhost:5173",
+        `https://${process.env.REPLIT_DOMAINS || 'localhost'}`
+      ],
   credentials: true,
 }));
 

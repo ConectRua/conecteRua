@@ -51,14 +51,14 @@ export function setupAuth(app: Express) {
     saveUninitialized: false,
     store: storage.sessionStore,
     cookie: {
-      secure: isProduction, // HTTPS required in production
+      secure: false, // Disable secure for Replit development
       httpOnly: true, // Prevent XSS attacks
-      sameSite: isProduction ? 'strict' : 'lax', // CSRF protection
+      sameSite: 'lax', // Less restrictive for development
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     },
   };
 
-  app.set("trust proxy", 1);
+  app.set("trust proxy", true); // Trust all proxies for Replit
   app.use(session(sessionSettings));
   app.use(passport.initialize());
   app.use(passport.session());
