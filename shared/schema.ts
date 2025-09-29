@@ -432,8 +432,8 @@ export const insertPacienteSchema = z.object({
   observacoes: z.string().nullable().optional(),
   
   // CONTROLE DE ATENDIMENTOS
-  ultimoAtendimento: z.date().nullable().optional(),
-  proximoAtendimento: z.date().nullable().optional(),
+  ultimoAtendimento: z.coerce.date().nullable().optional(),
+  proximoAtendimento: z.coerce.date().nullable().optional(),
   
   // SISTEMA
   ativo: z.boolean().optional().default(true),

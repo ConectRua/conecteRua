@@ -53,12 +53,23 @@ export const EditPatientModal = ({ open, onOpenChange, onEdit, paciente }: EditP
     latitude: '',
     longitude: '',
     condicoesSaude: [] as string[],
+    ultimoAtendimento: '',
+    proximoAtendimento: '',
     ativo: true
   });
 
   // Preencher dados quando paciente é definido
   useEffect(() => {
     if (paciente && open) {
+      const formatDateForInput = (date: string | Date | null) => {
+        if (!date) return '';
+        const d = new Date(date);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
       setFormData({
         nome: paciente.nome || '',
         endereco: paciente.endereco || '',
@@ -68,6 +79,8 @@ export const EditPatientModal = ({ open, onOpenChange, onEdit, paciente }: EditP
         latitude: paciente.latitude?.toString() || '',
         longitude: paciente.longitude?.toString() || '',
         condicoesSaude: paciente.condicoesSaude || [],
+        ultimoAtendimento: formatDateForInput(paciente.ultimoAtendimento),
+        proximoAtendimento: formatDateForInput(paciente.proximoAtendimento),
         ativo: paciente.ativo ?? true
       });
     }
@@ -252,6 +265,8 @@ export const EditPatientModal = ({ open, onOpenChange, onEdit, paciente }: EditP
       latitude: formData.latitude ? parseFloat(formData.latitude) : undefined,
       longitude: formData.longitude ? parseFloat(formData.longitude) : undefined,
       condicoesSaude: formData.condicoesSaude.length > 0 ? formData.condicoesSaude : undefined,
+      ultimoAtendimento: formData.ultimoAtendimento ? new Date(formData.ultimoAtendimento) : undefined,
+      proximoAtendimento: formData.proximoAtendimento ? new Date(formData.proximoAtendimento) : undefined,
       ativo: formData.ativo
     };
 
@@ -261,6 +276,15 @@ export const EditPatientModal = ({ open, onOpenChange, onEdit, paciente }: EditP
 
   const resetForm = () => {
     if (paciente) {
+      const formatDateForInput = (date: string | Date | null) => {
+        if (!date) return '';
+        const d = new Date(date);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
       setFormData({
         nome: paciente.nome || '',
         endereco: paciente.endereco || '',
@@ -270,6 +294,8 @@ export const EditPatientModal = ({ open, onOpenChange, onEdit, paciente }: EditP
         latitude: paciente.latitude?.toString() || '',
         longitude: paciente.longitude?.toString() || '',
         condicoesSaude: paciente.condicoesSaude || [],
+        ultimoAtendimento: formatDateForInput(paciente.ultimoAtendimento),
+        proximoAtendimento: formatDateForInput(paciente.proximoAtendimento),
         ativo: paciente.ativo ?? true
       });
     }
@@ -366,25 +392,53 @@ export const EditPatientModal = ({ open, onOpenChange, onEdit, paciente }: EditP
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="idade" className="text-sm font-medium">
-              Idade
-            </Label>
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label htmlFor="idade" className="text-sm font-medium">
+                Idade
+              </Label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="idade"
+                  data-testid="input-idade"
+                  type="number"
+                  min="0"
+                  max="120"
+                  value={formData.idade}
+                  onChange={(e) => setFormData(prev => ({ ...prev, idade: e.target.value }))}
+                  placeholder="Ex: 35"
+                  className={`pl-10 ${errors.idade ? 'border-red-500' : ''}`}
+                />
+              </div>
+              {errors.idade && <p className="text-sm text-red-500">{errors.idade}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ultimo-atendimento" className="text-sm font-medium">
+                Último Atendimento
+              </Label>
               <Input
-                id="idade"
-                data-testid="input-idade"
-                type="number"
-                min="0"
-                max="120"
-                value={formData.idade}
-                onChange={(e) => setFormData(prev => ({ ...prev, idade: e.target.value }))}
-                placeholder="Ex: 35"
-                className={`pl-10 max-w-xs ${errors.idade ? 'border-red-500' : ''}`}
+                id="ultimo-atendimento"
+                data-testid="input-ultimo-atendimento"
+                type="date"
+                value={formData.ultimoAtendimento}
+                onChange={(e) => setFormData(prev => ({ ...prev, ultimoAtendimento: e.target.value }))}
               />
             </div>
-            {errors.idade && <p className="text-sm text-red-500">{errors.idade}</p>}
+
+            <div className="space-y-2">
+              <Label htmlFor="proximo-atendimento" className="text-sm font-medium">
+                Próximo Atendimento
+              </Label>
+              <Input
+                id="proximo-atendimento"
+                data-testid="input-proximo-atendimento"
+                type="date"
+                value={formData.proximoAtendimento}
+                onChange={(e) => setFormData(prev => ({ ...prev, proximoAtendimento: e.target.value }))}
+              />
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
