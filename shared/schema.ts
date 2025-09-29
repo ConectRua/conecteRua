@@ -149,6 +149,9 @@ export const pacientes = pgTable("pacientes", {
   // SINAIS VITAIS
   pressaoArterial: varchar("pressao_arterial", { length: 20 }),
   frequenciaCardiaca: varchar("frequencia_cardiaca", { length: 10 }),
+  fcClassificacao: varchar("fc_classificacao", { length: 20 }), // NORMAL, TAQUICARDIA, BRADICARDIA
+  frequenciaRespiratoria: varchar("frequencia_respiratoria", { length: 10 }),
+  frClassificacao: varchar("fr_classificacao", { length: 20 }), // EUPNEICO, TAQUIPNEICO, APNEICO
   temperatura: varchar("temperatura", { length: 10 }),
   peso: varchar("peso", { length: 10 }),
   glicemiaCapilar: varchar("glicemia_capilar", { length: 10 }),
@@ -203,13 +206,57 @@ export const pacientes = pgTable("pacientes", {
   admMedicacao: boolean("adm_medicacao"),
   medicacaoAdministrada: text("medicacao_administrada"),
   
-  // EXAME FÍSICO BÁSICO
+  // EXAME FÍSICO DETALHADO
   estadoGeral: varchar("estado_geral", { length: 100 }), // BEG, REG, etc.
   orientacao: varchar("orientacao", { length: 100 }), // Orientado tempo/espaço, desorientado
   consciencia: varchar("consciencia", { length: 100 }), // Vigil, sonolento, obnubilado, estupor, coma
   hidratacao: varchar("hidratacao", { length: 100 }), // Hidratado, desidratado
   nutricao: varchar("nutricao", { length: 100 }), // Nutrido, desnutrido
   coloracao: varchar("coloracao", { length: 100 }), // Normocorado, hipocrômico
+  
+  // FACIES
+  facies: varchar("facies", { length: 20 }), // TÍPICA, ATÍPICA
+  faciesDescricao: text("facies_descricao"), // Se ATÍPICA
+  
+  // PULSOS
+  pulsosPresenca: varchar("pulsos_presenca", { length: 20 }), // PRESENTES, AUSENTES
+  pulsosSimetria: varchar("pulsos_simetria", { length: 20 }), // SIMÉTRICOS, ASSIMÉTRICOS
+  
+  // MEMBROS INFERIORES (MMII)
+  mmiiPerfusao: varchar("mmii_perfusao", { length: 30 }), // BEM PERFUNDIDOS, POUCO PERFUNDIDOS
+  mmiiTvp: varchar("mmii_tvp", { length: 30 }), // COM SINAIS DE TVP, SEM SINAIS DE TVP
+  
+  // LINFONODOMEGALIAS
+  linfonodomegalias: varchar("linfonodomegalias", { length: 10 }), // SEM, COM
+  linfonodomegaliasDescricao: text("linfonodomegalias_descricao"), // Se COM
+  
+  // TVP PANTURRILHAS
+  tvpPanturrilhas: varchar("tvp_panturrilhas", { length: 20 }), // EMPASTADAS, NORMAIS
+  tvpSinalHomans: varchar("tvp_sinal_homans", { length: 20 }), // POSITIVO, NEGATIVO
+  
+  // EDEMA
+  edemaFacies: boolean("edema_facies"),
+  edemaMaos: boolean("edema_maos"),
+  edemaPes: boolean("edema_pes"),
+  edemaGeneralizado: boolean("edema_generalizado"),
+  
+  // ABDOME DETALHADO
+  abdomenTipo: varchar("abdomen_tipo", { length: 20 }), // GLOBO, ESCAVADO, PENDULAR
+  abdomenMassas: varchar("abdomen_massas", { length: 30 }), // PRESENÇA, AUSÊNCIA DE MASSAS
+  abdomenHerniaUmbilical: boolean("abdomen_hernia_umbilical"),
+  abdomenHerniaInguinal: boolean("abdomen_hernia_inguinal"),
+  abdomenRetracoes: boolean("abdomen_retracoes"),
+  abdomenCirculacaoColateral: varchar("abdomen_circulacao_colateral", { length: 20 }), // PRESENTE, AUSENTE
+  abdomenPeristalse: varchar("abdomen_peristalse", { length: 30 }),
+  abdomenLesoesCutaneas: text("abdomen_lesoes_cutaneas"),
+  abdomenRuidosHidroaereos: varchar("abdomen_ruidos_hidroaereos", { length: 10 }), // +, -
+  abdomenSopros: varchar("abdomen_sopros", { length: 10 }), // +, -
+  abdomenDistendido: varchar("abdomen_distendido", { length: 10 }), // +, -
+  abdomenDor: varchar("abdomen_dor", { length: 20 }), // DOLOROSO, INDOLOR
+  abdomenSinalMurphy: varchar("abdomen_sinal_murphy", { length: 10 }), // +, -
+  abdomenSinalBlumberg: varchar("abdomen_sinal_blumberg", { length: 10 }), // +, -
+  abdomenSinalGiordano: varchar("abdomen_sinal_giordano", { length: 10 }), // +, -
+  abdomenVisceromegalias: varchar("abdomen_visceromegalias", { length: 10 }), // +, -
   
   // CAMPOS EXISTENTES (mantidos para compatibilidade)
   condicoesSaude: text("condicoes_saude").array(),
@@ -262,6 +309,9 @@ export const insertPacienteSchema = z.object({
   // SINAIS VITAIS
   pressaoArterial: z.string().nullable().optional(),
   frequenciaCardiaca: z.string().nullable().optional(),
+  fcClassificacao: z.string().nullable().optional(),
+  frequenciaRespiratoria: z.string().nullable().optional(),
+  frClassificacao: z.string().nullable().optional(),
   temperatura: z.string().nullable().optional(),
   peso: z.string().nullable().optional(),
   glicemiaCapilar: z.string().nullable().optional(),
@@ -316,13 +366,57 @@ export const insertPacienteSchema = z.object({
   admMedicacao: z.boolean().nullable().optional(),
   medicacaoAdministrada: z.string().nullable().optional(),
   
-  // EXAME FÍSICO BÁSICO
+  // EXAME FÍSICO DETALHADO
   estadoGeral: z.string().nullable().optional(),
   orientacao: z.string().nullable().optional(),
   consciencia: z.string().nullable().optional(),
   hidratacao: z.string().nullable().optional(),
   nutricao: z.string().nullable().optional(),
   coloracao: z.string().nullable().optional(),
+  
+  // FACIES
+  facies: z.string().nullable().optional(),
+  faciesDescricao: z.string().nullable().optional(),
+  
+  // PULSOS
+  pulsosPresenca: z.string().nullable().optional(),
+  pulsosSimetria: z.string().nullable().optional(),
+  
+  // MEMBROS INFERIORES (MMII)
+  mmiiPerfusao: z.string().nullable().optional(),
+  mmiiTvp: z.string().nullable().optional(),
+  
+  // LINFONODOMEGALIAS
+  linfonodomegalias: z.string().nullable().optional(),
+  linfonodomegaliasDescricao: z.string().nullable().optional(),
+  
+  // TVP PANTURRILHAS
+  tvpPanturrilhas: z.string().nullable().optional(),
+  tvpSinalHomans: z.string().nullable().optional(),
+  
+  // EDEMA
+  edemaFacies: z.boolean().nullable().optional(),
+  edemaMaos: z.boolean().nullable().optional(),
+  edemaPes: z.boolean().nullable().optional(),
+  edemaGeneralizado: z.boolean().nullable().optional(),
+  
+  // ABDOME DETALHADO
+  abdomenTipo: z.string().nullable().optional(),
+  abdomenMassas: z.string().nullable().optional(),
+  abdomenHerniaUmbilical: z.boolean().nullable().optional(),
+  abdomenHerniaInguinal: z.boolean().nullable().optional(),
+  abdomenRetracoes: z.boolean().nullable().optional(),
+  abdomenCirculacaoColateral: z.string().nullable().optional(),
+  abdomenPeristalse: z.string().nullable().optional(),
+  abdomenLesoesCutaneas: z.string().nullable().optional(),
+  abdomenRuidosHidroaereos: z.string().nullable().optional(),
+  abdomenSopros: z.string().nullable().optional(),
+  abdomenDistendido: z.string().nullable().optional(),
+  abdomenDor: z.string().nullable().optional(),
+  abdomenSinalMurphy: z.string().nullable().optional(),
+  abdomenSinalBlumberg: z.string().nullable().optional(),
+  abdomenSinalGiordano: z.string().nullable().optional(),
+  abdomenVisceromegalias: z.string().nullable().optional(),
   
   // CAMPOS EXISTENTES (mantidos para compatibilidade)
   condicoesSaude: z.array(z.string()).optional(),
