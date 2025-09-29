@@ -57,6 +57,23 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
   const geocodingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const geocodingRequestIdRef = useRef<number>(0);
 
+  // Funções para classificação automática de sinais vitais
+  const classificarFC = (fc: string): string => {
+    const valor = parseInt(fc);
+    if (isNaN(valor)) return '';
+    if (valor < 60) return 'BRADICARDIA';
+    if (valor > 100) return 'TAQUICARDIA';
+    return 'NORMAL';
+  };
+
+  const classificarFR = (fr: string): string => {
+    const valor = parseInt(fr);
+    if (isNaN(valor)) return '';
+    if (valor === 0) return 'APNEICO';
+    if (valor > 20) return 'TAQUIPNEICO';
+    return 'EUPNEICO';
+  };
+
   const form = useForm<PacienteFormData>({
     resolver: zodResolver(pacienteCompletoSchema),
     defaultValues: {
@@ -172,6 +189,24 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
       }
     };
   }, []);
+
+  // Observar mudanças nos campos de FC e FR para atualizar classificações
+  const watchedFC = form.watch('frequenciaCardiaca');
+  const watchedFR = form.watch('frequenciaRespiratoria');
+  
+  useEffect(() => {
+    if (watchedFC) {
+      const classificacao = classificarFC(watchedFC);
+      form.setValue('fcClassificacao', classificacao);
+    }
+  }, [watchedFC, form]);
+  
+  useEffect(() => {
+    if (watchedFR) {
+      const classificacao = classificarFR(watchedFR);
+      form.setValue('frClassificacao', classificacao);
+    }
+  }, [watchedFR, form]);
 
   // Função para geocoding de endereço
   const geocodeAddress = async (endereco: string, cep: string, requestId: number) => {
@@ -875,19 +910,55 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
                       )}
                     />
 
-                    <FormField
-                      control={form.control}
-                      name="frequenciaCardiaca"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Frequência Cardíaca</FormLabel>
-                          <FormControl>
-                            <Input placeholder="72 bpm" {...field} data-testid="input-frequencia-cardiaca" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
+                    <div className="space-y-2">
+                      <FormField
+                        control={form.control}
+                        name="frequenciaCardiaca"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Frequência Cardíaca</FormLabel>
+                            <FormControl>
+                              <Input placeholder="72 bpm" {...field} data-testid="input-frequencia-cardiaca" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      {form.watch('fcClassificacao') && (
+                        <div className={`px-2 py-1 rounded text-sm font-medium ${
+                          form.watch('fcClassificacao') === 'NORMAL' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' :
+                          form.watch('fcClassificacao') === 'TAQUICARDIA' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100' :
+                          'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'
+                        }`}>
+                          {form.watch('fcClassificacao')}
+                        </div>
                       )}
-                    />
+                    </div>
+
+                    <div className="space-y-2">
+                      <FormField
+                        control={form.control}
+                        name="frequenciaRespiratoria"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Frequência Respiratória</FormLabel>
+                            <FormControl>
+                              <Input placeholder="16 irpm" {...field} data-testid="input-frequencia-respiratoria" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      {form.watch('frClassificacao') && (
+                        <div className={`px-2 py-1 rounded text-sm font-medium ${
+                          form.watch('frClassificacao') === 'EUPNEICO' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' :
+                          form.watch('frClassificacao') === 'APNEICO' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100' :
+                          'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'
+                        }`}>
+                          {form.watch('frClassificacao')}
+                        </div>
+                      )}
+                    </div>
 
                     <FormField
                       control={form.control}
