@@ -11,6 +11,7 @@ import {
   ongs, 
   pacientes, 
   equipamentosSociais,
+  orientacoesEncaminhamento,
   auditLog,
   geocodingCache,
   type User, 
@@ -19,6 +20,8 @@ import {
   type ONG,
   type Paciente,
   type EquipamentoSocial,
+  type OrientacaoEncaminhamento,
+  type InsertOrientacaoEncaminhamento,
   type GeocodingCache,
   type InsertGeocodingCache
 } from "../shared/schema";
@@ -267,6 +270,40 @@ export class PostgreSQLStorage implements IStorage {
   }
 
   // ============ UTILITY METHODS ============
+  // ============ ORIENTAÇÕES DE ENCAMINHAMENTO METHODS ============
+  async getOrientacoesByPaciente(pacienteId: number): Promise<OrientacaoEncaminhamento[]> {
+    return await db.select().from(orientacoesEncaminhamento)
+      .where(eq(orientacoesEncaminhamento.pacienteId, pacienteId))
+      .orderBy(sql`${orientacoesEncaminhamento.createdAt} DESC`);
+  }
+
+  async getOrientacao(id: number): Promise<OrientacaoEncaminhamento | null> {
+    const result = await db.select().from(orientacoesEncaminhamento)
+      .where(eq(orientacoesEncaminhamento.id, id))
+      .limit(1);
+    return result[0] || null;
+  }
+
+  async createOrientacao(orientacaoData: Omit<OrientacaoEncaminhamento, 'id' | 'createdAt' | 'updatedAt'>): Promise<OrientacaoEncaminhamento> {
+    const result = await db.insert(orientacoesEncaminhamento).values(orientacaoData).returning();
+    return result[0];
+  }
+
+  async updateOrientacao(id: number, updates: Partial<OrientacaoEncaminhamento>): Promise<OrientacaoEncaminhamento | null> {
+    const result = await db.update(orientacoesEncaminhamento)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(orientacoesEncaminhamento.id, id))
+      .returning();
+    return result[0] || null;
+  }
+
+  async deleteOrientacao(id: number): Promise<boolean> {
+    const result = await db.update(orientacoesEncaminhamento)
+      .set({ ativo: false, updatedAt: new Date() })
+      .where(eq(orientacoesEncaminhamento.id, id));
+    return result.rowCount > 0;
+  }
+
   async logAudit(userId: number, action: string, tableName: string, recordId: number, oldValues?: any, newValues?: any) {
     await db.insert(auditLog).values({
       userId,

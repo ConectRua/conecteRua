@@ -1639,6 +1639,97 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // ============ ORIENTAÇÕES DE ENCAMINHAMENTO CRUD ============
+  
+  // Buscar orientações de um paciente
+  app.get("/api/pacientes/:pacienteId/orientacoes", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      const pacienteId = parseInt(req.params.pacienteId);
+      const orientacoes = await storage.getOrientacoesByPaciente(pacienteId);
+      res.json(orientacoes);
+    } catch (error) {
+      console.error("Erro ao buscar orientações:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+  
+  // Criar nova orientação
+  app.post("/api/orientacoes", auditMiddleware('CREATE', 'orientacoes_encaminhamento'), async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      const dadosOrientacao = {
+        ...req.body,
+        usuarioId: req.user.id
+      };
+      
+      const orientacao = await storage.createOrientacao(dadosOrientacao);
+      res.locals.recordId = orientacao.id;
+      res.locals.newValues = orientacao;
+      
+      res.status(201).json(orientacao);
+    } catch (error) {
+      console.error("Erro ao criar orientação:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+  
+  // Atualizar orientação
+  app.put("/api/orientacoes/:id", auditMiddleware('UPDATE', 'orientacoes_encaminhamento'), async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      const id = parseInt(req.params.id);
+      const orientacaoAtual = await storage.getOrientacao(id);
+      
+      if (!orientacaoAtual) {
+        return res.status(404).json({ error: "Orientação não encontrada" });
+      }
+      
+      res.locals.oldValues = orientacaoAtual;
+      
+      const orientacaoAtualizada = await storage.updateOrientacao(id, req.body);
+      res.locals.newValues = orientacaoAtualizada;
+      
+      res.json(orientacaoAtualizada);
+    } catch (error) {
+      console.error("Erro ao atualizar orientação:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+  
+  // Deletar orientação
+  app.delete("/api/orientacoes/:id", auditMiddleware('DELETE', 'orientacoes_encaminhamento'), async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      const id = parseInt(req.params.id);
+      const orientacao = await storage.getOrientacao(id);
+      
+      if (!orientacao) {
+        return res.status(404).json({ error: "Orientação não encontrada" });
+      }
+      
+      res.locals.oldValues = orientacao;
+      
+      await storage.deleteOrientacao(id);
+      res.json({ sucesso: true, mensagem: "Orientação deletada com sucesso" });
+    } catch (error) {
+      console.error("Erro ao deletar orientação:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

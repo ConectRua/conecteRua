@@ -3,7 +3,7 @@
 
 import session from "express-session";
 import createMemoryStore from "memorystore";
-import { User, InsertUser, UBS, ONG, Paciente, EquipamentoSocial, GeocodingCache, InsertGeocodingCache } from "../shared/schema";
+import { User, InsertUser, UBS, ONG, Paciente, EquipamentoSocial, GeocodingCache, InsertGeocodingCache, OrientacaoEncaminhamento, InsertOrientacaoEncaminhamento } from "../shared/schema";
 
 const MemoryStore = createMemoryStore(session);
 
@@ -55,6 +55,13 @@ export interface IStorage {
   getGeocodingCache(addressHash: string): Promise<GeocodingCache | null>;
   setGeocodingCache(cache: InsertGeocodingCache): Promise<GeocodingCache>;
   clearOldGeocodingCache(daysOld?: number): Promise<number>;
+  
+  // Orientações de Encaminhamento CRUD methods
+  getOrientacoesByPaciente(pacienteId: number): Promise<OrientacaoEncaminhamento[]>;
+  getOrientacao(id: number): Promise<OrientacaoEncaminhamento | null>;
+  createOrientacao(orientacao: Omit<OrientacaoEncaminhamento, 'id' | 'createdAt' | 'updatedAt'>): Promise<OrientacaoEncaminhamento>;
+  updateOrientacao(id: number, updates: Partial<OrientacaoEncaminhamento>): Promise<OrientacaoEncaminhamento | null>;
+  deleteOrientacao(id: number): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -69,6 +76,8 @@ export class MemStorage implements IStorage {
   private ongsList: ONG[] = [];
   private pacientesList: Paciente[] = [];
   private equipamentosSociais: EquipamentoSocial[] = [];
+  private orientacoesList: OrientacaoEncaminhamento[] = [];
+  private nextOrientacaoId = 1;
   
   // Geocoding cache storage
   private geocodingCache: Map<string, GeocodingCache> = new Map();
@@ -574,6 +583,51 @@ export class MemStorage implements IStorage {
       }
     }
     return deletedCount;
+  }
+  
+  // Orientações de Encaminhamento methods
+  async getOrientacoesByPaciente(pacienteId: number): Promise<OrientacaoEncaminhamento[]> {
+    return this.orientacoesList.filter(o => o.pacienteId === pacienteId && o.ativo);
+  }
+  
+  async getOrientacao(id: number): Promise<OrientacaoEncaminhamento | null> {
+    return this.orientacoesList.find(o => o.id === id && o.ativo) || null;
+  }
+  
+  async createOrientacao(orientacaoData: Omit<OrientacaoEncaminhamento, 'id' | 'createdAt' | 'updatedAt'>): Promise<OrientacaoEncaminhamento> {
+    const orientacao: OrientacaoEncaminhamento = {
+      id: this.nextOrientacaoId++,
+      ...orientacaoData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.orientacoesList.push(orientacao);
+    return orientacao;
+  }
+  
+  async updateOrientacao(id: number, updates: Partial<OrientacaoEncaminhamento>): Promise<OrientacaoEncaminhamento | null> {
+    const index = this.orientacoesList.findIndex(o => o.id === id && o.ativo);
+    if (index === -1) return null;
+    
+    const orientacao = {
+      ...this.orientacoesList[index],
+      ...updates,
+      updatedAt: new Date(),
+    };
+    this.orientacoesList[index] = orientacao;
+    return orientacao;
+  }
+  
+  async deleteOrientacao(id: number): Promise<boolean> {
+    const index = this.orientacoesList.findIndex(o => o.id === id && o.ativo);
+    if (index === -1) return false;
+    
+    this.orientacoesList[index] = {
+      ...this.orientacoesList[index],
+      ativo: false,
+      updatedAt: new Date(),
+    };
+    return true;
   }
 }
 
