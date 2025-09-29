@@ -110,6 +110,9 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
       // Sinais vitais
       pressaoArterial: '',
       frequenciaCardiaca: '',
+      fcClassificacao: '',
+      frequenciaRespiratoria: '',
+      frClassificacao: '',
       temperatura: '',
       peso: '',
       glicemiaCapilar: '',
@@ -172,6 +175,50 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
       nutricao: '',
       coloracao: '',
       
+      // Facies
+      facies: '',
+      faciesDescricao: '',
+      
+      // Pulsos
+      pulsosPresenca: '',
+      pulsosSimetria: '',
+      
+      // MMII
+      mmiiPerfusao: '',
+      mmiiTvp: '',
+      
+      // Linfonodomegalias
+      linfonodomegalias: '',
+      linfonodomegaliasDescricao: '',
+      
+      // TVP Panturrilhas
+      tvpPanturrilhas: '',
+      tvpSinalHomans: '',
+      
+      // Edema
+      edemaFacies: false,
+      edemaMaos: false,
+      edemaPes: false,
+      edemaGeneralizado: false,
+      
+      // Abdome
+      abdomenTipo: '',
+      abdomenMassas: '',
+      abdomenHerniaUmbilical: false,
+      abdomenHerniaInguinal: false,
+      abdomenRetracoes: false,
+      abdomenCirculacaoColateral: '',
+      abdomenPeristalse: '',
+      abdomenLesoesCutaneas: '',
+      abdomenRuidosHidroaereos: '',
+      abdomenSopros: '',
+      abdomenDistendido: '',
+      abdomenDor: '',
+      abdomenSinalMurphy: '',
+      abdomenSinalBlumberg: '',
+      abdomenSinalGiordano: '',
+      abdomenVisceromegalias: '',
+      
       // Evolução
       evolucao: '',
       observacoes: '',
@@ -195,17 +242,13 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
   const watchedFR = form.watch('frequenciaRespiratoria');
   
   useEffect(() => {
-    if (watchedFC) {
-      const classificacao = classificarFC(watchedFC);
-      form.setValue('fcClassificacao', classificacao);
-    }
+    const classificacao = classificarFC(watchedFC || '');
+    form.setValue('fcClassificacao', classificacao);
   }, [watchedFC, form]);
   
   useEffect(() => {
-    if (watchedFR) {
-      const classificacao = classificarFR(watchedFR);
-      form.setValue('frClassificacao', classificacao);
-    }
+    const classificacao = classificarFR(watchedFR || '');
+    form.setValue('frClassificacao', classificacao);
   }, [watchedFR, form]);
 
   // Função para geocoding de endereço
