@@ -5,9 +5,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { Geolocation } from '@capacitor/geolocation';
 import { useApiData } from '@/hooks/useApiData';
 import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { 
   UserPlus, 
   Building2, 
@@ -15,13 +17,18 @@ import {
   MapPin, 
   Phone,
   Check,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 
 const CadastroManual = () => {
   const { addUBS, addONG, isCreating } = useApiData();
   const { toast } = useToast();
   const [tipoEntidade, setTipoEntidade] = useState<'ubs' | 'ong'>('ubs');
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [isGeocodingAddress, setIsGeocodingAddress] = useState(false);
+  const geocodingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const geocodingRequestIdRef = useRef<number>(0);
   const [formData, setFormData] = useState({
     nome: '',
     endereco: '',
@@ -30,20 +37,190 @@ const CadastroManual = () => {
     tipo: '',
     responsavel: '',
     horarioFuncionamento: '',
+    latitude: '',
+    longitude: '',
     especialidades: [] as string[],
     servicos: [] as string[]
   });
+
+  // Cleanup timeout quando componente desmonta
+  useEffect(() => {
+    return () => {
+      if (geocodingTimeoutRef.current) {
+        clearTimeout(geocodingTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Função para geocoding de endereço
+  const geocodeAddress = async (endereco: string, cep: string, requestId: number) => {
+    if (!endereco.trim() || !cep.trim()) return;
+    
+    // Verificar se Google Maps API está disponível
+    if (typeof window === 'undefined' || !window.google || !window.google.maps) {
+      toast.error('Google Maps não está disponível. Tente novamente.');
+      return;
+    }
+    
+    // Validar formato do CEP
+    const cepPattern = /^\d{5}-?\d{3}$/;
+    if (!cepPattern.test(cep)) {
+      return; // CEP inválido, não faz geocoding
+    }
+    
+    setIsGeocodingAddress(true);
+    try {
+      const fullAddress = `${endereco}, ${cep}, Brasil`;
+      const geocoder = new google.maps.Geocoder();
+      
+      const result = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
+        geocoder.geocode(
+          { address: fullAddress },
+          (results, status) => {
+            // Verificar se esta resposta ainda é relevante
+            if (geocodingRequestIdRef.current !== requestId) {
+              reject(new Error('Request obsoleto'));
+              return;
+            }
+            
+            if (status === 'OK' && results && results.length > 0) {
+              resolve(results);
+            } else {
+              reject(new Error(`Geocoding failed: ${status}`));
+            }
+          }
+        );
+      });
+
+      // Verificar novamente se esta resposta ainda é relevante
+      if (geocodingRequestIdRef.current === requestId) {
+        const location = result[0].geometry.location;
+        const lat = location.lat();
+        const lng = location.lng();
+        
+        setFormData(prev => ({
+          ...prev,
+          latitude: lat.toString(),
+          longitude: lng.toString()
+        }));
+        
+        toast.success('Localização encontrada automaticamente!');
+      }
+    } catch (error) {
+      if (geocodingRequestIdRef.current === requestId) {
+        console.warn('Erro no geocoding:', error);
+        // Só mostrar erro se não for um request obsoleto
+        if (!error.message.includes('obsoleto')) {
+          toast.error('Não foi possível encontrar a localização. Verifique o endereço e CEP.');
+        }
+      }
+    } finally {
+      if (geocodingRequestIdRef.current === requestId) {
+        setIsGeocodingAddress(false);
+      }
+    }
+  };
+
+  // Função para trigger geocoding com debounce
+  const triggerGeocoding = (endereco: string, cep: string) => {
+    // Cancelar timeout anterior se existir
+    if (geocodingTimeoutRef.current) {
+      clearTimeout(geocodingTimeoutRef.current);
+      geocodingTimeoutRef.current = null;
+    }
+    
+    // Incrementar request ID para invalidar requests anteriores
+    geocodingRequestIdRef.current += 1;
+    const currentRequestId = geocodingRequestIdRef.current;
+    
+    // Só fazer geocoding se ambos campos estão preenchidos e endereço tem tamanho mínimo
+    if (endereco.trim().length >= 10 && cep.trim().length >= 8) {
+      geocodingTimeoutRef.current = setTimeout(() => {
+        geocodeAddress(endereco, cep, currentRequestId);
+      }, 1500); // 1.5 segundos de debounce
+    }
+  };
+
+  // Handlers para inputs com geocoding automático
+  const handleEnderecoChange = (value: string) => {
+    setFormData(prev => ({ ...prev, endereco: value }));
+    triggerGeocoding(value, formData.cep);
+  };
+
+  const handleCepChange = (value: string) => {
+    setFormData(prev => ({ ...prev, cep: value }));
+    triggerGeocoding(formData.endereco, value);
+  };
+
+  // Função para obter localização atual
+  const getCurrentLocation = async () => {
+    setIsGettingLocation(true);
+    try {
+      // Primeiro tenta a API Capacitor (para mobile)
+      try {
+        const coordinates = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: true,
+          timeout: 10000
+        });
+        
+        setFormData(prev => ({
+          ...prev,
+          latitude: coordinates.coords.latitude.toString(),
+          longitude: coordinates.coords.longitude.toString()
+        }));
+        
+        toast.success('Localização atual obtida com sucesso!');
+        return;
+      } catch (capacitorError) {
+        console.log('Capacitor failed, trying browser API:', capacitorError);
+        
+        // Fallback para API do browser (para web)
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              setFormData(prev => ({
+                ...prev,
+                latitude: position.coords.latitude.toString(),
+                longitude: position.coords.longitude.toString()
+              }));
+              toast.success('Localização atual obtida com sucesso!');
+              setIsGettingLocation(false);
+            },
+            (error) => {
+              console.error('Erro browser geolocation:', error);
+              throw error;
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+          );
+          return;
+        } else {
+          throw new Error('Geolocalização não suportada pelo navegador');
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao obter localização:', error);
+      toast.error('Não foi possível obter a localização. Verifique as permissões.');
+    } finally {
+      setIsGettingLocation(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
+      const coordinates = formData.latitude && formData.longitude 
+        ? { latitude: parseFloat(formData.latitude), longitude: parseFloat(formData.longitude) }
+        : undefined;
+      
       if (tipoEntidade === 'ubs') {
         await addUBS({
           nome: formData.nome,
           endereco: formData.endereco,
           cep: formData.cep,
           telefone: formData.telefone,
+          latitude: coordinates?.latitude,
+          longitude: coordinates?.longitude,
           especialidades: formData.especialidades,
           gestor: formData.responsavel,
           horarioFuncionamento: formData.horarioFuncionamento,
@@ -55,6 +232,8 @@ const CadastroManual = () => {
           endereco: formData.endereco,
           cep: formData.cep,
           telefone: formData.telefone,
+          latitude: coordinates?.latitude,
+          longitude: coordinates?.longitude,
           servicos: formData.servicos,
           responsavel: formData.responsavel,
           ativo: true
@@ -70,6 +249,8 @@ const CadastroManual = () => {
         tipo: '',
         responsavel: '',
         horarioFuncionamento: '',
+        latitude: '',
+        longitude: '',
         especialidades: [],
         servicos: []
       });
@@ -165,23 +346,29 @@ const CadastroManual = () => {
               </div>
 
               <div>
-                <Label htmlFor="endereco">Endereço Completo</Label>
-                <Textarea
-                  id="endereco"
-                  placeholder="Ex: QS 101, Conjunto A, Lote 1, Samambaia"
-                  value={formData.endereco}
-                  onChange={(e) => setFormData(prev => ({ ...prev, endereco: e.target.value }))}
-                />
+                <Label htmlFor="endereco">Endereço Completo *</Label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Textarea
+                    id="endereco"
+                    placeholder="Ex: QS 101, Conjunto A, Lote 1, Samambaia"
+                    className="pl-10"
+                    value={formData.endereco}
+                    onChange={(e) => handleEnderecoChange(e.target.value)}
+                    data-testid="input-endereco"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="cep">CEP</Label>
+                  <Label htmlFor="cep">CEP *</Label>
                   <Input
                     id="cep"
                     placeholder="00000-000"
                     value={formData.cep}
-                    onChange={(e) => setFormData(prev => ({ ...prev, cep: e.target.value }))}
+                    onChange={(e) => handleCepChange(e.target.value)}
+                    data-testid="input-cep"
                   />
                 </div>
                 <div>
@@ -194,6 +381,71 @@ const CadastroManual = () => {
                   />
                 </div>
               </div>
+
+              {/* Coordenadas GPS */}
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="latitude" className="text-sm font-medium">
+                    Latitude {isGeocodingAddress && <Loader2 className="inline h-3 w-3 animate-spin ml-1" />}
+                  </Label>
+                  <Input
+                    id="latitude"
+                    value={formData.latitude}
+                    onChange={(e) => setFormData(prev => ({ ...prev, latitude: e.target.value }))}
+                    placeholder="-15.7942"
+                    type="number"
+                    step="any"
+                    data-testid="input-latitude"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="longitude" className="text-sm font-medium">
+                    Longitude
+                  </Label>
+                  <Input
+                    id="longitude"
+                    value={formData.longitude}
+                    onChange={(e) => setFormData(prev => ({ ...prev, longitude: e.target.value }))}
+                    placeholder="-47.8822"
+                    type="number"
+                    step="any"
+                    data-testid="input-longitude"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Localização Atual</Label>
+                  <Button
+                    type="button"
+                    onClick={getCurrentLocation}
+                    disabled={isGettingLocation}
+                    className="w-full"
+                    variant="outline"
+                    data-testid="button-get-location"
+                  >
+                    {isGettingLocation ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Obtendo...
+                      </>
+                    ) : (
+                      <>
+                        <MapPin className="h-4 w-4 mr-2" />
+                        Usar GPS
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {(formData.latitude && formData.longitude) && (
+                <div className="bg-green-50 dark:bg-green-950 p-3 rounded-lg border border-green-200 dark:border-green-800">
+                  <p className="text-sm text-green-700 dark:text-green-300">
+                    📍 Localização encontrada: {parseFloat(formData.latitude).toFixed(6)}, {parseFloat(formData.longitude).toFixed(6)}
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -284,7 +536,8 @@ const CadastroManual = () => {
           <CardContent className="pt-6">
             <div className="flex justify-between items-center">
               <div className="text-sm text-muted-foreground">
-                <p>• As coordenadas serão geradas automaticamente a partir do CEP</p>
+                <p>• As coordenadas são encontradas automaticamente pelo endereço/CEP</p>
+                <p>• Use o botão 'Usar GPS' para capturar sua localização atual</p>
                 <p>• Todos os campos marcados com * são obrigatórios</p>
               </div>
               
@@ -293,9 +546,23 @@ const CadastroManual = () => {
                   <X className="h-4 w-4 mr-2" />
                   Cancelar
                 </Button>
-                <Button type="submit" className="bg-green-600 hover:bg-green-700">
-                  <Check className="h-4 w-4 mr-2" />
-                  Salvar {tipoEntidade === 'ubs' ? 'UBS' : 'ONG'}
+                <Button 
+                  type="submit" 
+                  className="bg-green-600 hover:bg-green-700"
+                  disabled={isGeocodingAddress || isGettingLocation || isCreating}
+                  data-testid="button-submit"
+                >
+                  {isGeocodingAddress || isGettingLocation || isCreating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Processando...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4 mr-2" />
+                      Salvar {tipoEntidade === 'ubs' ? 'UBS' : 'ONG'}
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

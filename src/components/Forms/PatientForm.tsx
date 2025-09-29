@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,7 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
-import { MapPin, Loader2 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { MapPin, Loader2, User, Phone, Calendar, Heart } from 'lucide-react';
 import { useApiData } from '@/hooks/useApiData';
 import type { InsertPaciente } from '../../../shared/schema';
 import { insertPacienteSchema } from '../../../shared/schema';
@@ -48,7 +49,10 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
   const { addPaciente } = useApiData();
   const [selectedCondicoesSaude, setSelectedCondicoesSaude] = useState<string[]>([]);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
-  const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [isGeocodingAddress, setIsGeocodingAddress] = useState(false);
+  const [formData, setFormData] = useState({ endereco: '', cep: '', latitude: '', longitude: '' });
+  const geocodingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const geocodingRequestIdRef = useRef<number>(0);
 
   const form = useForm<PatientFormData>({
     resolver: zodResolver(patientSchema),
@@ -61,6 +65,117 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
       condicoesSaude: [],
     },
   });
+
+  // Cleanup timeout quando modal fecha
+  useEffect(() => {
+    return () => {
+      if (geocodingTimeoutRef.current) {
+        clearTimeout(geocodingTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Função para geocoding de endereço com melhor tratamento
+  const geocodeAddress = async (endereco: string, cep: string, requestId: number) => {
+    if (!endereco.trim() || !cep.trim()) return;
+    
+    // Verificar se Google Maps API está disponível
+    if (typeof window === 'undefined' || !window.google || !window.google.maps) {
+      toast.error('Google Maps não está disponível. Tente novamente.');
+      return;
+    }
+    
+    // Validar formato do CEP
+    const cepPattern = /^\d{5}-?\d{3}$/;
+    if (!cepPattern.test(cep)) {
+      return; // CEP inválido, não faz geocoding
+    }
+    
+    setIsGeocodingAddress(true);
+    try {
+      const fullAddress = `${endereco}, ${cep}, Brasil`;
+      const geocoder = new google.maps.Geocoder();
+      
+      const result = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
+        geocoder.geocode(
+          { address: fullAddress },
+          (results, status) => {
+            // Verificar se esta resposta ainda é relevante
+            if (geocodingRequestIdRef.current !== requestId) {
+              reject(new Error('Request obsoleto'));
+              return;
+            }
+            
+            if (status === 'OK' && results && results.length > 0) {
+              resolve(results);
+            } else {
+              reject(new Error(`Geocoding failed: ${status}`));
+            }
+          }
+        );
+      });
+
+      // Verificar novamente se esta resposta ainda é relevante
+      if (geocodingRequestIdRef.current === requestId) {
+        const location = result[0].geometry.location;
+        const lat = location.lat();
+        const lng = location.lng();
+        
+        setFormData(prev => ({
+          ...prev,
+          latitude: lat.toString(),
+          longitude: lng.toString()
+        }));
+        
+        toast.success('Localização encontrada automaticamente!');
+      }
+    } catch (error) {
+      if (geocodingRequestIdRef.current === requestId) {
+        console.warn('Erro no geocoding:', error);
+        // Só mostrar erro se não for um request obsoleto
+        if (!error.message.includes('obsoleto')) {
+          toast.error('Não foi possível encontrar a localização. Verifique o endereço e CEP.');
+        }
+      }
+    } finally {
+      if (geocodingRequestIdRef.current === requestId) {
+        setIsGeocodingAddress(false);
+      }
+    }
+  };
+
+  // Função para trigger geocoding com debounce adequado
+  const triggerGeocoding = (endereco: string, cep: string) => {
+    // Cancelar timeout anterior se existir
+    if (geocodingTimeoutRef.current) {
+      clearTimeout(geocodingTimeoutRef.current);
+      geocodingTimeoutRef.current = null;
+    }
+    
+    // Incrementar request ID para invalidar requests anteriores
+    geocodingRequestIdRef.current += 1;
+    const currentRequestId = geocodingRequestIdRef.current;
+    
+    // Só fazer geocoding se ambos campos estão preenchidos e endereço tem tamanho mínimo
+    if (endereco.trim().length >= 10 && cep.trim().length >= 8) {
+      geocodingTimeoutRef.current = setTimeout(() => {
+        geocodeAddress(endereco, cep, currentRequestId);
+      }, 1500); // 1.5 segundos de debounce
+    }
+  };
+
+  // Handlers para inputs com geocoding automático
+  const handleEnderecoChange = (value: string) => {
+    setFormData(prev => ({ ...prev, endereco: value }));
+    form.setValue('endereco', value);
+    triggerGeocoding(value, formData.cep);
+  };
+
+  const handleCepChange = (value: string) => {
+    setFormData(prev => ({ ...prev, cep: value }));
+    form.setValue('cep', value);
+    triggerGeocoding(formData.endereco, value);
+  };
 
   const getCurrentLocation = async () => {
     console.log('=== INICIO getCurrentLocation ===');
@@ -83,7 +198,11 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
         };
         
         console.log('Localização formatada:', location);
-        setCurrentLocation(location);
+        setFormData(prev => ({
+          ...prev,
+          latitude: location.latitude.toString(),
+          longitude: location.longitude.toString()
+        }));
         toast.success('Localização obtida com sucesso!');
         console.log('=== FIM getCurrentLocation (sucesso via Capacitor) ===');
         return;
@@ -100,7 +219,11 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
                 longitude: position.coords.longitude
               };
               console.log('Localização formatada (browser):', location);
-              setCurrentLocation(location);
+              setFormData(prev => ({
+                ...prev,
+                latitude: location.latitude.toString(),
+                longitude: location.longitude.toString()
+              }));
               toast.success('Localização obtida com sucesso!');
               console.log('=== FIM getCurrentLocation (sucesso via Browser) ===');
               setIsGettingLocation(false);
@@ -132,11 +255,14 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
     console.log('Localização atual:', currentLocation);
     
     try {
-      // Usar localização atual se disponível, senão simular coordenadas baseadas no CEP
-      const coordinates = currentLocation || {
-        latitude: -15.8781 + (Math.random() - 0.5) * 0.1,
-        longitude: -48.0958 + (Math.random() - 0.5) * 0.1,
-      };
+
+      // Usar coordenadas do geocoding se disponíveis
+      const coordinates = formData.latitude && formData.longitude 
+        ? { latitude: parseFloat(formData.latitude), longitude: parseFloat(formData.longitude) }
+        : {
+            latitude: -15.8781 + (Math.random() - 0.5) * 0.1,
+            longitude: -48.0958 + (Math.random() - 0.5) * 0.1,
+          };
       
       console.log('Coordenadas a serem usadas:', coordinates);
 
@@ -168,7 +294,7 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
       toast.success('Paciente cadastrado com sucesso!');
       form.reset();
       setSelectedCondicoesSaude([]);
-      setCurrentLocation(null);
+      setFormData({ endereco: '', cep: '', latitude: '', longitude: '' });
       onOpenChange(false);
       console.log('=== FIM onSubmit (sucesso) ===');
     } catch (error) {
@@ -232,24 +358,45 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
               name="endereco"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Endereço</FormLabel>
+                  <FormLabel>Endereço *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Endereço completo" {...field} />
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Textarea
+                        placeholder="Rua, número, bairro"
+                        className="pl-10"
+                        rows={2}
+                        {...field}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          handleEnderecoChange(e.target.value);
+                        }}
+                        data-testid="input-endereco"
+                      />
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="cep"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>CEP</FormLabel>
+                    <FormLabel>CEP *</FormLabel>
                     <FormControl>
-                      <Input placeholder="00000-000" {...field} />
+                      <Input 
+                        placeholder="00000-000" 
+                        {...field} 
+                        onChange={(e) => {
+                          field.onChange(e);
+                          handleCepChange(e.target.value);
+                        }}
+                        data-testid="input-cep"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -290,37 +437,79 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
               />
             </div>
 
-            {/* Botão de Localização */}
-            <div className="flex items-center justify-between bg-muted p-4 rounded-lg">
-              <div>
+            {/* Coordenadas GPS */}
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="latitude" className="text-sm font-medium">
+                  Latitude {isGeocodingAddress && <Loader2 className="inline h-3 w-3 animate-spin ml-1" />}
+                </Label>
+                <Input
+                  id="latitude"
+                  data-testid="input-latitude"
+                  value={formData.latitude}
+                  onChange={(e) => setFormData(prev => ({ ...prev, latitude: e.target.value }))}
+                  placeholder="-15.7942"
+                  type="number"
+                  step="any"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="longitude" className="text-sm font-medium">
+                  Longitude
+                </Label>
+                <Input
+                  id="longitude"
+                  data-testid="input-longitude"
+                  value={formData.longitude}
+                  onChange={(e) => setFormData(prev => ({ ...prev, longitude: e.target.value }))}
+                  placeholder="-47.8822"
+                  type="number"
+                  step="any"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label className="text-sm font-medium">Localização Atual</Label>
-                <p className="text-xs text-muted-foreground">
-                  {currentLocation 
-                    ? `Lat: ${currentLocation.latitude.toFixed(6)}, Long: ${currentLocation.longitude.toFixed(6)}`
-                    : 'Use sua localização atual para um cadastro mais preciso'
-                  }
+                <Button
+                  type="button"
+                  data-testid="button-get-location"
+                  onClick={getCurrentLocation}
+                  disabled={isGettingLocation}
+                  className="w-full"
+                  variant="outline"
+                >
+                  {isGettingLocation ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Obtendo...
+                    </>
+                  ) : (
+                    <>
+                      <MapPin className="h-4 w-4 mr-2" />
+                      Usar GPS
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {(formData.latitude && formData.longitude) && (
+              <div className="bg-green-50 dark:bg-green-950 p-3 rounded-lg border border-green-200 dark:border-green-800">
+                <p className="text-sm text-green-700 dark:text-green-300">
+                  📍 Localização encontrada: {parseFloat(formData.latitude).toFixed(6)}, {parseFloat(formData.longitude).toFixed(6)}
                 </p>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={getCurrentLocation}
-                disabled={isGettingLocation}
-                className="flex items-center gap-2"
-              >
-                {isGettingLocation ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <MapPin className="h-4 w-4" />
-                )}
-                {isGettingLocation ? 'Obtendo...' : 'Obter Localização'}
-              </Button>
-            </div>
+            )}
+
+            {/* Botão de Localização (removido - substituído pelos campos acima) */}
 
 
             <div>
-              <Label className="text-sm font-medium">Condições de Saúde</Label>
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Heart className="h-4 w-4" />
+                Condições de Saúde
+              </Label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
                 {condicoesSaudeOptions.map((condicao) => (
                   <div key={condicao} className="flex items-center space-x-2">
@@ -355,7 +544,20 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
               >
                 Cancelar
               </Button>
-              <Button type="submit">Cadastrar Paciente</Button>
+              <Button 
+                type="submit"
+                disabled={isGeocodingAddress || isGettingLocation}
+                data-testid="button-submit"
+              >
+                {isGeocodingAddress || isGettingLocation ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processando...
+                  </>
+                ) : (
+                  'Cadastrar Paciente'
+                )}
+              </Button>
             </div>
           </form>
         </Form>
