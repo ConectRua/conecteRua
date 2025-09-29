@@ -6,7 +6,7 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { createGeocodingService } from "./services/geocoding";
-import { insertUBSSchema, insertONGSchema, insertPacienteSchema, insertEquipamentoSocialSchema } from "../shared/schema";
+import { insertUBSSchema, insertONGSchema, insertPacienteSchema, insertEquipamentoSocialSchema, insertOrientacaoEncaminhamentoSchema } from "../shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import * as XLSX from "xlsx";
@@ -1664,8 +1664,11 @@ export function registerRoutes(app: Express): Server {
         return res.status(401).json({ error: "Não autenticado" });
       }
       
+      // Validação Zod
+      const validatedData = insertOrientacaoEncaminhamentoSchema.parse(req.body);
+      
       const dadosOrientacao = {
-        ...req.body,
+        ...validatedData,
         usuarioId: req.user.id
       };
       
@@ -1675,6 +1678,9 @@ export function registerRoutes(app: Express): Server {
       
       res.status(201).json(orientacao);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Dados inválidos", details: error.errors });
+      }
       console.error("Erro ao criar orientação:", error);
       res.status(500).json({ error: "Erro interno do servidor" });
     }
@@ -1687,6 +1693,10 @@ export function registerRoutes(app: Express): Server {
         return res.status(401).json({ error: "Não autenticado" });
       }
       
+      // Validação Zod para atualização (parcial)
+      const updateSchema = insertOrientacaoEncaminhamentoSchema.partial();
+      const validatedData = updateSchema.parse(req.body);
+      
       const id = parseInt(req.params.id);
       const orientacaoAtual = await storage.getOrientacao(id);
       
@@ -1696,11 +1706,14 @@ export function registerRoutes(app: Express): Server {
       
       res.locals.oldValues = orientacaoAtual;
       
-      const orientacaoAtualizada = await storage.updateOrientacao(id, req.body);
+      const orientacaoAtualizada = await storage.updateOrientacao(id, validatedData);
       res.locals.newValues = orientacaoAtualizada;
       
       res.json(orientacaoAtualizada);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Dados inválidos", details: error.errors });
+      }
       console.error("Erro ao atualizar orientação:", error);
       res.status(500).json({ error: "Erro interno do servidor" });
     }
