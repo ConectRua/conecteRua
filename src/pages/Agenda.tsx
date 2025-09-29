@@ -20,17 +20,6 @@ const Agenda = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | null>(null);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-sm text-muted-foreground">Carregando agenda...</p>
-        </div>
-      </div>
-    );
-  }
-
   // Filtrar pacientes que têm datas de atendimento
   const pacientesComAtendimento = pacientesList.filter(paciente => 
     paciente.ultimoAtendimento || paciente.proximoAtendimento
@@ -51,33 +40,6 @@ const Agenda = () => {
     if (!a.proximoAtendimento || !b.proximoAtendimento) return 0;
     return new Date(a.proximoAtendimento).getTime() - new Date(b.proximoAtendimento).getTime();
   });
-
-  const formatarData = (data: string | Date | null) => {
-    if (!data) return '';
-    try {
-      return format(new Date(data), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
-    } catch {
-      return '';
-    }
-  };
-
-  const formatarDataCurta = (data: string | Date | null) => {
-    if (!data) return '';
-    try {
-      return format(new Date(data), "dd/MM/yyyy", { locale: ptBR });
-    } catch {
-      return '';
-    }
-  };
-
-  const isDataProxima = (data: string | Date | null) => {
-    if (!data) return false;
-    const dataAtendimento = new Date(data);
-    const hoje = new Date();
-    const diferenca = dataAtendimento.getTime() - hoje.getTime();
-    const dias = Math.ceil(diferenca / (1000 * 3600 * 24));
-    return dias <= 7 && dias >= 0;
-  };
 
   // Mapear eventos por data para o calendário
   const eventsByDate = useMemo(() => {
@@ -120,6 +82,44 @@ const Agenda = () => {
 
   const goToNextMonth = () => {
     setCurrentMonth(addMonths(currentMonth, 1));
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-sm text-muted-foreground">Carregando agenda...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const formatarData = (data: string | Date | null) => {
+    if (!data) return '';
+    try {
+      return format(new Date(data), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+    } catch {
+      return '';
+    }
+  };
+
+  const formatarDataCurta = (data: string | Date | null) => {
+    if (!data) return '';
+    try {
+      return format(new Date(data), "dd/MM/yyyy", { locale: ptBR });
+    } catch {
+      return '';
+    }
+  };
+
+  const isDataProxima = (data: string | Date | null) => {
+    if (!data) return false;
+    const dataAtendimento = new Date(data);
+    const hoje = new Date();
+    const diferenca = dataAtendimento.getTime() - hoje.getTime();
+    const dias = Math.ceil(diferenca / (1000 * 3600 * 24));
+    return dias <= 7 && dias >= 0;
   };
 
   // Componente customizado para os dias do calendário
