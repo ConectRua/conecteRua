@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { ReclassificationModal } from '@/components/ReclassificationModal';
 import { AddONGModal } from '@/components/Forms/AddONGModal';
+import { EditONGModal } from '@/components/Forms/EditONGModal';
 import { useApiData } from '@/hooks/useApiData';
-import type { InsertONG } from '../../shared/schema';
+import type { InsertONG, ONG } from '../../shared/schema';
 import { 
   Heart, 
   Phone, 
@@ -19,12 +21,29 @@ import {
 } from 'lucide-react';
 
 const GestaoONGs = () => {
-  const { ongsList, loading, addONG } = useApiData();
+  const { ongsList, loading, addONG, updateONG, deleteONG } = useApiData();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedONG, setSelectedONG] = useState<ONG | null>(null);
 
   const handleAddONG = (ong: InsertONG) => {
     addONG(ong);
     setIsAddModalOpen(false);
+  };
+
+  const handleEditONG = (id: number, ongData: Partial<ONG>) => {
+    updateONG(id, ongData);
+    setIsEditModalOpen(false);
+    setSelectedONG(null);
+  };
+
+  const handleDeleteONG = (id: number) => {
+    deleteONG(id);
+  };
+
+  const openEditModal = (ong: ONG) => {
+    setSelectedONG(ong);
+    setIsEditModalOpen(true);
   };
 
   if (loading) {
@@ -135,16 +154,47 @@ const GestaoONGs = () => {
                 </div>
                 
                 <div className="flex space-x-2">
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => openEditModal(ong)}
+                    data-testid={`button-edit-${ong.id}`}
+                  >
                     <Edit className="h-4 w-4" />
                   </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-destructive hover:text-destructive"
+                        data-testid={`button-delete-${ong.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Tem certeza que deseja excluir a ONG "{ong.nome}"? Esta ação não pode ser desfeita.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={() => handleDeleteONG(ong.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                   <ReclassificationModal 
                     registro={{ id: ong.id, nome: ong.nome }}
                     tipoAtual="ongs"
                   />
-                  <Button variant="outline" size="sm" className="text-destructive">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -212,6 +262,13 @@ const GestaoONGs = () => {
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
         onAdd={handleAddONG}
+      />
+      
+      <EditONGModal 
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        onEdit={handleEditONG}
+        ong={selectedONG}
       />
     </div>
   );

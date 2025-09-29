@@ -3,19 +3,38 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { ReclassificationModal } from '@/components/ReclassificationModal';
 import { AddUBSModal } from '@/components/Forms/AddUBSModal';
+import { EditUBSModal } from '@/components/Forms/EditUBSModal';
 import { useApiData } from '@/hooks/useApiData';
-import { Building2, Search, Plus, Edit, MapPin, Phone, Users } from 'lucide-react';
-import type { InsertUBS } from '../../shared/schema';
+import { Building2, Search, Plus, Edit, MapPin, Phone, Users, Trash2 } from 'lucide-react';
+import type { InsertUBS, UBS } from '../../shared/schema';
 
 const GestaoUBS = () => {
-  const { ubsList, loading, addUBS } = useApiData();
+  const { ubsList, loading, addUBS, updateUBS, deleteUBS } = useApiData();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedUBS, setSelectedUBS] = useState<UBS | null>(null);
 
   const handleAddUBS = (ubs: InsertUBS) => {
     addUBS(ubs);
     setIsAddModalOpen(false);
+  };
+
+  const handleEditUBS = (id: number, ubsData: Partial<UBS>) => {
+    updateUBS(id, ubsData);
+    setIsEditModalOpen(false);
+    setSelectedUBS(null);
+  };
+
+  const handleDeleteUBS = (id: number) => {
+    deleteUBS(id);
+  };
+
+  const openEditModal = (ubs: UBS) => {
+    setSelectedUBS(ubs);
+    setIsEditModalOpen(true);
   };
 
   if (loading) {
@@ -76,10 +95,45 @@ const GestaoUBS = () => {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => openEditModal(ubs)}
+                    data-testid={`button-edit-${ubs.id}`}
+                  >
                     <Edit className="h-4 w-4 mr-2" />
                     Editar
                   </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="text-destructive hover:text-destructive"
+                        data-testid={`button-delete-${ubs.id}`}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Excluir
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Tem certeza que deseja excluir a UBS "{ubs.nome}"? Esta ação não pode ser desfeita.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={() => handleDeleteUBS(ubs.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                   <ReclassificationModal 
                     registro={{ id: ubs.id, nome: ubs.nome }}
                     tipoAtual="ubs"
@@ -130,6 +184,13 @@ const GestaoUBS = () => {
         open={isAddModalOpen}
         onOpenChange={setIsAddModalOpen}
         onAdd={handleAddUBS}
+      />
+      
+      <EditUBSModal 
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        onEdit={handleEditUBS}
+        ubs={selectedUBS}
       />
     </div>
   );

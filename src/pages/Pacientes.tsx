@@ -3,14 +3,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Users, Search, Plus, UserCheck, MapPin, Phone, Calendar, CreditCard } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Users, Search, Plus, UserCheck, MapPin, Phone, Calendar, CreditCard, Trash2 } from 'lucide-react';
 import { PatientForm } from '@/components/Forms/PatientForm';
 import { useApiData } from '@/hooks/useApiData';
 
 const Pacientes = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const { pacientesList, getEstatisticas } = useApiData();
+  const { pacientesList, getEstatisticas, deletePaciente } = useApiData();
   const stats = getEstatisticas();
+
+  const handleDeletePaciente = (id: number) => {
+    deletePaciente(id);
+  };
 
   return (
     <div className="space-y-6">
@@ -116,9 +121,41 @@ const Pacientes = () => {
                     <p className="text-sm text-muted-foreground">Idade: {paciente.idade} anos</p>
                   </div>
                 </div>
-                <Button size="sm" variant="outline">
-                  Ver Detalhes
-                </Button>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline">
+                    Ver Detalhes
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="text-destructive hover:text-destructive"
+                        data-testid={`button-delete-paciente-${paciente.id}`}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Excluir
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Tem certeza que deseja excluir o paciente "{paciente.nome}"? Esta ação não pode ser desfeita.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={() => handleDeletePaciente(paciente.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </div>
               
               <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
