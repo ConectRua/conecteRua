@@ -17,7 +17,8 @@ import {
   FileSpreadsheet,
   Search,
   LogOut,
-  User
+  User,
+  CalendarDays
 } from 'lucide-react';
 import logoConecteRua from '@/assets/logo-conecte-rua-final.png';
 
@@ -46,6 +47,12 @@ const navItems: NavItem[] = [
     href: '/pacientes',
     icon: Users,
     description: 'Cadastro e pareamento'
+  },
+  {
+    title: 'Agenda',
+    href: '/agenda',
+    icon: CalendarDays,
+    description: 'Atendimentos e agendamentos'
   },
   {
     title: 'Cadastro Manual',

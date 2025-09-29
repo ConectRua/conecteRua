@@ -16,6 +16,7 @@ import BuscaCEP from "./pages/BuscaCEP";
 import GestaoUBS from "./pages/GestaoUBS";
 import GestaoEquipamentos from "./pages/GestaoEquipamentos";
 import Pacientes from "./pages/Pacientes";
+import Agenda from "./pages/Agenda";
 import Relatorios from "./pages/Relatorios";
 import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
@@ -37,6 +38,7 @@ const App = () => (
               <Route index element={<Dashboard />} />
               <Route path="mapa" element={<MapaInterativo />} />
               <Route path="pacientes" element={<Pacientes />} />
+              <Route path="agenda" element={<Agenda />} />
               <Route path="cadastro" element={<CadastroManual />} />
               <Route path="importacao" element={<ImportacaoPlanilhas />} />
               <Route path="busca" element={<BuscaCEP />} />
