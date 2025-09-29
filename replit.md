@@ -4,6 +4,15 @@ This is a georeferencing system for social assistance and health services in Sam
 
 # Recent Changes
 
+## September 29, 2025 - Phase 8: Calendar Month View Implementation COMPLETED
+- ✅ **Calendar visualization**: Added third tab "Calendário" to Agenda page with full month grid view (7×6 layout)
+- ✅ **Event indicators**: Visual dots (blue for próximo, green for último) on days with patient appointments
+- ✅ **Month navigation**: Previous/next month buttons with proper date-fns locale support (pt-BR)
+- ✅ **Day selection system**: Click any day to view detailed patient list in responsive sidebar panel
+- ✅ **42-day fixed grid**: Proper calendar layout with Sunday-first alignment and trailing/leading dates
+- ✅ **Performance optimization**: Memoized events mapping (useMemo) for efficient data processing
+- ✅ **Quality assurance**: Complete data-testid coverage, architect-approved implementation
+
 ## September 22, 2025 - Phase 7: System Corrections and Statistics Implementation COMPLETED
 - ✅ **Statistics API endpoint**: Implemented GET /api/estatisticas with comprehensive data insights
 - ✅ **Patient registration fixes**: Corrected React Query configuration for proper API integration
@@ -44,6 +53,9 @@ Google Maps JavaScript API integration provides interactive mapping capabilities
 
 ## Form Management
 React Hook Form with Zod validation provides robust form handling throughout the application. Forms include patient registration, UBS/ONG management, and data import interfaces with comprehensive validation and error handling.
+
+## Calendar System
+The Agenda page features a sophisticated calendar month view that displays patient appointments in a visual grid format. The calendar uses date-fns with Portuguese Brazilian locale, showing a fixed 42-day layout (6 weeks × 7 days) with proper weekday alignment. Events are indicated with colored dots (blue for próximo atendimento, green for último atendimento), and clicking on any day reveals a detailed list of patients scheduled for that date. Month navigation is smooth with previous/next controls, and the system includes performance optimizations through memoized data processing.
 
 ## Mobile Support
 Capacitor integration enables mobile app deployment with native device features like geolocation. The responsive design ensures optimal experience across desktop and mobile devices.
