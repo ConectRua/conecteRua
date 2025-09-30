@@ -1575,6 +1575,58 @@ export function registerRoutes(app: Express): Server {
     }
   });
   
+  // Endpoint específico para atualizar coordenadas (usado em drag-and-drop no mapa)
+  app.put("/api/pacientes/:id/coordenadas", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID inválido" });
+      }
+      
+      const { latitude, longitude } = req.body;
+      
+      // Validar coordenadas
+      if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+        return res.status(400).json({ error: "Latitude e longitude devem ser números" });
+      }
+      
+      if (latitude < -90 || latitude > 90) {
+        return res.status(400).json({ error: "Latitude deve estar entre -90 e 90" });
+      }
+      
+      if (longitude < -180 || longitude > 180) {
+        return res.status(400).json({ error: "Longitude deve estar entre -180 e 180" });
+      }
+      
+      // Atualizar apenas as coordenadas
+      const paciente = await storage.updatePaciente(id, {
+        latitude,
+        longitude
+      });
+      
+      if (!paciente) {
+        return res.status(404).json({ error: "Paciente não encontrado" });
+      }
+      
+      res.json({
+        success: true,
+        paciente: {
+          id: paciente.id,
+          nome: paciente.nome,
+          latitude: paciente.latitude,
+          longitude: paciente.longitude
+        }
+      });
+    } catch (error) {
+      console.error("Error updating patient coordinates:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+  
   app.delete("/api/pacientes/:id", auditMiddleware('DELETE', 'pacientes'), async (req, res) => {
     try {
       if (!req.isAuthenticated()) {

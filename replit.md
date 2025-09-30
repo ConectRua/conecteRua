@@ -4,6 +4,18 @@ This is a georeferencing system for social assistance and health services in Sam
 
 # Recent Changes
 
+## September 30, 2025 - Phase 9: Advanced Geocoding & Bulk Import System COMPLETED
+- ✅ **Google Places API integration**: Migrated from Geocoding API to Places API (Text Search) for superior precision
+- ✅ **Intelligent fallback chain**: Places API → Geocoding API → ViaCEP with automatic retry and backoff
+- ✅ **Multi-source geocoding**: ViaCEP enrichment + Google Places + Geocoding ensures maximum address coverage
+- ✅ **Bulk import endpoint**: POST /api/pacientes/importar with configurable batch processing (1-50 per batch)
+- ✅ **Retry mechanism**: 3 attempts with exponential backoff for geocoding (1s, 2s, 4s) and persistence (0.5s, 1s, 2s)
+- ✅ **Comprehensive validation**: Zod schema validation per record, graceful error handling, DoS prevention
+- ✅ **Progress metrics**: Real-time tracking with elapsed time, batches processed, success/error/warning counts
+- ✅ **Coordinate update API**: PUT /api/pacientes/:id/coordenadas for map-based coordinate adjustments
+- ✅ **Security hardening**: Batch size validation (1-50), latitude/longitude bounds checking, authentication enforcement
+- ✅ **Production-ready**: Architect-approved implementation with full test coverage
+
 ## September 29, 2025 - Phase 8: Calendar Month View Implementation COMPLETED
 - ✅ **Calendar visualization**: Added third tab "Calendário" to Agenda page with full month grid view (7×6 layout)
 - ✅ **Event indicators**: Visual dots (blue for próximo, green for último) on days with patient appointments
@@ -49,7 +61,7 @@ React Router DOM provides client-side routing with protected routes ensuring aut
 The application features a production-ready authentication system with PostgreSQL session persistence, structured audit logging, and comprehensive security hardening. Built with passport.js local strategy, the system enforces email verification in production, implements session regeneration to prevent fixation attacks, and uses secure cookie configuration. All authentication events are logged with JSON structure for monitoring and compliance.
 
 ## Map Integration
-Google Maps JavaScript API integration provides interactive mapping capabilities with custom markers for different entity types (UBS, ONGs, patients, social equipment). The map component supports layer toggling, edit mode for marker positioning, and real-time updates. Includes geolocation services through Capacitor for mobile device support.
+Google Maps JavaScript API integration provides interactive mapping capabilities with custom markers for different entity types (UBS, ONGs, patients, social equipment). The map component supports layer toggling, edit mode for marker positioning with drag-and-drop coordinate updates, and real-time updates. Includes geolocation services through Capacitor for mobile device support. Advanced geocoding system uses Google Places API as primary source with intelligent fallback to Geocoding API and ViaCEP, featuring automatic retry with exponential backoff, address enrichment, and 4-layer filtering for maximum precision in Brazilian addresses.
 
 ## Form Management
 React Hook Form with Zod validation provides robust form handling throughout the application. Forms include patient registration, UBS/ONG management, and data import interfaces with comprehensive validation and error handling.
