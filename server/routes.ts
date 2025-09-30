@@ -169,6 +169,45 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: "Erro interno do servidor" });
     }
   });
+
+  // Reverse geocoding: buscar endereço e CEP a partir de coordenadas
+  app.post("/api/geocode/reverse", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      const { latitude, longitude } = req.body;
+      
+      if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+        return res.status(400).json({ error: "Latitude e longitude devem ser números" });
+      }
+      
+      if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+        return res.status(400).json({ error: "Coordenadas inválidas" });
+      }
+      
+      const result = await geocodingService.reverseGeocode(latitude, longitude);
+      
+      if (!result) {
+        return res.status(404).json({ 
+          error: "Não foi possível encontrar endereço para as coordenadas fornecidas" 
+        });
+      }
+      
+      res.json({
+        sucesso: true,
+        endereco: result.endereco,
+        cep: result.cep,
+        bairro: result.bairro,
+        cidade: result.cidade,
+        estado: result.estado
+      });
+    } catch (error) {
+      console.error("Erro no reverse geocoding:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
   
   // Buscar serviços próximos
   app.get("/api/nearby", async (req, res) => {

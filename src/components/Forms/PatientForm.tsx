@@ -240,6 +240,8 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
   // Observar mudanças nos campos de FC e FR para atualizar classificações
   const watchedFC = form.watch('frequenciaCardiaca');
   const watchedFR = form.watch('frequenciaRespiratoria');
+  const watchedLatitude = form.watch('latitude');
+  const watchedLongitude = form.watch('longitude');
   
   useEffect(() => {
     const classificacao = classificarFC(watchedFC || '');
@@ -251,14 +253,37 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
     form.setValue('frClassificacao', classificacao);
   }, [watchedFR, form]);
 
-  // Função para geocoding de endereço
+  // Observar mudanças nas coordenadas para fazer reverse geocoding
+  useEffect(() => {
+    // Evitar executar no carregamento inicial
+    if (watchedLatitude === undefined || watchedLongitude === undefined) return;
+    if (!watchedLatitude || !watchedLongitude) return;
+    
+    const lat = typeof watchedLatitude === 'number' ? watchedLatitude : parseFloat(watchedLatitude as string);
+    const lng = typeof watchedLongitude === 'number' ? watchedLongitude : parseFloat(watchedLongitude as string);
+    
+    if (isNaN(lat) || isNaN(lng)) return;
+    
+    // Debounce para reverse geocoding
+    if (geocodingTimeoutRef.current) {
+      clearTimeout(geocodingTimeoutRef.current);
+    }
+    
+    geocodingRequestIdRef.current += 1;
+    const currentRequestId = geocodingRequestIdRef.current;
+    
+    geocodingTimeoutRef.current = setTimeout(() => {
+      // Só faz reverse geocoding se o CEP estiver vazio
+      const currentCep = form.getValues('cep');
+      if (!currentCep || currentCep.length < 8) {
+        reverseGeocodeCoordinates(lat, lng, currentRequestId);
+      }
+    }, 2000);
+  }, [watchedLatitude, watchedLongitude, form]);
+
+  // Função para geocoding de endereço (CEP → Coordenadas)
   const geocodeAddress = async (endereco: string, cep: string, requestId: number) => {
     if (!endereco.trim() || !cep.trim()) return;
-    
-    if (typeof window === 'undefined' || !window.google || !window.google.maps) {
-      toast.error('Google Maps não está disponível. Tente novamente.');
-      return;
-    }
     
     const cepPattern = /^\d{5}-?\d{3}$/;
     if (!cepPattern.test(cep)) {
@@ -267,46 +292,91 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
     
     setIsGeocodingAddress(true);
     try {
-      const fullAddress = `${endereco}, ${cep}, Brasil`;
-      const geocoder = new google.maps.Geocoder();
-      
-      const result = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
-        geocoder.geocode(
-          { address: fullAddress },
-          (results, status) => {
-            if (geocodingRequestIdRef.current !== requestId) {
-              reject(new Error('Request obsoleto'));
-              return;
-            }
-            
-            if (status === 'OK' && results && results.length > 0) {
-              resolve(results);
-            } else {
-              reject(new Error(`Geocoding failed: ${status}`));
-            }
-          }
-        );
+      const response = await fetch('/api/geocode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ endereco, cep })
       });
-
-      if (geocodingRequestIdRef.current === requestId) {
-        const location = result[0].geometry.location;
-        const lat = location.lat();
-        const lng = location.lng();
+      
+      if (geocodingRequestIdRef.current !== requestId) {
+        return;
+      }
+      
+      const data = await response.json();
+      
+      if (data.sucesso && data.latitude && data.longitude) {
+        const lat = parseFloat(data.latitude);
+        const lng = parseFloat(data.longitude);
         
-        setFormData(prev => ({
-          ...prev,
-          latitude: lat.toString(),
-          longitude: lng.toString()
-        }));
-        
-        toast.success('Localização encontrada automaticamente!');
+        if (!isNaN(lat) && !isNaN(lng)) {
+          setFormData(prev => ({
+            ...prev,
+            latitude: lat.toString(),
+            longitude: lng.toString()
+          }));
+          
+          form.setValue('latitude', lat);
+          form.setValue('longitude', lng);
+          
+          toast.success('📍 Localização encontrada automaticamente!');
+        }
+      } else {
+        console.warn('Geocoding sem sucesso:', data.erro);
       }
     } catch (error) {
       if (geocodingRequestIdRef.current === requestId) {
         console.warn('Erro no geocoding:', error);
-        if (!error.message.includes('obsoleto')) {
+        if (!error.message?.includes('obsoleto')) {
           toast.error('Não foi possível encontrar a localização. Verifique o endereço e CEP.');
         }
+      }
+    } finally {
+      if (geocodingRequestIdRef.current === requestId) {
+        setIsGeocodingAddress(false);
+      }
+    }
+  };
+
+  // Função para reverse geocoding (Coordenadas → CEP)
+  const reverseGeocodeCoordinates = async (latitude: number, longitude: number, requestId: number) => {
+    if (!latitude || !longitude || isNaN(latitude) || isNaN(longitude)) return;
+    
+    setIsGeocodingAddress(true);
+    try {
+      const response = await fetch('/api/geocode/reverse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ latitude, longitude })
+      });
+      
+      if (geocodingRequestIdRef.current !== requestId) {
+        return;
+      }
+      
+      const data = await response.json();
+      
+      if (data.sucesso && data.cep) {
+        setFormData(prev => ({
+          ...prev,
+          cep: data.cep,
+          endereco: data.endereco || prev.endereco
+        }));
+        
+        if (data.cep) {
+          form.setValue('cep', data.cep);
+        }
+        
+        if (data.endereco && !form.getValues('endereco')) {
+          form.setValue('endereco', data.endereco);
+        }
+        
+        toast.success('📮 CEP encontrado automaticamente!');
+      }
+    } catch (error) {
+      if (geocodingRequestIdRef.current === requestId) {
+        console.warn('Erro no reverse geocoding:', error);
       }
     } finally {
       if (geocodingRequestIdRef.current === requestId) {
@@ -349,19 +419,33 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
   const getCurrentLocation = async () => {
     setIsGettingLocation(true);
     try {
+      let lat: number, lng: number;
+      
       try {
         const coordinates = await Geolocation.getCurrentPosition({
           enableHighAccuracy: true,
           timeout: 10000
         });
         
+        lat = coordinates.coords.latitude;
+        lng = coordinates.coords.longitude;
+        
         setFormData(prev => ({
           ...prev,
-          latitude: coordinates.coords.latitude.toString(),
-          longitude: coordinates.coords.longitude.toString()
+          latitude: lat.toString(),
+          longitude: lng.toString()
         }));
         
-        toast.success('Localização atual obtida com sucesso!');
+        form.setValue('latitude', lat);
+        form.setValue('longitude', lng);
+        
+        toast.success('📍 Localização atual obtida com sucesso!');
+        
+        // Acionar reverse geocoding para buscar o CEP
+        geocodingRequestIdRef.current += 1;
+        const currentRequestId = geocodingRequestIdRef.current;
+        reverseGeocodeCoordinates(lat, lng, currentRequestId);
+        
         return;
       } catch (capacitorError) {
         console.log('Capacitor failed, trying browser API:', capacitorError);
@@ -369,13 +453,25 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
         if (navigator.geolocation) {
           navigator.geolocation.getCurrentPosition(
             (position) => {
+              lat = position.coords.latitude;
+              lng = position.coords.longitude;
+              
               setFormData(prev => ({
                 ...prev,
-                latitude: position.coords.latitude.toString(),
-                longitude: position.coords.longitude.toString()
+                latitude: lat.toString(),
+                longitude: lng.toString()
               }));
-              toast.success('Localização atual obtida com sucesso!');
+              
+              form.setValue('latitude', lat);
+              form.setValue('longitude', lng);
+              
+              toast.success('📍 Localização atual obtida com sucesso!');
               setIsGettingLocation(false);
+              
+              // Acionar reverse geocoding para buscar o CEP
+              geocodingRequestIdRef.current += 1;
+              const currentRequestId = geocodingRequestIdRef.current;
+              reverseGeocodeCoordinates(lat, lng, currentRequestId);
             },
             (error) => {
               console.error('Erro browser geolocation:', error);

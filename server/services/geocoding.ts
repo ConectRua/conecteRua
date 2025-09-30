@@ -386,6 +386,140 @@ export class GeocodingService {
   }
 
   /**
+   * Reverse geocoding: busca endereço e CEP a partir de coordenadas
+   */
+  async reverseGeocode(latitude: number, longitude: number): Promise<{
+    endereco: string;
+    cep: string;
+    bairro?: string;
+    cidade?: string;
+    estado?: string;
+  } | null> {
+    const cacheKey = `reverse_${latitude.toFixed(6)}_${longitude.toFixed(6)}`;
+    
+    // Verificar cache em memória primeiro
+    const cachedMemory = this.memoryCache.get(cacheKey);
+    if (cachedMemory && cachedMemory.source === 'cache') {
+      const cached = cachedMemory as any;
+      if (cached.reverseData) {
+        return cached.reverseData;
+      }
+    }
+    
+    // Verificar cache do banco de dados
+    try {
+      const cached = await this.storage.getGeocodingCache(cacheKey);
+      if (cached && cached.source !== 'error') {
+        const result = {
+          endereco: cached.address || '',
+          cep: cached.cep || '',
+          bairro: '',
+          cidade: '',
+          estado: ''
+        };
+        
+        // Adicionar ao cache em memória
+        this.memoryCache.set(cacheKey, {
+          address: { endereco: result.endereco, cep: result.cep },
+          coordinates: null,
+          source: 'cache',
+          reverseData: result
+        } as any);
+        
+        return result;
+      }
+    } catch (error) {
+      console.warn('Erro ao consultar cache de reverse geocoding:', error);
+    }
+    
+    return this.queueRequest(async () => {
+      try {
+        const url = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1&zoom=18`;
+        
+        const response = await this.fetchWithTimeout(url, {
+          headers: {
+            'User-Agent': 'Georeferenciamento-Saude-DF/1.0 (https://geosaude.replit.app)'
+          }
+        }, 8000);
+        
+        if (!response.ok) {
+          throw new Error(`Nominatim reverse API error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data && data.address) {
+          const addr = data.address;
+          
+          // Extrair CEP se disponível
+          const cep = addr.postcode || '';
+          
+          // Construir endereço completo
+          const parts: string[] = [];
+          if (addr.road) parts.push(addr.road);
+          if (addr.house_number) parts.push(addr.house_number);
+          if (addr.suburb || addr.neighbourhood) parts.push(addr.suburb || addr.neighbourhood);
+          
+          const endereco = parts.length > 0 ? parts.join(', ') : data.display_name;
+          
+          const result = {
+            endereco,
+            cep: cep || '',
+            bairro: addr.suburb || addr.neighbourhood || '',
+            cidade: addr.city || addr.town || addr.municipality || '',
+            estado: addr.state || ''
+          };
+          
+          // Salvar nos caches
+          this.memoryCache.set(cacheKey, {
+            address: { endereco: result.endereco, cep: result.cep },
+            coordinates: null,
+            source: 'cache',
+            reverseData: result
+          } as any);
+          
+          // Salvar no banco de dados
+          try {
+            await this.storage.setGeocodingCache({
+              addressHash: cacheKey,
+              address: endereco,
+              cep: cep || '00000-000',
+              latitude: latitude,
+              longitude: longitude,
+              source: 'nominatim',
+              errorMessage: null
+            });
+          } catch (error) {
+            console.warn('Erro ao salvar no cache de reverse geocoding:', error);
+          }
+          
+          return result;
+        }
+        
+        // Salvar erro no cache para evitar requisições repetidas
+        try {
+          await this.storage.setGeocodingCache({
+            addressHash: cacheKey,
+            address: '',
+            cep: '00000-000',
+            latitude: latitude,
+            longitude: longitude,
+            source: 'error',
+            errorMessage: 'Endereço não encontrado'
+          });
+        } catch (error) {
+          console.warn('Erro ao salvar erro no cache:', error);
+        }
+        
+        return null;
+      } catch (error) {
+        console.warn('Erro no reverse geocoding:', error);
+        return null;
+      }
+    });
+  }
+
+  /**
    * Limpa o cache em memória (útil para testes)
    */
   clearCache(): void {
