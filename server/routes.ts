@@ -1352,6 +1352,192 @@ export function registerRoutes(app: Express): Server {
     }
   });
   
+  // Função auxiliar para retry com backoff exponencial
+  async function retryWithBackoff<T>(
+    fn: () => Promise<T>,
+    maxRetries: number = 3,
+    baseDelay: number = 1000
+  ): Promise<T> {
+    let lastError: any;
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        return await fn();
+      } catch (error) {
+        lastError = error;
+        
+        // Não fazer retry no último attempt
+        if (attempt < maxRetries - 1) {
+          // Backoff exponencial: 1s, 2s, 4s
+          const delay = baseDelay * Math.pow(2, attempt);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+    
+    throw lastError;
+  }
+
+  // Importação em massa de pacientes com geocodificação e retry
+  app.post("/api/pacientes/importar", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      const { pacientes, batchSize: rawBatchSize } = req.body;
+      
+      if (!Array.isArray(pacientes) || pacientes.length === 0) {
+        return res.status(400).json({ error: "Array de pacientes é obrigatório e não pode estar vazio" });
+      }
+      
+      // Validar e sanitizar batchSize (deve ser inteiro positivo entre 1 e 50)
+      let batchSize = 5; // padrão
+      if (rawBatchSize !== undefined) {
+        const parsedBatchSize = parseInt(String(rawBatchSize), 10);
+        if (isNaN(parsedBatchSize) || parsedBatchSize < 1 || parsedBatchSize > 50) {
+          return res.status(400).json({ 
+            error: "batchSize deve ser um número inteiro entre 1 e 50",
+            valorRecebido: rawBatchSize
+          });
+        }
+        batchSize = parsedBatchSize;
+      }
+      
+      const startTime = Date.now();
+      
+      const resultados = {
+        total: pacientes.length,
+        sucesso: [] as any[],
+        erros: [] as any[],
+        avisos: [] as any[],
+        tempoDecorrido: 0,
+        loteProcessados: 0
+      };
+      
+      // Processar em lotes configuráveis (padrão 5) para controlar concorrência
+      const totalBatches = Math.ceil(pacientes.length / batchSize);
+      
+      for (let i = 0; i < pacientes.length; i += batchSize) {
+        const batch = pacientes.slice(i, i + batchSize);
+        resultados.loteProcessados++;
+        
+        const batchPromises = batch.map(async (pacienteRaw, batchIndex) => {
+          const index = i + batchIndex;
+          
+          try {
+            // Geocodificar endereço com retry se CEP for fornecido
+            let coordenadas = {
+              latitude: pacienteRaw.latitude || null,
+              longitude: pacienteRaw.longitude || null
+            };
+            
+            if (pacienteRaw.cep && (!pacienteRaw.latitude || !pacienteRaw.longitude)) {
+              try {
+                const geocodeResult = await retryWithBackoff(
+                  () => geocodingService.geocodeAddress(
+                    pacienteRaw.endereco || "",
+                    pacienteRaw.cep
+                  ),
+                  3,
+                  1000
+                );
+                
+                if (geocodeResult.coordinates) {
+                  coordenadas = geocodeResult.coordinates;
+                  resultados.avisos.push({
+                    linha: index + 1,
+                    nome: pacienteRaw.nome,
+                    mensagem: `Coordenadas geocodificadas automaticamente (fonte: ${geocodeResult.source}, precisão: ${geocodeResult.precisao || 'N/A'})`
+                  });
+                } else {
+                  resultados.avisos.push({
+                    linha: index + 1,
+                    nome: pacienteRaw.nome,
+                    mensagem: `Não foi possível geocodificar o endereço após 3 tentativas: ${geocodeResult.error || 'erro desconhecido'}`
+                  });
+                }
+              } catch (geocodeError: any) {
+                resultados.avisos.push({
+                  linha: index + 1,
+                  nome: pacienteRaw.nome,
+                  mensagem: `Erro na geocodificação após 3 tentativas: ${geocodeError.message}`
+                });
+              }
+            }
+            
+            // Preparar dados do paciente (converter undefined para null)
+            const pacienteData = {
+              ...pacienteRaw,
+              latitude: coordenadas.latitude ?? null,
+              longitude: coordenadas.longitude ?? null,
+              dataAtendimento: pacienteRaw.dataAtendimento ? new Date(pacienteRaw.dataAtendimento) : null,
+              dataNascimento: pacienteRaw.dataNascimento ? new Date(pacienteRaw.dataNascimento) : null,
+              telefone: pacienteRaw.telefone ?? null,
+              email: pacienteRaw.email ?? null,
+              ativo: pacienteRaw.ativo ?? true,
+            };
+            
+            // Validar dados
+            const validation = insertPacienteSchema.safeParse(pacienteData);
+            if (!validation.success) {
+              resultados.erros.push({
+                linha: index + 1,
+                nome: pacienteRaw.nome || 'Não informado',
+                erro: 'Dados inválidos',
+                detalhes: validation.error.issues.map(issue => ({
+                  campo: issue.path.join('.'),
+                  mensagem: issue.message
+                }))
+              });
+              return;
+            }
+            
+            // Salvar no banco de dados com retry
+            const paciente = await retryWithBackoff(
+              () => storage.createPaciente(validation.data),
+              3,
+              500
+            );
+            
+            resultados.sucesso.push({
+              linha: index + 1,
+              id: paciente.id,
+              nome: paciente.nome,
+              geocodificado: coordenadas.latitude !== null
+            });
+            
+          } catch (error: any) {
+            resultados.erros.push({
+              linha: index + 1,
+              nome: pacienteRaw.nome || 'Não informado',
+              erro: `Erro após 3 tentativas: ${error.message || 'Erro ao processar paciente'}`
+            });
+          }
+        });
+        
+        // Aguardar processamento do lote
+        await Promise.allSettled(batchPromises);
+        
+        // Pequeno delay entre lotes para evitar sobrecarga
+        if (i + batchSize < pacientes.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+      
+      resultados.tempoDecorrido = Math.round((Date.now() - startTime) / 1000);
+      
+      res.status(200).json({
+        mensagem: `Importação concluída em ${resultados.tempoDecorrido}s: ${resultados.sucesso.length} sucesso, ${resultados.erros.length} erros, ${resultados.avisos.length} avisos`,
+        ...resultados
+      });
+      
+    } catch (error: any) {
+      console.error("Error importing patients:", error);
+      res.status(500).json({ error: "Erro interno do servidor", detalhes: error.message });
+    }
+  });
+  
   app.put("/api/pacientes/:id", auditMiddleware('UPDATE', 'pacientes'), async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
