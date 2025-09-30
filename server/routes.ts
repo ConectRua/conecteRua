@@ -1329,8 +1329,16 @@ export function registerRoutes(app: Express): Server {
         return res.status(401).json({ error: "Não autenticado" });
       }
       
-      const validation = insertPacienteSchema.safeParse(req.body);
+      // Converter dataAtendimento e dataNascimento de string ISO para Date, se necessário
+      const pacienteData = {
+        ...req.body,
+        dataAtendimento: req.body.dataAtendimento ? new Date(req.body.dataAtendimento) : null,
+        dataNascimento: req.body.dataNascimento ? new Date(req.body.dataNascimento) : null,
+      };
+      
+      const validation = insertPacienteSchema.safeParse(pacienteData);
       if (!validation.success) {
+        console.log("Validation error details:", validation.error.issues);
         return res.status(400).json({ error: "Dados inválidos", details: validation.error.issues });
       }
       
@@ -1355,7 +1363,14 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "ID inválido" });
       }
       
-      const validation = insertPacienteSchema.partial().safeParse(req.body);
+      // Converter dataAtendimento e dataNascimento de string ISO para Date, se necessário
+      const pacienteData = {
+        ...req.body,
+        dataAtendimento: req.body.dataAtendimento ? new Date(req.body.dataAtendimento) : null,
+        dataNascimento: req.body.dataNascimento ? new Date(req.body.dataNascimento) : null,
+      };
+      
+      const validation = insertPacienteSchema.partial().safeParse(pacienteData);
       if (!validation.success) {
         return res.status(400).json({ error: "Dados inválidos", details: validation.error.issues });
       }
