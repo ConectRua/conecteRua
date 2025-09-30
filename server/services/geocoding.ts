@@ -14,13 +14,13 @@ export interface Address {
 export interface GeocodeResult {
   address: Address;
   coordinates: Coordinates | null;
-  source: 'nominatim' | 'viacep' | 'cache' | 'error';
+  source: 'google' | 'viacep' | 'cache' | 'error';
   error?: string;
 }
 
 /**
- * Serviço de geocodificação que utiliza Nominatim (OpenStreetMap) como fonte principal
- * e ViaCEP como fallback para CEPs brasileiros.
+ * Serviço de geocodificação que utiliza Google Geocoding API como fonte principal
+ * e ViaCEP como etapa inicial para CEPs brasileiros.
  * Implementa cache persistente no banco de dados e rate limiting para evitar bloqueio das APIs.
  */
 export class GeocodingService {
@@ -141,14 +141,14 @@ export class GeocodingService {
     }
     
     try {
-      // 1. Tentar Nominatim primeiro
-      const nominatimResult = await this.tryNominatim(endereco, cep);
-      if (nominatimResult.coordinates) {
-        await this.saveToCaches(cacheKey, address, nominatimResult);
-        return nominatimResult;
+      // 1. Tentar Google Geocoding API primeiro
+      const googleResult = await this.tryGoogleGeocoding(endereco, cep);
+      if (googleResult.coordinates) {
+        await this.saveToCaches(cacheKey, address, googleResult);
+        return googleResult;
       }
       
-      // 2. Fallback para ViaCEP se Nominatim falhar
+      // 2. Fallback para ViaCEP + Google se geocoding direto falhar
       const viacepResult = await this.tryViaCEP(cep);
       if (viacepResult.coordinates) {
         await this.saveToCaches(cacheKey, address, viacepResult);
@@ -216,58 +216,62 @@ export class GeocodingService {
   }
 
   /**
-   * Tenta geocodificar usando a API do Nominatim (OpenStreetMap) com rate limiting
+   * Tenta geocodificar usando a API do Google Geocoding com rate limiting
    */
-  private async tryNominatim(endereco: string, cep: string): Promise<GeocodeResult> {
+  private async tryGoogleGeocoding(endereco: string, cep: string): Promise<GeocodeResult> {
     const address: Address = { endereco, cep };
     
     return this.queueRequest(async () => {
       try {
+        // Obter chave do Google Maps API
+        const apiKey = process.env.VITE_GOOGLE_MAPS_API_KEY;
+        if (!apiKey) {
+          throw new Error('Google Maps API key não configurada');
+        }
+        
         // Construir query de busca otimizada para Brasil
         const query = `${endereco}, ${cep}, Brasil`;
         const encodedQuery = encodeURIComponent(query);
         
-        const url = `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&limit=1&countrycodes=br&addressdetails=1`;
+        const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedQuery}&key=${apiKey}&region=br&language=pt-BR`;
         
-        const response = await this.fetchWithTimeout(url, {
-          headers: {
-            'User-Agent': 'Georeferenciamento-Saude-DF/1.0 (https://geosaude.replit.app)'
-          }
-        }, 8000);
+        const response = await this.fetchWithTimeout(url, {}, 8000);
         
         if (!response.ok) {
-          throw new Error(`Nominatim API error: ${response.status}`);
+          throw new Error(`Google Geocoding API error: ${response.status}`);
         }
         
         const data = await response.json();
         
-        if (data && data.length > 0) {
-          const result = data[0];
+        if (data.status === 'OK' && data.results && data.results.length > 0) {
+          const result = data.results[0];
+          const location = result.geometry.location;
+          
           const coordinates: Coordinates = {
-            latitude: parseFloat(result.lat),
-            longitude: parseFloat(result.lon)
+            latitude: location.lat,
+            longitude: location.lng
           };
           
           return {
             address,
             coordinates,
-            source: 'nominatim'
+            source: 'google'
           };
         }
         
         return {
           address,
           coordinates: null,
-          source: 'nominatim',
-          error: 'Endereço não encontrado no Nominatim'
+          source: 'google',
+          error: 'Endereço não encontrado no Google Maps'
         };
         
       } catch (error) {
         return {
           address,
           coordinates: null,
-          source: 'nominatim',
-          error: `Erro Nominatim: ${error.message}`
+          source: 'google',
+          error: `Erro Google Geocoding: ${error.message}`
         };
       }
     });
@@ -303,23 +307,22 @@ export class GeocodingService {
       const data = await response.json();
       
       if (data && !data.erro) {
-        // ViaCEP não retorna coordenadas exatas, então vamos tentar Nominatim novamente
+        // ViaCEP não retorna coordenadas exatas, então vamos usar Google Geocoding
         // com o endereço completo retornado pelo ViaCEP
         const fullAddress = `${data.logradouro}, ${data.bairro}, ${data.localidade}, ${data.uf}`;
         
         try {
-          const nominatimResult = await this.tryNominatim(fullAddress, cleanCep);
-          if (nominatimResult.coordinates) {
+          const googleResult = await this.tryGoogleGeocoding(fullAddress, cleanCep);
+          if (googleResult.coordinates) {
             return {
               address: { endereco: fullAddress, cep },
-              coordinates: nominatimResult.coordinates,
+              coordinates: googleResult.coordinates,
               source: 'viacep'
             };
           }
         } catch {
-          // Se Nominatim falhar, usar coordenadas aproximadas da cidade
-          // Para simplificar, vamos usar coordenadas do centro de Brasília
-          // Em produção, seria interessante ter um banco de coordenadas por cidade
+          // Se Google Geocoding falhar, retornar erro
+          // Em produção, seria interessante ter um fallback adicional
         }
         
         return {
@@ -434,48 +437,74 @@ export class GeocodingService {
     
     return this.queueRequest(async () => {
       try {
-        const url = `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1&zoom=18`;
+        // Obter chave do Google Maps API
+        const apiKey = process.env.VITE_GOOGLE_MAPS_API_KEY;
+        if (!apiKey) {
+          throw new Error('Google Maps API key não configurada');
+        }
         
-        const response = await this.fetchWithTimeout(url, {
-          headers: {
-            'User-Agent': 'Georeferenciamento-Saude-DF/1.0 (https://geosaude.replit.app)'
-          }
-        }, 8000);
+        const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${apiKey}&language=pt-BR&region=br`;
+        
+        const response = await this.fetchWithTimeout(url, {}, 8000);
         
         if (!response.ok) {
-          throw new Error(`Nominatim reverse API error: ${response.status}`);
+          throw new Error(`Google reverse geocoding API error: ${response.status}`);
         }
         
         const data = await response.json();
         
-        if (data && data.address) {
-          const addr = data.address;
+        if (data.status === 'OK' && data.results && data.results.length > 0) {
+          const result = data.results[0];
+          const components = result.address_components || [];
           
-          // Extrair CEP se disponível
-          const cep = addr.postcode || '';
+          // Extrair informações do endereço
+          let cep = '';
+          let bairro = '';
+          let cidade = '';
+          let estado = '';
+          let rua = '';
+          let numero = '';
+          
+          components.forEach((comp: any) => {
+            const types = comp.types || [];
+            
+            if (types.includes('postal_code')) {
+              cep = comp.long_name;
+            } else if (types.includes('neighborhood') || types.includes('sublocality')) {
+              bairro = comp.long_name;
+            } else if (types.includes('administrative_area_level_2') || types.includes('locality')) {
+              cidade = comp.long_name;
+            } else if (types.includes('administrative_area_level_1')) {
+              estado = comp.short_name;
+            } else if (types.includes('route')) {
+              rua = comp.long_name;
+            } else if (types.includes('street_number')) {
+              numero = comp.long_name;
+            }
+          });
           
           // Construir endereço completo
           const parts: string[] = [];
-          if (addr.road) parts.push(addr.road);
-          if (addr.house_number) parts.push(addr.house_number);
-          if (addr.suburb || addr.neighbourhood) parts.push(addr.suburb || addr.neighbourhood);
+          if (rua) parts.push(rua);
+          if (numero) parts.push(numero);
+          if (bairro) parts.push(bairro);
           
-          const endereco = parts.length > 0 ? parts.join(', ') : data.display_name;
+          const endereco = parts.length > 0 ? parts.join(', ') : result.formatted_address;
           
-          const result = {
+          const resultData = {
             endereco,
             cep: cep || '',
-            bairro: addr.suburb || addr.neighbourhood || '',
-            cidade: addr.city || addr.town || addr.municipality || '',
-            estado: addr.state || ''
+            bairro: bairro || '',
+            cidade: cidade || '',
+            estado: estado || ''
           };
           
           // Salvar nos caches
           this.memoryCache.set(cacheKey, {
-            address: { endereco: result.endereco, cep: result.cep },
+            address: { endereco: resultData.endereco, cep: resultData.cep },
             coordinates: null,
             source: 'cache',
-            reverseData: result
+            reverseData: resultData
           } as any);
           
           // Salvar no banco de dados
@@ -486,14 +515,14 @@ export class GeocodingService {
               cep: cep || '00000-000',
               latitude: latitude,
               longitude: longitude,
-              source: 'nominatim',
+              source: 'google',
               errorMessage: null
             });
           } catch (error) {
             console.warn('Erro ao salvar no cache de reverse geocoding:', error);
           }
           
-          return result;
+          return resultData;
         }
         
         // Salvar erro no cache para evitar requisições repetidas
