@@ -233,6 +233,10 @@ export class GeocodingService {
         const query = `${endereco}, ${cep}, Brasil`;
         const encodedQuery = encodeURIComponent(query);
         
+        console.log('=== ENDEREÇO ENVIADO PARA GOOGLE ===');
+        console.log('Query:', query);
+        console.log('CEP:', cep);
+        
         const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedQuery}&key=${apiKey}&region=br&language=pt-BR`;
         
         const response = await this.fetchWithTimeout(url, {}, 8000);
@@ -242,6 +246,9 @@ export class GeocodingService {
         }
         
         const data = await response.json();
+        
+        console.log('=== RESPOSTA GOOGLE COMPLETA ===');
+        console.log(JSON.stringify(data, null, 2));
         
         if (data.status === 'OK' && data.results && data.results.length > 0) {
           const result = data.results[0];
@@ -306,10 +313,16 @@ export class GeocodingService {
       
       const data = await response.json();
       
+      console.log('=== DADOS VIACEP ===');
+      console.log(data);
+      
       if (data && !data.erro) {
         // ViaCEP não retorna coordenadas exatas, então vamos usar Google Geocoding
         // com o endereço completo retornado pelo ViaCEP
         const fullAddress = `${data.logradouro}, ${data.bairro}, ${data.localidade}, ${data.uf}`;
+        
+        console.log('=== ENDEREÇO MONTADO DO VIACEP ===');
+        console.log(fullAddress);
         
         try {
           const googleResult = await this.tryGoogleGeocoding(fullAddress, cleanCep);
