@@ -97,8 +97,17 @@ export const MapComponent = ({
     // Add UBS markers
     if (showUBS) {
       dataRef.current.ubsList.forEach((ubs: UBS) => {
+        // Converter latitude e longitude para número (podem vir como string do banco)
+        const lat = typeof ubs.latitude === 'string' ? parseFloat(ubs.latitude) : ubs.latitude;
+        const lng = typeof ubs.longitude === 'string' ? parseFloat(ubs.longitude) : ubs.longitude;
+        
+        // Verificar se as coordenadas são válidas
+        if (lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+          return;
+        }
+        
         const marker = new google.maps.Marker({
-          position: { lat: ubs.latitude, lng: ubs.longitude },
+          position: { lat: lat, lng: lng },
           map: map,
           title: ubs.nome,
           draggable: editMode,
@@ -158,8 +167,17 @@ export const MapComponent = ({
     // Add ONG markers
     if (showONGs) {
       dataRef.current.ongsList.forEach((ong: ONG) => {
+        // Converter latitude e longitude para número (podem vir como string do banco)
+        const lat = typeof ong.latitude === 'string' ? parseFloat(ong.latitude) : ong.latitude;
+        const lng = typeof ong.longitude === 'string' ? parseFloat(ong.longitude) : ong.longitude;
+        
+        // Verificar se as coordenadas são válidas
+        if (lat == null || lng == null || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+          return;
+        }
+        
         const marker = new google.maps.Marker({
-          position: { lat: ong.latitude, lng: ong.longitude },
+          position: { lat: lat, lng: lng },
           map: map,
           title: ong.nome,
           draggable: editMode,
@@ -219,17 +237,21 @@ export const MapComponent = ({
     // Add patient markers
     if (showPacientes) {
       dataRef.current.pacientesList.forEach((paciente: Paciente) => {
+        // Converter latitude e longitude para número (podem vir como string do banco)
+        const lat = typeof paciente.latitude === 'string' ? parseFloat(paciente.latitude) : paciente.latitude;
+        const lng = typeof paciente.longitude === 'string' ? parseFloat(paciente.longitude) : paciente.longitude;
+        
         // Verificar se as coordenadas são válidas antes de criar o marcador
-        if (paciente.latitude == null || paciente.longitude == null || 
-            !Number.isFinite(paciente.latitude) || !Number.isFinite(paciente.longitude) ||
-            paciente.latitude < -90 || paciente.latitude > 90 || 
-            paciente.longitude < -180 || paciente.longitude > 180) {
+        if (lat == null || lng == null || 
+            !Number.isFinite(lat) || !Number.isFinite(lng) ||
+            lat < -90 || lat > 90 || 
+            lng < -180 || lng > 180) {
           console.log(`Paciente ${paciente.nome} não possui coordenadas válidas - ignorando no mapa`);
           return;
         }
         
         const marker = new google.maps.Marker({
-          position: { lat: paciente.latitude, lng: paciente.longitude },
+          position: { lat: lat, lng: lng },
           map: map,
           title: paciente.nome,
           draggable: editMode,
