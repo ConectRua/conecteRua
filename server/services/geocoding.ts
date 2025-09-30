@@ -14,8 +14,9 @@ export interface Address {
 export interface GeocodeResult {
   address: Address;
   coordinates: Coordinates | null;
-  source: 'google' | 'viacep' | 'cache' | 'error';
+  source: 'places' | 'google' | 'viacep' | 'cache' | 'error';
   error?: string;
+  precisao?: 'ROOFTOP' | 'RANGE_INTERPOLATED' | 'GEOMETRIC_CENTER' | 'APPROXIMATE' | 'PLACE';
 }
 
 /**
@@ -169,14 +170,21 @@ export class GeocodingService {
         }
       }
       
-      // 2. Tentar Google Geocoding com endereço enriquecido
+      // 2. Tentar Google Places API primeiro (mais preciso)
+      const placesResult = await this.tryPlacesAPI(enrichedAddress, cep);
+      if (placesResult.coordinates) {
+        await this.saveToCaches(cacheKey, address, placesResult);
+        return placesResult;
+      }
+      
+      // 3. Fallback para Google Geocoding com endereço enriquecido
       const googleResult = await this.tryGoogleGeocoding(enrichedAddress, cep, bairroFromCEP);
       if (googleResult.coordinates) {
         await this.saveToCaches(cacheKey, address, googleResult);
         return googleResult;
       }
       
-      // 3. Fallback para ViaCEP + Google se geocoding direto falhar
+      // 4. Último fallback para ViaCEP + Google se geocoding direto falhar
       const viacepResult = await this.tryViaCEP(cep);
       if (viacepResult.coordinates) {
         await this.saveToCaches(cacheKey, address, viacepResult);
@@ -241,6 +249,71 @@ export class GeocodingService {
     }
     
     return results;
+  }
+
+  /**
+   * Tenta geocodificar usando a API do Google Places (Text Search) - mais precisa
+   */
+  private async tryPlacesAPI(endereco: string, cep: string): Promise<GeocodeResult> {
+    const address: Address = { endereco, cep };
+    
+    return this.queueRequest(async () => {
+      try {
+        // Obter chave do Google Maps API
+        const apiKey = process.env.VITE_GOOGLE_MAPS_API_KEY;
+        if (!apiKey) {
+          throw new Error('Google Maps API key não configurada');
+        }
+        
+        // Construir query para Places API Text Search
+        const query = `${endereco}, ${cep}, Brasília, DF`;
+        const encodedQuery = encodeURIComponent(query);
+        
+        const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodedQuery}&key=${apiKey}&language=pt-BR&region=br`;
+        
+        const response = await this.fetchWithTimeout(url, {}, 8000);
+        
+        if (!response.ok) {
+          throw new Error(`Google Places API error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.status === 'OK' && data.results && data.results.length > 0) {
+          const result = data.results[0];
+          const location = result.geometry.location;
+          
+          const coordinates: Coordinates = {
+            latitude: location.lat,
+            longitude: location.lng
+          };
+          
+          return {
+            address,
+            coordinates,
+            source: 'places',
+            precisao: 'PLACE'
+          };
+        }
+        
+        // Se Places não encontrou, retornar null para tentar Geocoding
+        return {
+          address,
+          coordinates: null,
+          source: 'places',
+          error: 'Endereço não encontrado no Google Places'
+        };
+        
+      } catch (error: any) {
+        // Em caso de erro no Places, retornar null para fallback
+        return {
+          address,
+          coordinates: null,
+          source: 'places',
+          error: error.message
+        };
+      }
+    });
   }
 
   /**
@@ -336,7 +409,8 @@ export class GeocodingService {
           return {
             address,
             coordinates,
-            source: 'google'
+            source: 'google',
+            precisao: result.geometry.location_type as any
           };
         }
         
