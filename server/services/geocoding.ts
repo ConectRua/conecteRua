@@ -107,7 +107,7 @@ export class GeocodingService {
   }
 
   /**
-   * Geocodifica um endereço usando Nominatim e ViaCEP como fallback
+   * Geocodifica um endereço usando Google Geocoding, com enriquecimento via ViaCEP
    */
   async geocodeAddress(endereco: string, cep: string): Promise<GeocodeResult> {
     const address: Address = { endereco, cep };
@@ -141,14 +141,42 @@ export class GeocodingService {
     }
     
     try {
-      // 1. Tentar Google Geocoding API primeiro
-      const googleResult = await this.tryGoogleGeocoding(endereco, cep);
+      // 1. Buscar informações do CEP no ViaCEP para enriquecer o endereço
+      let enrichedAddress = endereco;
+      let bairroFromCEP: string | null = null;
+      
+      if (cep) {
+        try {
+          const cleanCep = cep.replace(/\D/g, '');
+          if (cleanCep.length === 8) {
+            const viacepUrl = `https://viacep.com.br/ws/${cleanCep}/json/`;
+            const viacepResponse = await this.fetchWithTimeout(viacepUrl, {}, 5000);
+            
+            if (viacepResponse.ok) {
+              const viacepData = await viacepResponse.json();
+              if (viacepData && !viacepData.erro) {
+                bairroFromCEP = viacepData.bairro;
+                
+                // Enriquecer endereço com informações do ViaCEP se bairro não estiver presente
+                if (bairroFromCEP && !endereco.toLowerCase().includes(bairroFromCEP.toLowerCase())) {
+                  enrichedAddress = `${endereco}, ${bairroFromCEP}`;
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('Erro ao buscar CEP no ViaCEP:', error);
+        }
+      }
+      
+      // 2. Tentar Google Geocoding com endereço enriquecido
+      const googleResult = await this.tryGoogleGeocoding(enrichedAddress, cep, bairroFromCEP);
       if (googleResult.coordinates) {
         await this.saveToCaches(cacheKey, address, googleResult);
         return googleResult;
       }
       
-      // 2. Fallback para ViaCEP + Google se geocoding direto falhar
+      // 3. Fallback para ViaCEP + Google se geocoding direto falhar
       const viacepResult = await this.tryViaCEP(cep);
       if (viacepResult.coordinates) {
         await this.saveToCaches(cacheKey, address, viacepResult);
@@ -218,7 +246,7 @@ export class GeocodingService {
   /**
    * Tenta geocodificar usando a API do Google Geocoding com rate limiting
    */
-  private async tryGoogleGeocoding(endereco: string, cep: string): Promise<GeocodeResult> {
+  private async tryGoogleGeocoding(endereco: string, cep: string, bairroEsperado?: string | null): Promise<GeocodeResult> {
     const address: Address = { endereco, cep };
     
     return this.queueRequest(async () => {
@@ -229,15 +257,12 @@ export class GeocodingService {
           throw new Error('Google Maps API key não configurada');
         }
         
-        // Construir query de busca otimizada para Brasil
-        const query = `${endereco}, ${cep}, Brasil`;
+        // Construir query de busca otimizada para Brasil com contexto geográfico
+        const query = `${endereco}, Brasília - DF, Brasil`;
         const encodedQuery = encodeURIComponent(query);
         
-        console.log('=== ENDEREÇO ENVIADO PARA GOOGLE ===');
-        console.log('Query:', query);
-        console.log('CEP:', cep);
-        
-        const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedQuery}&key=${apiKey}&region=br&language=pt-BR`;
+        // Usar components para restringir a busca ao DF e Brasília
+        const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedQuery}&components=administrative_area:DF|locality:Brasília&key=${apiKey}&region=br&language=pt-BR`;
         
         const response = await this.fetchWithTimeout(url, {}, 8000);
         
@@ -247,11 +272,60 @@ export class GeocodingService {
         
         const data = await response.json();
         
-        console.log('=== RESPOSTA GOOGLE COMPLETA ===');
-        console.log(JSON.stringify(data, null, 2));
-        
         if (data.status === 'OK' && data.results && data.results.length > 0) {
-          const result = data.results[0];
+          // Tentar encontrar resultado mais preciso E correto
+          let result = data.results[0];
+          
+          // Primeiro, tentar encontrar resultado com o CEP exato
+          for (const r of data.results) {
+            const postalCode = r.address_components?.find(c => c.types.includes('postal_code'));
+            if (postalCode && cep && postalCode.long_name.replace(/\D/g, '') === cep.replace(/\D/g, '')) {
+              result = r;
+              break;
+            }
+          }
+          
+          // Se não encontrou pelo CEP exato, tentar pelo bairro esperado
+          if (result === data.results[0] && bairroEsperado && data.results.length > 1) {
+            for (const r of data.results) {
+              const bairroComponents = r.address_components?.filter(c => 
+                c.types.includes('administrative_area_level_4') || 
+                c.types.includes('sublocality') ||
+                c.types.includes('sublocality_level_1')
+              );
+              
+              if (bairroComponents) {
+                for (const comp of bairroComponents) {
+                  if (comp.long_name.toLowerCase().includes(bairroEsperado.toLowerCase()) ||
+                      bairroEsperado.toLowerCase().includes(comp.long_name.toLowerCase())) {
+                    result = r;
+                    break;
+                  }
+                }
+                if (result !== data.results[0]) break;
+              }
+            }
+          }
+          
+          // Se ainda não encontrou, priorizar resultado mais preciso (ROOFTOP ou RANGE_INTERPOLATED)
+          // mas verificando se o CEP está próximo
+          if (result === data.results[0] && data.results.length > 1) {
+            for (const r of data.results) {
+              if (r.geometry.location_type === 'ROOFTOP' || r.geometry.location_type === 'RANGE_INTERPOLATED') {
+                const postalCode = r.address_components?.find(c => c.types.includes('postal_code'));
+                // Só usar se o CEP for próximo (primeiros 5 dígitos)
+                if (postalCode && cep) {
+                  const cleanCep = cep.replace(/\D/g, '');
+                  const resultCep = postalCode.long_name.replace(/\D/g, '');
+                  if (cleanCep.substring(0, 5) === resultCep.substring(0, 5)) {
+                    result = r;
+                    break;
+                  }
+                }
+              }
+            }
+          }
+          
           const location = result.geometry.location;
           
           const coordinates: Coordinates = {
@@ -313,16 +387,10 @@ export class GeocodingService {
       
       const data = await response.json();
       
-      console.log('=== DADOS VIACEP ===');
-      console.log(data);
-      
       if (data && !data.erro) {
         // ViaCEP não retorna coordenadas exatas, então vamos usar Google Geocoding
-        // com o endereço completo retornado pelo ViaCEP
-        const fullAddress = `${data.logradouro}, ${data.bairro}, ${data.localidade}, ${data.uf}`;
-        
-        console.log('=== ENDEREÇO MONTADO DO VIACEP ===');
-        console.log(fullAddress);
+        // com o endereço completo retornado pelo ViaCEP com contexto geográfico
+        const fullAddress = `${data.logradouro}, ${data.bairro}, ${data.localidade} - ${data.uf}, Brasil`;
         
         try {
           const googleResult = await this.tryGoogleGeocoding(fullAddress, cleanCep);
