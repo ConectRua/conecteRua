@@ -1431,6 +1431,8 @@ export function registerRoutes(app: Express): Server {
               latitude: pacienteRaw.latitude || null,
               longitude: pacienteRaw.longitude || null
             };
+            let precisao: string | null = null;
+            let fonteGeocode: string | null = null;
             
             if (pacienteRaw.cep && (!pacienteRaw.latitude || !pacienteRaw.longitude)) {
               try {
@@ -1445,6 +1447,8 @@ export function registerRoutes(app: Express): Server {
                 
                 if (geocodeResult.coordinates) {
                   coordenadas = geocodeResult.coordinates;
+                  precisao = geocodeResult.precisao || null;
+                  fonteGeocode = geocodeResult.source;
                   resultados.avisos.push({
                     linha: index + 1,
                     nome: pacienteRaw.nome,
@@ -1471,6 +1475,7 @@ export function registerRoutes(app: Express): Server {
               ...pacienteRaw,
               latitude: coordenadas.latitude ?? null,
               longitude: coordenadas.longitude ?? null,
+              precisaoGeocode: precisao,
               dataAtendimento: pacienteRaw.dataAtendimento ? new Date(pacienteRaw.dataAtendimento) : null,
               dataNascimento: pacienteRaw.dataNascimento ? new Date(pacienteRaw.dataNascimento) : null,
               telefone: pacienteRaw.telefone ?? null,
@@ -1504,7 +1509,9 @@ export function registerRoutes(app: Express): Server {
               linha: index + 1,
               id: paciente.id,
               nome: paciente.nome,
-              geocodificado: coordenadas.latitude !== null
+              geocodificado: coordenadas.latitude !== null,
+              precisao: precisao,
+              fonte: fonteGeocode
             });
             
           } catch (error: any) {

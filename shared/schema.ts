@@ -134,6 +134,7 @@ export const pacientes = pgTable("pacientes", {
   cep: varchar("cep", { length: 10 }).notNull(),
   latitude: doublePrecision("latitude"),
   longitude: doublePrecision("longitude"),
+  precisaoGeocode: varchar("precisao_geocode", { length: 30 }), // ROOFTOP, RANGE_INTERPOLATED, GEOMETRIC_CENTER, APPROXIMATE, PLACE
   telefone: varchar("telefone", { length: 20 }),
   
   // IDENTIDADE E DEMOGRAFIA
@@ -298,6 +299,7 @@ export const insertPacienteSchema = z.object({
   cep: z.string().regex(/^\d{5}-?\d{3}$/),
   latitude: z.number().nullable().optional(),
   longitude: z.number().nullable().optional(),
+  precisaoGeocode: z.string().nullable().optional(),
   telefone: z.string().nullable().optional(),
   
   // IDENTIDADE E DEMOGRAFIA
