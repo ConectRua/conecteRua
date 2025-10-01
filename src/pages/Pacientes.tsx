@@ -29,17 +29,7 @@ const Pacientes = () => {
 
   const deleteBatchMutation = useMutation({
     mutationFn: async (ids: number[]) => {
-      const res = await apiRequest('/api/pacientes/excluir-lote', {
-        method: 'POST',
-        body: JSON.stringify({ ids }),
-        headers: { 'Content-Type': 'application/json' },
-      });
-      
-      if (!res.ok) {
-        throw new Error('Falha ao excluir pacientes');
-      }
-      
-      return await res.json() as { deleted: number; failed: number; total: number; success: boolean };
+      return await apiRequest('POST', '/api/pacientes/excluir-lote', { ids }) as { deleted: number; failed: number; total: number; success: boolean };
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/pacientes'] });
