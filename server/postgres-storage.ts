@@ -186,6 +186,26 @@ export class PostgreSQLStorage implements IStorage {
     return result.length > 0;
   }
 
+  async deletePacientes(ids: number[]): Promise<{ success: number; failed: number }> {
+    let success = 0;
+    let failed = 0;
+    
+    for (const id of ids) {
+      try {
+        const deleted = await this.deletePaciente(id);
+        if (deleted) {
+          success++;
+        } else {
+          failed++;
+        }
+      } catch (error) {
+        failed++;
+      }
+    }
+    
+    return { success, failed };
+  }
+
   // ============ EQUIPAMENTOS SOCIAIS CRUD METHODS ============
   async getEquipamentosSociais(): Promise<EquipamentoSocial[]> {
     return await db.select().from(equipamentosSociais).where(eq(equipamentosSociais.ativo, true));

@@ -39,6 +39,7 @@ export interface IStorage {
   createPaciente(paciente: Omit<Paciente, 'id' | 'createdAt' | 'updatedAt'>): Promise<Paciente>;
   updatePaciente(id: number, updates: Partial<Paciente>): Promise<Paciente | null>;
   deletePaciente(id: number): Promise<boolean>;
+  deletePacientes(ids: number[]): Promise<{ success: number; failed: number }>;
   
   // Equipamentos Sociais CRUD methods
   getEquipamentosSociais(): Promise<EquipamentoSocial[]>;
@@ -502,6 +503,22 @@ export class MemStorage implements IStorage {
     
     this.pacientesList.splice(index, 1);
     return true;
+  }
+
+  async deletePacientes(ids: number[]): Promise<{ success: number; failed: number }> {
+    let success = 0;
+    let failed = 0;
+    
+    for (const id of ids) {
+      const deleted = await this.deletePaciente(id);
+      if (deleted) {
+        success++;
+      } else {
+        failed++;
+      }
+    }
+    
+    return { success, failed };
   }
   
   // Equipamentos Sociais CRUD methods

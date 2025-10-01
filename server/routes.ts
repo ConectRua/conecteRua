@@ -1654,6 +1654,38 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: "Erro interno do servidor" });
     }
   });
+
+  app.post("/api/pacientes/excluir-lote", auditMiddleware('DELETE_BATCH', 'pacientes'), async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      const validation = z.object({
+        ids: z.array(z.number()).min(1).max(100)
+      }).safeParse(req.body);
+      
+      if (!validation.success) {
+        return res.status(400).json({ 
+          error: "Dados inválidos", 
+          details: validation.error.issues 
+        });
+      }
+      
+      const { ids } = validation.data;
+      const result = await storage.deletePacientes(ids);
+      
+      res.json({ 
+        success: true,
+        deleted: result.success,
+        failed: result.failed,
+        total: ids.length
+      });
+    } catch (error) {
+      console.error("Error batch deleting Pacientes:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
   
   // Equipamentos Sociais CRUD routes
   app.post("/api/equipamentos-sociais", auditMiddleware('CREATE', 'equipamentos_sociais'), async (req, res) => {
