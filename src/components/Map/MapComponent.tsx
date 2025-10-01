@@ -250,6 +250,21 @@ export const MapComponent = ({
           return;
         }
         
+        // Determinar cor do marcador baseado na precisão da geocodificação
+        // Alta precisão (azul): ROOFTOP, PLACE, RANGE_INTERPOLATED
+        // Baixa precisão (amarelo): APPROXIMATE, GEOMETRIC_CENTER, null
+        const precisao = (paciente as any).precisaoGeocode;
+        const isLowPrecision = !precisao || precisao === 'APPROXIMATE' || precisao === 'GEOMETRIC_CENTER';
+        
+        let markerColor;
+        if (editMode) {
+          markerColor = '#fbbf24'; // Amarelo em modo edição
+        } else if (isLowPrecision) {
+          markerColor = '#fbbf24'; // Amarelo para baixa precisão (precisa validação)
+        } else {
+          markerColor = '#3b82f6'; // Azul para alta precisão
+        }
+        
         const marker = new google.maps.Marker({
           position: { lat: lat, lng: lng },
           map: map,
@@ -258,7 +273,7 @@ export const MapComponent = ({
           icon: {
             url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
               <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="10" fill="${editMode ? '#fbbf24' : '#8b5cf6'}" stroke="white" stroke-width="2"/>
+                <circle cx="12" cy="12" r="10" fill="${markerColor}" stroke="white" stroke-width="2"/>
                 <text x="12" y="16" font-family="Arial" font-size="10" fill="white" text-anchor="middle">👤</text>
               </svg>
             `),
@@ -266,15 +281,25 @@ export const MapComponent = ({
           }
         });
 
+        // Texto amigável para precisão
+        const precisaoTexto = precisao 
+          ? precisao === 'ROOFTOP' ? 'Alta (endereço exato)' 
+          : precisao === 'PLACE' ? 'Alta (local conhecido)' 
+          : precisao === 'RANGE_INTERPOLATED' ? 'Boa (interpolado)' 
+          : precisao === 'GEOMETRIC_CENTER' ? 'Média (centro geométrico)' 
+          : 'Baixa (aproximado)' 
+          : 'Desconhecida';
+        
         const infoWindow = new google.maps.InfoWindow({
           content: `
             <div class="p-3" style="min-width: 250px;">
-              <h3 class="font-bold text-lg mb-2" style="color: #8b5cf6;">${escapeHtml(paciente.nome)}</h3>
+              <h3 class="font-bold text-lg mb-2" style="color: ${markerColor};">${escapeHtml(paciente.nome)}</h3>
               <div class="space-y-1 text-sm">
                 <p><strong>Idade:</strong> ${escapeHtml(paciente.idade?.toString())} anos</p>
                 <p><strong>Endereço:</strong> ${escapeHtml(paciente.endereco)}</p>
                 <p><strong>CEP:</strong> ${escapeHtml(paciente.cep)}</p>
                 <p><strong>Telefone:</strong> ${escapeHtml(paciente.telefone)}</p>
+                ${precisao ? `<p><strong>Precisão:</strong> <span style="color: ${isLowPrecision ? '#f59e0b' : '#10b981'};">${escapeHtml(precisaoTexto)}</span>${isLowPrecision ? ' ⚠️' : ' ✓'}</p>` : ''}
                 ${paciente.distanciaUbs ? `<p><strong>Distância UBS:</strong> ${escapeHtml(paciente.distanciaUbs.toFixed(1))} km</p>` : ''}
                 <div class="mt-2">
                   <strong>Condições de Saúde:</strong>
