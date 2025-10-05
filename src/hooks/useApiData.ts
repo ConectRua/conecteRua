@@ -501,13 +501,7 @@ export const useReclassificar = () => {
       tipoOrigem: 'ubs' | 'ongs' | 'equipamentos'; 
       tipoDestino: 'ubs' | 'ongs' | 'equipamentos' 
     }) => {
-      return apiRequest('/api/reclassificar', {
-        method: 'POST',
-        body: JSON.stringify({ id, tipoOrigem, tipoDestino }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      return apiRequest('POST', '/api/reclassificar', { id, tipoOrigem, tipoDestino });
     },
     onSuccess: (data) => {
       // Invalidate all relevant caches

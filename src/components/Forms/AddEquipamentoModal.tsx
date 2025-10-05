@@ -117,11 +117,17 @@ export const AddEquipamentoModal = ({ open, onOpenChange, onAdd }: AddEquipament
     if (!validateForm()) return;
 
     const newEquipamento: InsertEquipamentoSocial = {
-      ...formData,
+      nome: formData.nome,
+      tipo: formData.tipo,
+      endereco: formData.endereco,
+      cep: formData.cep.replace(/\D/g, '').replace(/(\d{5})(\d{3})/, '$1-$2'),
       latitude: formData.latitude ? parseFloat(formData.latitude) : null,
       longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-      capacidade: formData.capacidade ? parseInt(formData.capacidade) : null,
-      cep: formData.cep.replace(/\D/g, '').replace(/(\d{5})(\d{3})/, '$1-$2')
+      telefone: formData.telefone || null,
+      email: formData.email || null,
+      horarioFuncionamento: formData.horarioFuncionamento || null,
+      servicos: formData.servicos.length > 0 ? formData.servicos : undefined,
+      ativo: true
     };
 
     onAdd(newEquipamento);
