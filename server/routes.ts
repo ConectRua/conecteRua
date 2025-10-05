@@ -37,13 +37,45 @@ function detectEntityType(row: any): 'ubs' | 'ongs' | 'equipamentos' | null {
     return 'ubs';
   }
   
-  // Detectar Equipamentos Sociais (CAPS, CRAS, etc.)
+  // Detectar Equipamentos Sociais (CAPS, CRAS, CREAS, etc.)
   if (textoCombinado.includes('CAPS') ||
       textoCombinado.includes('CRAS') ||
+      textoCombinado.includes('CREAS') ||
       textoCombinado.includes('CENTRO DE ATENÇÃO PSICOSSOCIAL') ||
+      textoCombinado.includes('CENTRO DE ATENCAO PSICOSSOCIAL') ||
       textoCombinado.includes('CENTRO DE REFERÊNCIA') ||
+      textoCombinado.includes('CENTRO DE REFERENCIA') ||
+      textoCombinado.includes('CENTRO DE ASSISTÊNCIA SOCIAL') ||
+      textoCombinado.includes('CENTRO DE ASSISTENCIA SOCIAL') ||
       textoCombinado.includes('EQUIPAMENTO SOCIAL') ||
-      textoCombinado.includes('CENTRO SOCIAL')) {
+      textoCombinado.includes('CENTRO SOCIAL') ||
+      textoCombinado.includes('CENTRO DIA') ||
+      textoCombinado.includes('CENTRO-DIA') ||
+      textoCombinado.includes('CASA DE ACOLHIMENTO') ||
+      textoCombinado.includes('CASA DE ACOLHIDA') ||
+      textoCombinado.includes('ABRIGO') ||
+      textoCombinado.includes('CENTRO DE CONVIVÊNCIA') ||
+      textoCombinado.includes('CENTRO DE CONVIVENCIA') ||
+      textoCombinado.includes('CENTRO POP') ||
+      textoCombinado.includes('CENTRO-POP') ||
+      textoCombinado.includes('CENTRO POPULAÇÃO') ||
+      textoCombinado.includes('CENTRO POPULACAO') ||
+      textoCombinado.includes('CONSELHO TUTELAR') ||
+      textoCombinado.includes('COSE') ||
+      textoCombinado.includes('CENTRO DE ORIENTAÇÃO') ||
+      textoCombinado.includes('CENTRO DE ORIENTACAO') ||
+      textoCombinado.includes('NÚCLEO') ||
+      textoCombinado.includes('NUCLEO') ||
+      textoCombinado.includes('UNIDADE DE ACOLHIMENTO') ||
+      textoCombinado.includes('CASA-LAR') ||
+      textoCombinado.includes('CASA LAR') ||
+      textoCombinado.includes('RESIDÊNCIA INCLUSIVA') ||
+      textoCombinado.includes('RESIDENCIA INCLUSIVA') ||
+      textoCombinado.includes('CENTRO ESPECIALIZADO') ||
+      textoCombinado.includes('SERVIÇO DE ACOLHIMENTO') ||
+      textoCombinado.includes('SERVICO DE ACOLHIMENTO') ||
+      textoCombinado.includes('SERVIÇO DE CONVIVÊNCIA') ||
+      textoCombinado.includes('SERVICO DE CONVIVENCIA')) {
     return 'equipamentos';
   }
   
