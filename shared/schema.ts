@@ -500,7 +500,7 @@ export const insertEquipamentoSocialSchema = z.object({
   latitude: z.number().nullable().optional(),
   longitude: z.number().nullable().optional(),
   telefone: z.string().nullable().optional(),
-  email: z.string().email().nullable().optional(),
+  email: z.union([z.string().email(), z.literal(''), z.null()]).nullable().optional(),
   horarioFuncionamento: z.string().nullable().optional(),
   servicos: z.array(z.string()).optional(),
   responsavel: z.string().nullable().optional(),

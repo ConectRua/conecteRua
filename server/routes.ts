@@ -738,15 +738,13 @@ export function registerRoutes(app: Express): Server {
                 nome: registro.nome,
                 tipo: registro.tipoEquipamento || 'Equipamento Social',
                 endereco: registro.endereco,
-                cep: registro.cep,
+                cep: registro.cep ? registro.cep.replace(/[^\d-]/g, '') : registro.cep, // Limpa CEP
                 telefone: registro.telefone,
-                email: registro.email,
+                email: registro.email || null, // Converte string vazia para null
                 horarioFuncionamento: registro.horarioFuncionamento,
                 servicos: registro.servicos || [],
                 responsavel: registro.responsavel
               };
-              
-              console.log('DEBUG - Equipamento data before geocoding:', equipamentoData);
               
               // Geocodificar
               if (equipamentoData.endereco && equipamentoData.cep) {
@@ -761,15 +759,11 @@ export function registerRoutes(app: Express): Server {
                 }
               }
               
-              console.log('DEBUG - Equipamento data after geocoding:', equipamentoData);
-              
               validacao = insertEquipamentoSocialSchema.safeParse(equipamentoData);
               if (validacao.success) {
-                console.log('DEBUG - Validation success, saving equipamento:', validacao.data);
                 await storage.createEquipamentoSocial(validacao.data);
                 registrosImportados++;
               } else {
-                console.log('DEBUG - Validation failed:', validacao.error.issues);
                 erros.push(`${registro.nome}: ${validacao.error.issues.map(i => i.message).join(', ')}`);
               }
               break;
