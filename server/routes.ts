@@ -741,8 +741,9 @@ export function registerRoutes(app: Express): Server {
                 cep: registro.cep,
                 telefone: registro.telefone,
                 email: registro.email,
+                horarioFuncionamento: registro.horarioFuncionamento,
                 servicos: registro.servicos || [],
-                capacidade: registro.capacidade
+                responsavel: registro.responsavel
               };
               
               // Geocodificar
