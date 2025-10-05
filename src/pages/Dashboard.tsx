@@ -18,12 +18,17 @@ import {
   Clock,
   Phone,
   BarChart3,
-  Map as MapIcon
+  Map as MapIcon,
+  Home
 } from 'lucide-react';
+import { useState } from 'react';
+import { AddEquipamentoModal } from '@/components/Forms/AddEquipamentoModal';
+import { EquipamentoSocialIcon } from '@/components/icons/EquipamentoSocialIcon';
 
 const Dashboard = () => {
   // Use real API data directly
-  const { ubsList, ongsList, pacientesList, equipamentosSociais, getEstatisticas, loading, error } = useApiData();
+  const { ubsList, ongsList, pacientesList, equipamentosSociais, getEstatisticas, loading, error, addEquipamentoSocial } = useApiData();
+  const [showAddEquipamento, setShowAddEquipamento] = useState(false);
   
   const analytics = useAnalytics(ubsList, pacientesList, equipamentosSociais);
   const stats = getEstatisticas();
@@ -230,6 +235,15 @@ const Dashboard = () => {
                     <Heart className="h-4 w-4 mr-2" />
                     Adicionar ONG
                   </Button>
+                  <Button 
+                    className="w-full" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setShowAddEquipamento(true)}
+                  >
+                    <EquipamentoSocialIcon className="h-4 w-4 mr-2" />
+                    Novo Equipamento Social
+                  </Button>
                   <Button className="w-full" variant="outline" size="sm">
                     <Users className="h-4 w-4 mr-2" />
                     Importar Pacientes
@@ -260,6 +274,16 @@ const Dashboard = () => {
           />
         </TabsContent>
       </Tabs>
+
+      {/* Add Equipamento Social Modal */}
+      <AddEquipamentoModal
+        open={showAddEquipamento}
+        onOpenChange={setShowAddEquipamento}
+        onAdd={(equipamento) => {
+          addEquipamentoSocial(equipamento);
+          setShowAddEquipamento(false);
+        }}
+      />
     </div>
   );
 };
