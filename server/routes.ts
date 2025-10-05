@@ -1000,12 +1000,13 @@ export function registerRoutes(app: Express): Server {
                   telefone: row['telefone'] || row['Telefone'] || row['fone'] || row['phone'] || row['celular'] || row['contato'] ||
                            row['Contato'] || row['Tel'] || row['Fone'],
                   email: row['email'] || row['Email'] || row['e-mail'] || row['E-mail'] || row['contato_email'] || row['E-Mail'],
+                  horarioFuncionamento: row['horario'] || row['horario_funcionamento'] || row['Horário'] || 
+                                       row['Horário de Funcionamento'] || row['funcionamento'],
                   servicos: row['servicos'] || row['Servicos'] || row['atividades'] || row['programas'] || row['areas_atuacao'] || 
                            row['Tipo de Equipamento'] || row['Serviços Oferecidos'] ? 
                     String(row['servicos'] || row['Servicos'] || row['atividades'] || row['programas'] || row['areas_atuacao'] || 
                            row['Tipo de Equipamento'] || row['Serviços Oferecidos']).split(',').map(s => s.trim()) : [],
-                  capacidade: row['capacidade'] || row['Capacidade'] || row['vagas'] || row['Vagas'] ? 
-                    parseInt(row['capacidade'] || row['Capacidade'] || row['vagas'] || row['Vagas']) : null
+                  responsavel: row['responsavel'] || row['Responsavel'] || row['coordenador'] || row['diretor'] || row['gestor']
                 };
                 
                 // Geocodificar se endereço e CEP estão presentes
