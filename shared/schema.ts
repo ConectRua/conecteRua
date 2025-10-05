@@ -486,6 +486,7 @@ export const equipamentosSociais = pgTable("equipamentos_sociais", {
   email: varchar("email", { length: 255 }),
   horarioFuncionamento: text("horario_funcionamento"),
   servicos: text("servicos").array(),
+  responsavel: varchar("responsavel", { length: 255 }),
   ativo: boolean("ativo").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -502,6 +503,7 @@ export const insertEquipamentoSocialSchema = z.object({
   email: z.string().email().nullable().optional(),
   horarioFuncionamento: z.string().nullable().optional(),
   servicos: z.array(z.string()).optional(),
+  responsavel: z.string().nullable().optional(),
   ativo: z.boolean().optional().default(true),
 });
 

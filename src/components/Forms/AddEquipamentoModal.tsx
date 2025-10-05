@@ -127,6 +127,7 @@ export const AddEquipamentoModal = ({ open, onOpenChange, onAdd }: AddEquipament
       email: formData.email || null,
       horarioFuncionamento: formData.horarioFuncionamento || null,
       servicos: formData.servicos.length > 0 ? formData.servicos : undefined,
+      responsavel: formData.responsavel || null,
       ativo: true
     };
 
