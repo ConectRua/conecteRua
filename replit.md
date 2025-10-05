@@ -4,6 +4,17 @@ This is a georeferencing system for social assistance and health services in Sam
 
 # Recent Changes
 
+## October 05, 2025 - Phase 10: Social Equipment Complete CRUD Integration COMPLETED
+- ✅ **CRUD hooks implementation**: Added useCreateEquipamentoSocial, useUpdateEquipamentoSocial, useDeleteEquipamentoSocial following established patterns
+- ✅ **useApiData integration**: Integrated equipment hooks with CRUD functions (addEquipamentoSocial, updateEquipamentoSocial, deleteEquipamentoSocial)
+- ✅ **Position update support**: Extended updatePosition function to handle equipment coordinate updates in map edit mode
+- ✅ **Schema alignment**: Added missing 'responsavel' field to equipamentos_sociais schema and insertSchema (varchar 255, nullable)
+- ✅ **Modal corrections**: Fixed AddEquipamentoModal to include 'responsavel' in submission payload, removed non-existent 'capacidade' field
+- ✅ **Database migration**: Successfully applied schema changes with drizzle-kit push --force
+- ✅ **Query cache management**: Proper invalidation on create/update/delete with toast notifications
+- ✅ **Bug fixes**: Corrected useReclassificar parameter order (method before URL) for apiRequest
+- ✅ **Architect approved**: All changes reviewed and validated for correctness and security
+
 ## September 30, 2025 - Phase 9: Advanced Geocoding & Bulk Import System COMPLETED
 - ✅ **Google Places API integration**: Migrated from Geocoding API to Places API (Text Search) for superior precision
 - ✅ **Intelligent fallback chain**: Places API → Geocoding API → ViaCEP with automatic retry and backoff
