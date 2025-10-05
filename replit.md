@@ -4,6 +4,14 @@ This is a georeferencing system for social assistance and health services in Sam
 
 # Recent Changes
 
+## October 05, 2025 - Phase 11: Enhanced Social Equipment Auto-Detection COMPLETED
+- ✅ **Expanded keyword recognition**: Added 30+ new keywords for social equipment type detection in spreadsheet imports
+- ✅ **Comprehensive coverage**: Now detects CREAS, Centro Dia, Casa de Acolhimento, Abrigo, Centro de Convivência, Centro Pop, Conselho Tutelar, COSE, Núcleo, Casa-Lar, Residência Inclusiva, Centro Especializado, and service variations
+- ✅ **Accent-insensitive matching**: All keywords include both accented and unaccented variants (e.g., "REFERÊNCIA" and "REFERENCIA")
+- ✅ **Improved detection rate**: User-confirmed successful recognition improvement from initial low detection to significantly higher coverage
+- ✅ **Zero performance impact**: Maintains O(n) complexity with small constant factors, no async overhead
+- ✅ **Architect approved**: Code review confirmed no regressions, proper cleanup of debug code, and appropriate keyword choices
+
 ## October 05, 2025 - Phase 10: Social Equipment Complete CRUD Integration COMPLETED
 - ✅ **CRUD hooks implementation**: Added useCreateEquipamentoSocial, useUpdateEquipamentoSocial, useDeleteEquipamentoSocial following established patterns
 - ✅ **useApiData integration**: Integrated equipment hooks with CRUD functions (addEquipamentoSocial, updateEquipamentoSocial, deleteEquipamentoSocial)
