@@ -13,12 +13,12 @@ import {
   Settings, 
   ChevronLeft,
   Home,
-  UserPlus,
   FileSpreadsheet,
   Search,
   LogOut,
   User,
-  CalendarDays
+  CalendarDays,
+  Blocks
 } from 'lucide-react';
 import logoConecteRua from '@/assets/logo-conecte-rua-final.png';
 
@@ -55,12 +55,6 @@ const navItems: NavItem[] = [
     description: 'Atendimentos e agendamentos'
   },
   {
-    title: 'Cadastro Manual',
-    href: '/cadastro',
-    icon: UserPlus,
-    description: 'Adicionar UBS e ONGs'
-  },
-  {
     title: 'Import Planilhas',
     href: '/importacao',
     icon: FileSpreadsheet,
@@ -83,6 +77,12 @@ const navItems: NavItem[] = [
     href: '/ongs',
     icon: Heart,
     description: 'Organizações e Instituições'
+  },
+  {
+    title: 'Gestão Equipamentos Sociais',
+    href: '/equipamentos',
+    icon: Blocks,
+    description: 'Equipamentos e Serviços Sociais'
   },
   {
     title: 'Relatórios',
