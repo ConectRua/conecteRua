@@ -17,10 +17,10 @@ import {
   Search,
   LogOut,
   User,
-  CalendarDays,
-  Blocks
+  CalendarDays
 } from 'lucide-react';
 import logoConecteRua from '@/assets/logo-conecte-rua-final.png';
+import { EquipamentoSocialIcon } from '@/components/icons/EquipamentoSocialIcon';
 
 interface NavItem {
   title: string;
@@ -81,7 +81,7 @@ const navItems: NavItem[] = [
   {
     title: 'Gestão Equipamentos Sociais',
     href: '/equipamentos',
-    icon: Blocks,
+    icon: EquipamentoSocialIcon,
     description: 'Equipamentos e Serviços Sociais'
   },
   {
