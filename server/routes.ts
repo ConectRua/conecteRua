@@ -746,6 +746,8 @@ export function registerRoutes(app: Express): Server {
                 responsavel: registro.responsavel
               };
               
+              console.log('DEBUG - Equipamento data before geocoding:', equipamentoData);
+              
               // Geocodificar
               if (equipamentoData.endereco && equipamentoData.cep) {
                 try {
@@ -759,11 +761,15 @@ export function registerRoutes(app: Express): Server {
                 }
               }
               
+              console.log('DEBUG - Equipamento data after geocoding:', equipamentoData);
+              
               validacao = insertEquipamentoSocialSchema.safeParse(equipamentoData);
               if (validacao.success) {
+                console.log('DEBUG - Validation success, saving equipamento:', validacao.data);
                 await storage.createEquipamentoSocial(validacao.data);
                 registrosImportados++;
               } else {
+                console.log('DEBUG - Validation failed:', validacao.error.issues);
                 erros.push(`${registro.nome}: ${validacao.error.issues.map(i => i.message).join(', ')}`);
               }
               break;
