@@ -6,6 +6,7 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { createGeocodingService } from "./services/geocoding";
+import { createGooglePlacesService } from "./services/googlePlacesService";
 import { insertUBSSchema, insertONGSchema, insertPacienteSchema, insertEquipamentoSocialSchema, insertOrientacaoEncaminhamentoSchema } from "../shared/schema";
 import { z } from "zod";
 import multer from "multer";
@@ -157,6 +158,9 @@ export function registerRoutes(app: Express): Server {
 
   // Criar instância do serviço de geocodificação
   const geocodingService = createGeocodingService(storage);
+  
+  // Criar instância do serviço de busca inteligente do Google Places
+  const googlePlacesService = createGooglePlacesService();
 
   // ============ ENDPOINTS GEOGRÁFICOS (FASE 4) ============
   
@@ -568,6 +572,67 @@ export function registerRoutes(app: Express): Server {
               horarioFuncionamento: row['horario'] || row['horario_funcionamento'] || row['horarioFuncionamento'] || 
                                    row['Horario'] || row['funcionamento'] || row['Horário de Funcionamento'] || row['Horário'] || ''
             };
+            
+            // Tentar buscar no Google Places para enriquecer dados
+            if (googlePlacesService && dadosExtraidos.nome && (dadosExtraidos.endereco || dadosExtraidos.cep)) {
+              try {
+                const searchData = {
+                  nome: dadosExtraidos.nome,
+                  tipo: 'UBS',
+                  endereco: dadosExtraidos.endereco,
+                  cep: dadosExtraidos.cep,
+                  telefone: dadosExtraidos.telefone
+                };
+                
+                const placeResult = await googlePlacesService.findAndMatchPlace(searchData);
+                
+                // Adicionar informações do Google Places ao registro
+                dadosExtraidos.googleMatch = {
+                  found: placeResult.found,
+                  confidence: placeResult.confidence,
+                  source: placeResult.source,
+                  googlePlaceId: placeResult.googlePlaceId
+                };
+                
+                // Se encontrou com boa confiança, enriquecer os dados
+                if (placeResult.found && placeResult.confidence >= 70) {
+                  dadosExtraidos.latitude = placeResult.latitude;
+                  dadosExtraidos.longitude = placeResult.longitude;
+                  
+                  // Enriquecer com dados do Google se disponíveis
+                  if (!dadosExtraidos.telefone && placeResult.telefone) {
+                    dadosExtraidos.telefone = placeResult.telefone;
+                    dadosExtraidos.telefoneSource = 'google';
+                  }
+                  
+                  if (!dadosExtraidos.horarioFuncionamento && placeResult.horarioFuncionamento) {
+                    dadosExtraidos.horarioFuncionamento = placeResult.horarioFuncionamento;
+                    dadosExtraidos.horarioSource = 'google';
+                  }
+                  
+                  if (placeResult.endereco && placeResult.confidence > 80) {
+                    dadosExtraidos.enderecoGoogle = placeResult.endereco;
+                  }
+                  
+                  if (placeResult.cep && !dadosExtraidos.cep) {
+                    dadosExtraidos.cep = placeResult.cep;
+                  }
+                } else if (placeResult.found && placeResult.confidence >= 50) {
+                  // Confiança média - adicionar coordenadas mas marcar para revisão
+                  dadosExtraidos.latitude = placeResult.latitude;
+                  dadosExtraidos.longitude = placeResult.longitude;
+                  dadosExtraidos.needsReview = true;
+                  dadosExtraidos.reviewReason = `Match de ${placeResult.confidence}% - verificar localização`;
+                }
+              } catch (error) {
+                console.warn(`Erro ao buscar no Google Places para UBS ${dadosExtraidos.nome}:`, error);
+                dadosExtraidos.googleMatch = {
+                  found: false,
+                  confidence: 0,
+                  source: 'error'
+                };
+              }
+            }
             break;
             
           case 'ongs':
@@ -583,6 +648,67 @@ export function registerRoutes(app: Express): Server {
               site: row['site'] || row['Site'] || row['website'] || row['url'] || row['pagina'] || '',
               responsavel: row['responsavel'] || row['Responsavel'] || row['coordenador'] || row['diretor'] || row['presidente'] || ''
             };
+            
+            // Tentar buscar no Google Places para enriquecer dados
+            if (googlePlacesService && dadosExtraidos.nome && (dadosExtraidos.endereco || dadosExtraidos.cep)) {
+              try {
+                const searchData = {
+                  nome: dadosExtraidos.nome,
+                  tipo: 'ONG',
+                  endereco: dadosExtraidos.endereco,
+                  cep: dadosExtraidos.cep,
+                  telefone: dadosExtraidos.telefone
+                };
+                
+                const placeResult = await googlePlacesService.findAndMatchPlace(searchData);
+                
+                // Adicionar informações do Google Places ao registro
+                dadosExtraidos.googleMatch = {
+                  found: placeResult.found,
+                  confidence: placeResult.confidence,
+                  source: placeResult.source,
+                  googlePlaceId: placeResult.googlePlaceId
+                };
+                
+                // Se encontrou com boa confiança, enriquecer os dados
+                if (placeResult.found && placeResult.confidence >= 70) {
+                  dadosExtraidos.latitude = placeResult.latitude;
+                  dadosExtraidos.longitude = placeResult.longitude;
+                  
+                  // Enriquecer com dados do Google se disponíveis
+                  if (!dadosExtraidos.telefone && placeResult.telefone) {
+                    dadosExtraidos.telefone = placeResult.telefone;
+                    dadosExtraidos.telefoneSource = 'google';
+                  }
+                  
+                  if (!dadosExtraidos.site && placeResult.site) {
+                    dadosExtraidos.site = placeResult.site;
+                    dadosExtraidos.siteSource = 'google';
+                  }
+                  
+                  if (placeResult.endereco && placeResult.confidence > 80) {
+                    dadosExtraidos.enderecoGoogle = placeResult.endereco;
+                  }
+                  
+                  if (placeResult.cep && !dadosExtraidos.cep) {
+                    dadosExtraidos.cep = placeResult.cep;
+                  }
+                } else if (placeResult.found && placeResult.confidence >= 50) {
+                  // Confiança média - adicionar coordenadas mas marcar para revisão
+                  dadosExtraidos.latitude = placeResult.latitude;
+                  dadosExtraidos.longitude = placeResult.longitude;
+                  dadosExtraidos.needsReview = true;
+                  dadosExtraidos.reviewReason = `Match de ${placeResult.confidence}% - verificar localização`;
+                }
+              } catch (error) {
+                console.warn(`Erro ao buscar no Google Places para ONG ${dadosExtraidos.nome}:`, error);
+                dadosExtraidos.googleMatch = {
+                  found: false,
+                  confidence: 0,
+                  source: 'error'
+                };
+              }
+            }
             break;
             
           case 'equipamentos':
@@ -598,8 +724,71 @@ export function registerRoutes(app: Express): Server {
                        row['contato'] || row['Contato'] || row['Tel'] || row['Fone'] || '',
               email: row['email'] || row['Email'] || row['e-mail'] || row['E-mail'] || row['contato_email'] || row['E-Mail'] || '',
               horarioFuncionamento: row['horario'] || row['horario_funcionamento'] || row['Horário'] || 
-                                   row['Horário de Funcionamento'] || row['funcionamento'] || ''
+                                   row['Horário de Funcionamento'] || row['funcionamento'] || '',
+              responsavel: row['responsavel'] || row['Responsavel'] || row['coordenador'] || 
+                          row['Responsável'] || row['Coordenador'] || ''
             };
+            
+            // Tentar buscar no Google Places se o serviço estiver disponível
+            if (googlePlacesService && dadosExtraidos.nome && (dadosExtraidos.endereco || dadosExtraidos.cep)) {
+              try {
+                const searchData = {
+                  nome: dadosExtraidos.nome,
+                  tipo: dadosExtraidos.tipoEquipamento,
+                  endereco: dadosExtraidos.endereco,
+                  cep: dadosExtraidos.cep,
+                  telefone: dadosExtraidos.telefone
+                };
+                
+                const placeResult = await googlePlacesService.findAndMatchPlace(searchData);
+                
+                // Adicionar informações do Google Places ao registro
+                dadosExtraidos.googleMatch = {
+                  found: placeResult.found,
+                  confidence: placeResult.confidence,
+                  source: placeResult.source,
+                  googlePlaceId: placeResult.googlePlaceId
+                };
+                
+                // Se encontrou com boa confiança, enriquecer os dados
+                if (placeResult.found && placeResult.confidence >= 70) {
+                  dadosExtraidos.latitude = placeResult.latitude;
+                  dadosExtraidos.longitude = placeResult.longitude;
+                  
+                  // Enriquecer com dados do Google se disponíveis
+                  if (!dadosExtraidos.telefone && placeResult.telefone) {
+                    dadosExtraidos.telefone = placeResult.telefone;
+                    dadosExtraidos.telefoneSource = 'google';
+                  }
+                  
+                  if (!dadosExtraidos.horarioFuncionamento && placeResult.horarioFuncionamento) {
+                    dadosExtraidos.horarioFuncionamento = placeResult.horarioFuncionamento;
+                    dadosExtraidos.horarioSource = 'google';
+                  }
+                  
+                  if (placeResult.endereco && placeResult.confidence > 80) {
+                    dadosExtraidos.enderecoGoogle = placeResult.endereco;
+                  }
+                  
+                  if (placeResult.cep && !dadosExtraidos.cep) {
+                    dadosExtraidos.cep = placeResult.cep;
+                  }
+                } else if (placeResult.found && placeResult.confidence >= 50) {
+                  // Confiança média - adicionar coordenadas mas marcar para revisão
+                  dadosExtraidos.latitude = placeResult.latitude;
+                  dadosExtraidos.longitude = placeResult.longitude;
+                  dadosExtraidos.needsReview = true;
+                  dadosExtraidos.reviewReason = `Match de ${placeResult.confidence}% - verificar localização`;
+                }
+              } catch (error) {
+                console.warn(`Erro ao buscar no Google Places para equipamento ${dadosExtraidos.nome}:`, error);
+                dadosExtraidos.googleMatch = {
+                  found: false,
+                  confidence: 0,
+                  source: 'error'
+                };
+              }
+            }
             break;
             
           case 'pacientes':
@@ -677,8 +866,13 @@ export function registerRoutes(app: Express): Server {
                 gestor: registro.gestor
               };
               
-              // Geocodificar se endereço e CEP estão presentes
-              if (ubsData.endereco && ubsData.cep) {
+              // Usar coordenadas do Google Places se disponíveis, caso contrário geocodificar
+              if (registro.latitude && registro.longitude) {
+                // Usar coordenadas já obtidas do Google Places
+                (ubsData as any).latitude = registro.latitude;
+                (ubsData as any).longitude = registro.longitude;
+              } else if (ubsData.endereco && ubsData.cep) {
+                // Geocodificar se não há coordenadas do Google Places
                 try {
                   const geocodeResult = await geocodingService.geocodeAddress(ubsData.endereco, ubsData.cep);
                   if (geocodeResult.coordinates) {
@@ -711,8 +905,13 @@ export function registerRoutes(app: Express): Server {
                 responsavel: registro.responsavel
               };
               
-              // Geocodificar
-              if (ongData.endereco && ongData.cep) {
+              // Usar coordenadas do Google Places se disponíveis, caso contrário geocodificar
+              if (registro.latitude && registro.longitude) {
+                // Usar coordenadas já obtidas do Google Places
+                (ongData as any).latitude = registro.latitude;
+                (ongData as any).longitude = registro.longitude;
+              } else if (ongData.endereco && ongData.cep) {
+                // Geocodificar se não há coordenadas do Google Places
                 try {
                   const geocodeResult = await geocodingService.geocodeAddress(ongData.endereco, ongData.cep);
                   if (geocodeResult.coordinates) {
@@ -746,8 +945,13 @@ export function registerRoutes(app: Express): Server {
                 responsavel: registro.responsavel
               };
               
-              // Geocodificar
-              if (equipamentoData.endereco && equipamentoData.cep) {
+              // Usar coordenadas do Google Places se disponíveis, caso contrário geocodificar
+              if (registro.latitude && registro.longitude) {
+                // Usar coordenadas já obtidas do Google Places
+                (equipamentoData as any).latitude = registro.latitude;
+                (equipamentoData as any).longitude = registro.longitude;
+              } else if (equipamentoData.endereco && equipamentoData.cep) {
+                // Geocodificar se não há coordenadas do Google Places
                 try {
                   const geocodeResult = await geocodingService.geocodeAddress(equipamentoData.endereco, equipamentoData.cep);
                   if (geocodeResult.coordinates) {

@@ -4,6 +4,18 @@ This is a georeferencing system for social assistance and health services in Sam
 
 # Recent Changes
 
+## October 06, 2025 - Phase 12: Intelligent Google Places Integration for Excel Imports COMPLETED
+- ✅ **Smart matching service**: Implemented googlePlacesService.ts with multi-criteria scoring algorithm
+- ✅ **Excel import enhancement**: Automatic Google Maps matching for establishments in spreadsheets
+- ✅ **Confidence scoring**: Name similarity (40pts) + Address (30pts) + CEP (20pts) + Phone (10pts)
+- ✅ **Automatic enrichment**: Phone numbers, business hours, and precise coordinates from Google Maps
+- ✅ **Visual confidence indicators**: 🟢 95%+ match, 🟡 70-94% match, 🔴 manual review needed
+- ✅ **Multi-layer search strategy**: Name+address+CEP → Name+CEP+type → Name+region fallback
+- ✅ **Coordinate optimization**: Reuses Google Places coordinates in confirmation, avoiding duplicate geocoding
+- ✅ **Support for all entity types**: UBS, ONGs, and Social Equipment all benefit from intelligent matching
+- ✅ **Performance optimized**: Conditional enrichment only when data is missing or uncertain
+- ✅ **Production ready**: Full error handling with graceful fallback to traditional geocoding
+
 ## October 05, 2025 - Phase 11: Enhanced Social Equipment Auto-Detection COMPLETED
 - ✅ **Expanded keyword recognition**: Added 30+ new keywords for social equipment type detection in spreadsheet imports
 - ✅ **Comprehensive coverage**: Now detects CREAS, Centro Dia, Casa de Acolhimento, Abrigo, Centro de Convivência, Centro Pop, Conselho Tutelar, COSE, Núcleo, Casa-Lar, Residência Inclusiva, Centro Especializado, and service variations
