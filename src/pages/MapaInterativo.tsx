@@ -9,6 +9,7 @@ import { AddONGModal } from '@/components/Forms/AddONGModal';
 import { AddEquipamentoModal } from '@/components/Forms/AddEquipamentoModal';
 import { PatientForm } from '@/components/Forms/PatientForm';
 import { EquipamentoSocialIcon } from '@/components/icons/EquipamentoSocialIcon';
+import { ExportDropdown } from '@/components/Export/ExportDropdown';
 import { useApiData } from '@/hooks/useApiData';
 import { useState } from 'react';
 import { 
@@ -131,10 +132,12 @@ const MapaInterativo = () => {
               </>
             )}
           </Button>
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Exportar
-          </Button>
+          <ExportDropdown 
+            ubsList={ubsList}
+            ongsList={ongsList}
+            pacientesList={pacientesList}
+            equipamentosSociais={equipamentosSociais}
+          />
           <Button variant="outline" size="sm">
             <Maximize className="h-4 w-4 mr-2" />
             Tela Cheia
