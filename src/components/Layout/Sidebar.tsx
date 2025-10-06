@@ -111,7 +111,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
       className
     )}>
       {/* Header */}
-      <div className="flex h-24 items-center justify-between px-4 border-b">
+      <div className="relative flex h-24 items-center justify-center px-4 border-b">
         {!collapsed && (
           <img 
             src={logoConecteRua} 
@@ -124,7 +124,10 @@ export const Sidebar = ({ className }: SidebarProps) => {
           variant="ghost"
           size="sm"
           onClick={() => setCollapsed(!collapsed)}
-          className={cn("h-8 w-8 p-0", collapsed && "mx-auto")}
+          className={cn(
+            "h-8 w-8 p-0",
+            collapsed ? "mx-auto" : "absolute right-2"
+          )}
         >
           <ChevronLeft className={cn(
             "h-4 w-4 transition-transform",
