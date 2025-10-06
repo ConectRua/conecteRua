@@ -116,7 +116,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
           <img 
             src={logoConecteRua} 
             alt="ConecteRua - Sistema de Georreferenciamento" 
-            className="h-40 w-auto object-contain max-w-full"
+            className="h-36 w-auto object-contain max-w-full"
           />
         )}
         
