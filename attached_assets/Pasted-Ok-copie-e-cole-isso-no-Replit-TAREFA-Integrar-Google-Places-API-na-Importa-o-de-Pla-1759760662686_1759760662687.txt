@@ -1,0 +1,205 @@
+Ok, copie e cole isso no Replit:
+
+---
+
+# TAREFA: Integrar Google Places API na Importação de Planilhas
+
+## OBJETIVO
+Verificar se endereços da planilha existem no Google Places e no banco antes de importar, enriquecendo os dados automaticamente.
+
+## BACKEND - Modificar `/api/upload/preview`
+
+### 1. Para cada linha da planilha processada:
+
+```typescript
+// Pseudo-código do fluxo
+for (const registro of registrosPlanilha) {
+  
+  // 1. Buscar no Google Places
+  const googlePlacesResult = await buscarNoGooglePlaces({
+    nome: registro.nome,
+    endereco: registro.endereco,
+    cep: registro.cep,
+    tipo: registro.tipo // ubs, ong, equipamento
+  });
+  
+  // 2. Buscar no banco de dados local
+  const existeNoBanco = await verificarSePossuiBanco({
+    nome: registro.nome,
+    endereco: registro.endereco,
+    placeId: googlePlacesResult?.placeId
+  });
+  
+  // 3. Enriquecer o registro
+  registro.existeNoGooglePlaces = !!googlePlacesResult;
+  registro.existeNoBanco = existeNoBanco;
+  registro.placeId = googlePlacesResult?.placeId;
+  registro.coordenadas = googlePlacesResult?.location;
+  registro.telefoneGoogle = googlePlacesResult?.phoneNumber;
+  registro.horarioGoogle = googlePlacesResult?.openingHours;
+  registro.siteGoogle = googlePlacesResult?.website;
+  registro.avaliacaoGoogle = googlePlacesResult?.rating;
+  registro.fotoGoogle = googlePlacesResult?.photoUrl;
+  
+  // 4. Definir status
+  if (existeNoBanco) {
+    registro.status = 'DUPLICADO_BANCO';
+    registro.valido = false;
+    registro.erro = 'Já existe no sistema';
+  } else if (!googlePlacesResult) {
+    registro.status = 'NAO_ENCONTRADO_GOOGLE';
+    registro.avisoValidacao = 'Endereço não encontrado no Google. Será criado sem validação.';
+  } else {
+    registro.status = 'VALIDADO_GOOGLE';
+    registro.valido = true;
+  }
+}
+```
+
+### 2. Criar função de busca no Google Places:
+
+```typescript
+async function buscarNoGooglePlaces(params) {
+  const query = `${params.nome}, ${params.endereco}`;
+  
+  const response = await fetch(
+    `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(query)}&inputtype=textquery&fields=place_id,name,formatted_address,geometry,formatted_phone_number,opening_hours,website,rating,photos&key=${GOOGLE_PLACES_API_KEY}`
+  );
+  
+  const data = await response.json();
+  
+  if (data.candidates && data.candidates.length > 0) {
+    const place = data.candidates[0];
+    
+    return {
+      placeId: place.place_id,
+      nome: place.name,
+      endereco: place.formatted_address,
+      location: {
+        lat: place.geometry.location.lat,
+        lng: place.geometry.location.lng
+      },
+      phoneNumber: place.formatted_phone_number,
+      openingHours: place.opening_hours?.weekday_text,
+      website: place.website,
+      rating: place.rating,
+      photoUrl: place.photos?.[0]?.photo_reference
+    };
+  }
+  
+  return null;
+}
+```
+
+### 3. Retornar para o frontend:
+
+```typescript
+return {
+  success: true,
+  totalLinhas: registros.length,
+  totalValidos: registros.filter(r => r.valido).length,
+  totalDuplicados: registros.filter(r => r.status === 'DUPLICADO_BANCO').length,
+  totalNaoEncontrados: registros.filter(r => r.status === 'NAO_ENCONTRADO_GOOGLE').length,
+  registrosProcessados: registros
+};
+```
+
+## FRONTEND - Modificar `ImportacaoPlanilhas.tsx`
+
+### 1. Atualizar interface PreviewRecord:
+
+```typescript
+interface PreviewRecord {
+  // ... campos existentes
+  existeNoGooglePlaces: boolean;
+  existeNoBanco: boolean;
+  status: 'VALIDADO_GOOGLE' | 'DUPLICADO_BANCO' | 'NAO_ENCONTRADO_GOOGLE';
+  placeId?: string;
+  coordenadas?: { lat: number; lng: number };
+  telefoneGoogle?: string;
+  horarioGoogle?: string[];
+  siteGoogle?: string;
+  avaliacaoGoogle?: number;
+  avisoValidacao?: string;
+}
+```
+
+### 2. Adicionar coluna na tabela:
+
+```typescript
+<TableHeader>
+  <TableRow>
+    <TableHead className="w-12">Checkbox</TableHead>
+    <TableHead className="w-16">Linha</TableHead>
+    <TableHead className="w-24">Tipo</TableHead>
+    <TableHead className="w-32">Status Validação</TableHead> {/* NOVA COLUNA */}
+    <TableHead>Nome</TableHead>
+    <TableHead>Endereço</TableHead>
+    {/* ... restante */}
+  </TableRow>
+</TableHeader>
+```
+
+### 3. Renderizar badges de status:
+
+```typescript
+<TableCell>
+  {record.status === 'VALIDADO_GOOGLE' && (
+    <Badge variant="default" className="bg-green-500">
+      <CheckCircle className="h-3 w-3 mr-1" />
+      Validado Google
+    </Badge>
+  )}
+  
+  {record.status === 'DUPLICADO_BANCO' && (
+    <Badge variant="destructive">
+      <AlertCircle className="h-3 w-3 mr-1" />
+      Duplicado
+    </Badge>
+  )}
+  
+  {record.status === 'NAO_ENCONTRADO_GOOGLE' && (
+    <Badge variant="outline" className="border-yellow-500 text-yellow-600">
+      <AlertCircle className="h-3 w-3 mr-1" />
+      Não encontrado
+    </Badge>
+  )}
+</TableCell>
+```
+
+### 4. Adicionar tooltip com dados do Google:
+
+```typescript
+{record.existeNoGooglePlaces && (
+  <div className="text-xs text-muted-foreground mt-1">
+    {record.telefoneGoogle && `📞 ${record.telefoneGoogle}`}
+    {record.avaliacaoGoogle && ` | ⭐ ${record.avaliacaoGoogle}`}
+    {record.coordenadas && ` | 📍 ${record.coordenadas.lat.toFixed(4)}, ${record.coordenadas.lng.toFixed(4)}`}
+  </div>
+)}
+```
+
+## FLUXO COMPLETO
+
+1. Usuário faz upload da planilha
+2. Backend processa cada linha:
+   - Busca no Google Places
+   - Verifica duplicata no banco
+   - Enriquece com dados do Google
+3. Frontend exibe tabela com:
+   - ✅ Verde: Validado pelo Google
+   - 🔴 Vermelho: Duplicado no banco
+   - 🟡 Amarelo: Não encontrado no Google
+4. Usuário decide o que importar
+5. Backend salva apenas os selecionados
+
+## IMPORTANTE
+
+- Use cache para não bater limite da API do Google
+- Considere batch de requisições
+- Não bloquear registros não encontrados, apenas avisar
+- Salvar `placeId` no banco para referência futura
+
+---
+
+Cole isso direto no chat do Replit Agent.
