@@ -72,6 +72,28 @@ const ImportacaoPlanilhas = () => {
   const { toast } = useToast();
   const uploadMutation = useUploadPlanilha();
 
+  const handleDownloadTemplate = (tipo: 'ubs' | 'ongs' | 'pacientes' | 'equipamentos') => {
+    const fileNames = {
+      ubs: 'modelo_ubs_hospitais.xlsx',
+      ongs: 'modelo_ongs.xlsx',
+      pacientes: 'modelo_pacientes.xlsx',
+      equipamentos: 'modelo_equipamentos_sociais.xlsx'
+    };
+    
+    const fileName = fileNames[tipo];
+    const link = document.createElement('a');
+    link.href = `/${fileName}`;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Download iniciado",
+      description: `Baixando ${fileName}`,
+    });
+  };
+
   const acceptedTypes = [
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
     'application/vnd.ms-excel', // .xls
@@ -531,15 +553,39 @@ const ImportacaoPlanilhas = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button variant="outline" className="w-full justify-start">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start"
+              onClick={() => handleDownloadTemplate('ubs')}
+              data-testid="button-download-ubs"
+            >
               <FileSpreadsheet className="h-4 w-4 mr-2" />
               Modelo - Dados UBS
             </Button>
-            <Button variant="outline" className="w-full justify-start">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start"
+              onClick={() => handleDownloadTemplate('ongs')}
+              data-testid="button-download-ongs"
+            >
               <FileSpreadsheet className="h-4 w-4 mr-2" />
               Modelo - Dados ONGs
             </Button>
-            <Button variant="outline" className="w-full justify-start">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start"
+              onClick={() => handleDownloadTemplate('equipamentos')}
+              data-testid="button-download-equipamentos"
+            >
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Modelo - Equipamentos Sociais
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full justify-start"
+              onClick={() => handleDownloadTemplate('pacientes')}
+              data-testid="button-download-pacientes"
+            >
               <FileSpreadsheet className="h-4 w-4 mr-2" />
               Modelo - Dados Pacientes
             </Button>
