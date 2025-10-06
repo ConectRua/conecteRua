@@ -53,13 +53,13 @@ const AuthPage = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-green-50 dark:from-gray-900 dark:to-gray-800 p-8">
-      <div className="w-full max-w-md space-y-4">
+      <div className="w-full max-w-6xl space-y-4">
         {/* Logo */}
         <div className="text-center">
           <img 
             src={logoConecteRua} 
             alt="Sistema de Georreferenciamento" 
-            className="w-full max-w-md h-auto mx-auto mb-4"
+            className="w-full max-w-5xl h-auto mx-auto mb-4"
           />
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
             Conectando Pessoas aos Cuidados
