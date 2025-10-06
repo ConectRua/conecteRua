@@ -4,6 +4,16 @@ This is a georeferencing system for social assistance and health services in Sam
 
 # Recent Changes
 
+## October 06, 2025 - Phase 13: Bulk Deletion Functionality COMPLETED
+- ✅ **Multi-select hook**: Created reusable `useMultiSelect` hook for managing multiple item selections
+- ✅ **Equipamentos Sociais bulk deletion**: Added checkbox selection and "Delete Selected" button with confirmation dialog
+- ✅ **ONGs bulk deletion**: Implemented same pattern with visual feedback (ring highlight) on selected items
+- ✅ **UBS bulk deletion**: Completed bulk deletion across all management pages
+- ✅ **UI enhancements**: "Select All" checkbox, individual item checkboxes, selected count display
+- ✅ **Safety features**: Confirmation dialog shows exact count of items to be deleted before action
+- ✅ **Visual consistency**: All pages use same pattern - blue/green ring for selected items, destructive button style
+- ✅ **User experience**: Delete button appears only when items selected, clear selection after deletion
+
 ## October 06, 2025 - Phase 12: Intelligent Google Places Integration for Excel Imports COMPLETED
 - ✅ **Smart matching service**: Implemented googlePlacesService.ts with multi-criteria scoring algorithm
 - ✅ **Excel import enhancement**: Automatic Google Maps matching for establishments in spreadsheets
