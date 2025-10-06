@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ReclassificationModal } from '@/components/ReclassificationModal';
 import { AddEquipamentoModal } from '@/components/Forms/AddEquipamentoModal';
+import { EditEquipamentoModal } from '@/components/Forms/EditEquipamentoModal';
 import { useApiData } from '@/hooks/useApiData';
-import type { InsertEquipamentoSocial } from '../../shared/schema';
+import type { InsertEquipamentoSocial, EquipamentoSocial } from '../../shared/schema';
 import { 
   Building, 
   Phone, 
@@ -18,12 +19,24 @@ import {
 } from 'lucide-react';
 
 const GestaoEquipamentos = () => {
-  const { equipamentosSociais, loading, addEquipamentoSocial } = useApiData();
+  const { equipamentosSociais, loading, addEquipamentoSocial, updateEquipamentoSocial } = useApiData();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedEquipamento, setSelectedEquipamento] = useState<EquipamentoSocial | null>(null);
 
   const handleAddEquipamento = (equipamento: InsertEquipamentoSocial) => {
     addEquipamentoSocial(equipamento);
     setIsAddModalOpen(false);
+  };
+
+  const handleEditClick = (equipamento: EquipamentoSocial) => {
+    setSelectedEquipamento(equipamento);
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateEquipamento = (id: number, data: Partial<EquipamentoSocial>) => {
+    updateEquipamentoSocial(id, data);
+    setIsEditModalOpen(false);
   };
 
   if (loading) {
@@ -134,7 +147,12 @@ const GestaoEquipamentos = () => {
                 </div>
                 
                 <div className="flex space-x-2">
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleEditClick(equipamento)}
+                    data-testid={`button-edit-equipamento-${equipamento.id}`}
+                  >
                     <Edit className="h-4 w-4" />
                   </Button>
                   <ReclassificationModal 
@@ -240,6 +258,15 @@ const GestaoEquipamentos = () => {
         onOpenChange={setIsAddModalOpen}
         onAdd={handleAddEquipamento}
       />
+      
+      {selectedEquipamento && (
+        <EditEquipamentoModal
+          open={isEditModalOpen}
+          onOpenChange={setIsEditModalOpen}
+          equipamento={selectedEquipamento}
+          onUpdate={handleUpdateEquipamento}
+        />
+      )}
     </div>
   );
 };
