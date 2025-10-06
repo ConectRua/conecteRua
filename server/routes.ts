@@ -7,10 +7,12 @@ import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { createGeocodingService } from "./services/geocoding";
 import { createGooglePlacesService } from "./services/googlePlacesService";
-import { insertUBSSchema, insertONGSchema, insertPacienteSchema, insertEquipamentoSocialSchema, insertOrientacaoEncaminhamentoSchema } from "../shared/schema";
+import { insertUBSSchema, insertONGSchema, insertPacienteSchema, insertEquipamentoSocialSchema, insertOrientacaoEncaminhamentoSchema, ubs, ongs, equipamentosSociais } from "../shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import * as XLSX from "xlsx";
+import { db } from "./db";
+import { eq, and, sql } from "drizzle-orm";
 
 // Função para detectar automaticamente o tipo de entidade baseado nos dados
 function detectEntityType(row: any): 'ubs' | 'ongs' | 'equipamentos' | null {
@@ -159,20 +161,23 @@ async function checkUBSDuplicate(nome: string, endereco: string, placeId?: strin
   try {
     // Verificar por place_id se fornecido
     if (placeId) {
-      const byPlaceId = await storage.query('SELECT id FROM ubs WHERE place_id = $1 LIMIT 1', [placeId]);
-      if (byPlaceId.rows.length > 0) return true;
+      const byPlaceId = await db.select({ id: ubs.id })
+        .from(ubs)
+        .where(eq(ubs.placeId, placeId))
+        .limit(1);
+      if (byPlaceId.length > 0) return true;
     }
     
-    // Verificar por nome + endereço (normalizado)
-    const normalizedNome = nome.trim().toLowerCase();
-    const normalizedEndereco = endereco.trim().toLowerCase();
+    // Verificar por nome + endereço (normalizado usando SQL LOWER e TRIM)
+    const byNameAddress = await db.select({ id: ubs.id })
+      .from(ubs)
+      .where(and(
+        sql`LOWER(TRIM(${ubs.nome})) = LOWER(TRIM(${nome}))`,
+        sql`LOWER(TRIM(${ubs.endereco})) = LOWER(TRIM(${endereco}))`
+      ))
+      .limit(1);
     
-    const byNameAddress = await storage.query(
-      'SELECT id FROM ubs WHERE LOWER(TRIM(nome)) = $1 AND LOWER(TRIM(endereco)) = $2 LIMIT 1',
-      [normalizedNome, normalizedEndereco]
-    );
-    
-    return byNameAddress.rows.length > 0;
+    return byNameAddress.length > 0;
   } catch (error) {
     console.error('Erro ao verificar duplicata UBS:', error);
     return false;
@@ -184,20 +189,23 @@ async function checkONGDuplicate(nome: string, endereco: string, placeId?: strin
   try {
     // Verificar por place_id se fornecido
     if (placeId) {
-      const byPlaceId = await storage.query('SELECT id FROM ongs WHERE place_id = $1 LIMIT 1', [placeId]);
-      if (byPlaceId.rows.length > 0) return true;
+      const byPlaceId = await db.select({ id: ongs.id })
+        .from(ongs)
+        .where(eq(ongs.placeId, placeId))
+        .limit(1);
+      if (byPlaceId.length > 0) return true;
     }
     
-    // Verificar por nome + endereço (normalizado)
-    const normalizedNome = nome.trim().toLowerCase();
-    const normalizedEndereco = endereco.trim().toLowerCase();
+    // Verificar por nome + endereço (normalizado usando SQL LOWER e TRIM)
+    const byNameAddress = await db.select({ id: ongs.id })
+      .from(ongs)
+      .where(and(
+        sql`LOWER(TRIM(${ongs.nome})) = LOWER(TRIM(${nome}))`,
+        sql`LOWER(TRIM(${ongs.endereco})) = LOWER(TRIM(${endereco}))`
+      ))
+      .limit(1);
     
-    const byNameAddress = await storage.query(
-      'SELECT id FROM ongs WHERE LOWER(TRIM(nome)) = $1 AND LOWER(TRIM(endereco)) = $2 LIMIT 1',
-      [normalizedNome, normalizedEndereco]
-    );
-    
-    return byNameAddress.rows.length > 0;
+    return byNameAddress.length > 0;
   } catch (error) {
     console.error('Erro ao verificar duplicata ONG:', error);
     return false;
@@ -209,20 +217,23 @@ async function checkEquipamentoSocialDuplicate(nome: string, endereco: string, p
   try {
     // Verificar por place_id se fornecido
     if (placeId) {
-      const byPlaceId = await storage.query('SELECT id FROM equipamentos_sociais WHERE place_id = $1 LIMIT 1', [placeId]);
-      if (byPlaceId.rows.length > 0) return true;
+      const byPlaceId = await db.select({ id: equipamentosSociais.id })
+        .from(equipamentosSociais)
+        .where(eq(equipamentosSociais.placeId, placeId))
+        .limit(1);
+      if (byPlaceId.length > 0) return true;
     }
     
-    // Verificar por nome + endereço (normalizado)
-    const normalizedNome = nome.trim().toLowerCase();
-    const normalizedEndereco = endereco.trim().toLowerCase();
+    // Verificar por nome + endereço (normalizado usando SQL LOWER e TRIM)
+    const byNameAddress = await db.select({ id: equipamentosSociais.id })
+      .from(equipamentosSociais)
+      .where(and(
+        sql`LOWER(TRIM(${equipamentosSociais.nome})) = LOWER(TRIM(${nome}))`,
+        sql`LOWER(TRIM(${equipamentosSociais.endereco})) = LOWER(TRIM(${endereco}))`
+      ))
+      .limit(1);
     
-    const byNameAddress = await storage.query(
-      'SELECT id FROM equipamentos_sociais WHERE LOWER(TRIM(nome)) = $1 AND LOWER(TRIM(endereco)) = $2 LIMIT 1',
-      [normalizedNome, normalizedEndereco]
-    );
-    
-    return byNameAddress.rows.length > 0;
+    return byNameAddress.length > 0;
   } catch (error) {
     console.error('Erro ao verificar duplicata Equipamento Social:', error);
     return false;
@@ -650,6 +661,10 @@ export function registerRoutes(app: Express): Server {
                                    row['Horario'] || row['funcionamento'] || row['Horário de Funcionamento'] || row['Horário'] || ''
             };
             
+            // Verificar duplicata no banco
+            const isDuplicate = await checkUBSDuplicate(dadosExtraidos.nome, dadosExtraidos.endereco);
+            dadosExtraidos.existeNoBanco = isDuplicate;
+            
             // Tentar buscar no Google Places para enriquecer dados
             if (googlePlacesService && dadosExtraidos.nome && (dadosExtraidos.endereco || dadosExtraidos.cep)) {
               try {
@@ -668,8 +683,31 @@ export function registerRoutes(app: Express): Server {
                   found: placeResult.found,
                   confidence: placeResult.confidence,
                   source: placeResult.source,
-                  googlePlaceId: placeResult.googlePlaceId
+                  googlePlaceId: placeResult.googlePlaceId,
+                  rating: placeResult.rating,
+                  photoUrl: placeResult.photoUrl
                 };
+                
+                // Definir status de validação
+                if (isDuplicate) {
+                  dadosExtraidos.status = 'DUPLICADO_BANCO';
+                  dadosExtraidos.avisoValidacao = 'Este estabelecimento já existe no banco de dados';
+                } else if (placeResult.found && placeResult.confidence >= 70) {
+                  dadosExtraidos.status = 'VALIDADO_GOOGLE';
+                  dadosExtraidos.avisoValidacao = `Validado pelo Google Places (${placeResult.confidence}% de confiança)`;
+                } else if (placeResult.found && placeResult.confidence >= 50) {
+                  dadosExtraidos.status = 'VALIDADO_GOOGLE';
+                  dadosExtraidos.avisoValidacao = `Encontrado no Google com ${placeResult.confidence}% de confiança - revisar`;
+                  dadosExtraidos.needsReview = true;
+                } else {
+                  dadosExtraidos.status = 'NAO_ENCONTRADO_GOOGLE';
+                  dadosExtraidos.avisoValidacao = 'Não encontrado no Google Places - verificar dados';
+                }
+                
+                dadosExtraidos.existeNoGooglePlaces = placeResult.found;
+                dadosExtraidos.placeId = placeResult.googlePlaceId;
+                dadosExtraidos.avaliacaoGoogle = placeResult.rating;
+                dadosExtraidos.fotoGoogle = placeResult.photoUrl;
                 
                 // Se encontrou com boa confiança, enriquecer os dados
                 if (placeResult.found && placeResult.confidence >= 70) {
@@ -698,7 +736,6 @@ export function registerRoutes(app: Express): Server {
                   // Confiança média - adicionar coordenadas mas marcar para revisão
                   dadosExtraidos.latitude = placeResult.latitude;
                   dadosExtraidos.longitude = placeResult.longitude;
-                  dadosExtraidos.needsReview = true;
                   dadosExtraidos.reviewReason = `Match de ${placeResult.confidence}% - verificar localização`;
                 }
               } catch (error) {
@@ -708,7 +745,15 @@ export function registerRoutes(app: Express): Server {
                   confidence: 0,
                   source: 'error'
                 };
+                dadosExtraidos.existeNoGooglePlaces = false;
+                dadosExtraidos.status = isDuplicate ? 'DUPLICADO_BANCO' : 'NAO_ENCONTRADO_GOOGLE';
+                dadosExtraidos.avisoValidacao = isDuplicate ? 'Já existe no banco' : 'Erro ao buscar no Google Places';
               }
+            } else {
+              // Sem Google Places disponível
+              dadosExtraidos.existeNoGooglePlaces = false;
+              dadosExtraidos.status = isDuplicate ? 'DUPLICADO_BANCO' : 'NAO_ENCONTRADO_GOOGLE';
+              dadosExtraidos.avisoValidacao = isDuplicate ? 'Já existe no banco' : 'Dados insuficientes para validação';
             }
             break;
             
@@ -725,6 +770,10 @@ export function registerRoutes(app: Express): Server {
               site: row['site'] || row['Site'] || row['website'] || row['url'] || row['pagina'] || '',
               responsavel: row['responsavel'] || row['Responsavel'] || row['coordenador'] || row['diretor'] || row['presidente'] || ''
             };
+            
+            // Verificar duplicata no banco
+            const isDuplicateONG = await checkONGDuplicate(dadosExtraidos.nome, dadosExtraidos.endereco);
+            dadosExtraidos.existeNoBanco = isDuplicateONG;
             
             // Tentar buscar no Google Places para enriquecer dados
             if (googlePlacesService && dadosExtraidos.nome && (dadosExtraidos.endereco || dadosExtraidos.cep)) {
@@ -744,8 +793,31 @@ export function registerRoutes(app: Express): Server {
                   found: placeResult.found,
                   confidence: placeResult.confidence,
                   source: placeResult.source,
-                  googlePlaceId: placeResult.googlePlaceId
+                  googlePlaceId: placeResult.googlePlaceId,
+                  rating: placeResult.rating,
+                  photoUrl: placeResult.photoUrl
                 };
+                
+                // Definir status de validação
+                if (isDuplicateONG) {
+                  dadosExtraidos.status = 'DUPLICADO_BANCO';
+                  dadosExtraidos.avisoValidacao = 'Esta ONG já existe no banco de dados';
+                } else if (placeResult.found && placeResult.confidence >= 70) {
+                  dadosExtraidos.status = 'VALIDADO_GOOGLE';
+                  dadosExtraidos.avisoValidacao = `Validado pelo Google Places (${placeResult.confidence}% de confiança)`;
+                } else if (placeResult.found && placeResult.confidence >= 50) {
+                  dadosExtraidos.status = 'VALIDADO_GOOGLE';
+                  dadosExtraidos.avisoValidacao = `Encontrado no Google com ${placeResult.confidence}% de confiança - revisar`;
+                  dadosExtraidos.needsReview = true;
+                } else {
+                  dadosExtraidos.status = 'NAO_ENCONTRADO_GOOGLE';
+                  dadosExtraidos.avisoValidacao = 'Não encontrado no Google Places - verificar dados';
+                }
+                
+                dadosExtraidos.existeNoGooglePlaces = placeResult.found;
+                dadosExtraidos.placeId = placeResult.googlePlaceId;
+                dadosExtraidos.avaliacaoGoogle = placeResult.rating;
+                dadosExtraidos.fotoGoogle = placeResult.photoUrl;
                 
                 // Se encontrou com boa confiança, enriquecer os dados
                 if (placeResult.found && placeResult.confidence >= 70) {
@@ -758,8 +830,8 @@ export function registerRoutes(app: Express): Server {
                     dadosExtraidos.telefoneSource = 'google';
                   }
                   
-                  if (!dadosExtraidos.site && placeResult.site) {
-                    dadosExtraidos.site = placeResult.site;
+                  if (!dadosExtraidos.site && placeResult.website) {
+                    dadosExtraidos.site = placeResult.website;
                     dadosExtraidos.siteSource = 'google';
                   }
                   
@@ -774,7 +846,6 @@ export function registerRoutes(app: Express): Server {
                   // Confiança média - adicionar coordenadas mas marcar para revisão
                   dadosExtraidos.latitude = placeResult.latitude;
                   dadosExtraidos.longitude = placeResult.longitude;
-                  dadosExtraidos.needsReview = true;
                   dadosExtraidos.reviewReason = `Match de ${placeResult.confidence}% - verificar localização`;
                 }
               } catch (error) {
@@ -784,7 +855,15 @@ export function registerRoutes(app: Express): Server {
                   confidence: 0,
                   source: 'error'
                 };
+                dadosExtraidos.existeNoGooglePlaces = false;
+                dadosExtraidos.status = isDuplicateONG ? 'DUPLICADO_BANCO' : 'NAO_ENCONTRADO_GOOGLE';
+                dadosExtraidos.avisoValidacao = isDuplicateONG ? 'Já existe no banco' : 'Erro ao buscar no Google Places';
               }
+            } else {
+              // Sem Google Places disponível
+              dadosExtraidos.existeNoGooglePlaces = false;
+              dadosExtraidos.status = isDuplicateONG ? 'DUPLICADO_BANCO' : 'NAO_ENCONTRADO_GOOGLE';
+              dadosExtraidos.avisoValidacao = isDuplicateONG ? 'Já existe no banco' : 'Dados insuficientes para validação';
             }
             break;
             
@@ -806,6 +885,10 @@ export function registerRoutes(app: Express): Server {
                           row['Responsável'] || row['Coordenador'] || ''
             };
             
+            // Verificar duplicata no banco
+            const isDuplicateEquip = await checkEquipamentoSocialDuplicate(dadosExtraidos.nome, dadosExtraidos.endereco);
+            dadosExtraidos.existeNoBanco = isDuplicateEquip;
+            
             // Tentar buscar no Google Places se o serviço estiver disponível
             if (googlePlacesService && dadosExtraidos.nome && (dadosExtraidos.endereco || dadosExtraidos.cep)) {
               try {
@@ -824,8 +907,31 @@ export function registerRoutes(app: Express): Server {
                   found: placeResult.found,
                   confidence: placeResult.confidence,
                   source: placeResult.source,
-                  googlePlaceId: placeResult.googlePlaceId
+                  googlePlaceId: placeResult.googlePlaceId,
+                  rating: placeResult.rating,
+                  photoUrl: placeResult.photoUrl
                 };
+                
+                // Definir status de validação
+                if (isDuplicateEquip) {
+                  dadosExtraidos.status = 'DUPLICADO_BANCO';
+                  dadosExtraidos.avisoValidacao = 'Este equipamento já existe no banco de dados';
+                } else if (placeResult.found && placeResult.confidence >= 70) {
+                  dadosExtraidos.status = 'VALIDADO_GOOGLE';
+                  dadosExtraidos.avisoValidacao = `Validado pelo Google Places (${placeResult.confidence}% de confiança)`;
+                } else if (placeResult.found && placeResult.confidence >= 50) {
+                  dadosExtraidos.status = 'VALIDADO_GOOGLE';
+                  dadosExtraidos.avisoValidacao = `Encontrado no Google com ${placeResult.confidence}% de confiança - revisar`;
+                  dadosExtraidos.needsReview = true;
+                } else {
+                  dadosExtraidos.status = 'NAO_ENCONTRADO_GOOGLE';
+                  dadosExtraidos.avisoValidacao = 'Não encontrado no Google Places - verificar dados';
+                }
+                
+                dadosExtraidos.existeNoGooglePlaces = placeResult.found;
+                dadosExtraidos.placeId = placeResult.googlePlaceId;
+                dadosExtraidos.avaliacaoGoogle = placeResult.rating;
+                dadosExtraidos.fotoGoogle = placeResult.photoUrl;
                 
                 // Se encontrou com boa confiança, enriquecer os dados
                 if (placeResult.found && placeResult.confidence >= 70) {
@@ -854,7 +960,6 @@ export function registerRoutes(app: Express): Server {
                   // Confiança média - adicionar coordenadas mas marcar para revisão
                   dadosExtraidos.latitude = placeResult.latitude;
                   dadosExtraidos.longitude = placeResult.longitude;
-                  dadosExtraidos.needsReview = true;
                   dadosExtraidos.reviewReason = `Match de ${placeResult.confidence}% - verificar localização`;
                 }
               } catch (error) {
@@ -864,7 +969,15 @@ export function registerRoutes(app: Express): Server {
                   confidence: 0,
                   source: 'error'
                 };
+                dadosExtraidos.existeNoGooglePlaces = false;
+                dadosExtraidos.status = isDuplicateEquip ? 'DUPLICADO_BANCO' : 'NAO_ENCONTRADO_GOOGLE';
+                dadosExtraidos.avisoValidacao = isDuplicateEquip ? 'Já existe no banco' : 'Erro ao buscar no Google Places';
               }
+            } else {
+              // Sem Google Places disponível
+              dadosExtraidos.existeNoGooglePlaces = false;
+              dadosExtraidos.status = isDuplicateEquip ? 'DUPLICADO_BANCO' : 'NAO_ENCONTRADO_GOOGLE';
+              dadosExtraidos.avisoValidacao = isDuplicateEquip ? 'Já existe no banco' : 'Dados insuficientes para validação';
             }
             break;
             
