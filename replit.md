@@ -1,87 +1,6 @@
 # Overview
 
-This is a georeferencing system for social assistance and health services in Samambaia, Recanto das Emas, and Águas Claras. The application maps healthcare facilities (UBS), NGOs, and patients, providing intelligent pairing between patients and nearest healthcare units based on geographic proximity and service availability. It features an interactive map interface, comprehensive management dashboards, and data import capabilities.
-
-# Recent Changes
-
-## October 06, 2025 - Phase 13: Bulk Deletion Functionality COMPLETED
-- ✅ **Multi-select hook**: Created reusable `useMultiSelect` hook for managing multiple item selections
-- ✅ **Equipamentos Sociais bulk deletion**: Added checkbox selection and "Delete Selected" button with confirmation dialog
-- ✅ **ONGs bulk deletion**: Implemented same pattern with visual feedback (ring highlight) on selected items
-- ✅ **UBS bulk deletion**: Completed bulk deletion across all management pages
-- ✅ **UI enhancements**: "Select All" checkbox, individual item checkboxes, selected count display
-- ✅ **Safety features**: Confirmation dialog shows exact count of items to be deleted before action
-- ✅ **Visual consistency**: All pages use same pattern - blue/green ring for selected items, destructive button style
-- ✅ **User experience**: Delete button appears only when items selected, clear selection after deletion
-
-## October 06, 2025 - Phase 12: Intelligent Google Places Integration for Excel Imports COMPLETED
-- ✅ **Smart matching service**: Implemented googlePlacesService.ts with multi-criteria scoring algorithm
-- ✅ **Excel import enhancement**: Automatic Google Maps matching for establishments in spreadsheets
-- ✅ **Confidence scoring**: Name similarity (40pts) + Address (30pts) + CEP (20pts) + Phone (10pts)
-- ✅ **Automatic enrichment**: Phone numbers, business hours, and precise coordinates from Google Maps
-- ✅ **Visual confidence indicators**: 🟢 95%+ match, 🟡 70-94% match, 🔴 manual review needed
-- ✅ **Multi-layer search strategy**: Name+address+CEP → Name+CEP+type → Name+region fallback
-- ✅ **Coordinate optimization**: Reuses Google Places coordinates in confirmation, avoiding duplicate geocoding
-- ✅ **Support for all entity types**: UBS, ONGs, and Social Equipment all benefit from intelligent matching
-- ✅ **Performance optimized**: Conditional enrichment only when data is missing or uncertain
-- ✅ **Production ready**: Full error handling with graceful fallback to traditional geocoding
-
-## October 05, 2025 - Phase 11: Enhanced Social Equipment Auto-Detection COMPLETED
-- ✅ **Expanded keyword recognition**: Added 30+ new keywords for social equipment type detection in spreadsheet imports
-- ✅ **Comprehensive coverage**: Now detects CREAS, Centro Dia, Casa de Acolhimento, Abrigo, Centro de Convivência, Centro Pop, Conselho Tutelar, COSE, Núcleo, Casa-Lar, Residência Inclusiva, Centro Especializado, and service variations
-- ✅ **Accent-insensitive matching**: All keywords include both accented and unaccented variants (e.g., "REFERÊNCIA" and "REFERENCIA")
-- ✅ **Improved detection rate**: User-confirmed successful recognition improvement from initial low detection to significantly higher coverage
-- ✅ **Zero performance impact**: Maintains O(n) complexity with small constant factors, no async overhead
-- ✅ **Architect approved**: Code review confirmed no regressions, proper cleanup of debug code, and appropriate keyword choices
-
-## October 05, 2025 - Phase 10: Social Equipment Complete CRUD Integration COMPLETED
-- ✅ **CRUD hooks implementation**: Added useCreateEquipamentoSocial, useUpdateEquipamentoSocial, useDeleteEquipamentoSocial following established patterns
-- ✅ **useApiData integration**: Integrated equipment hooks with CRUD functions (addEquipamentoSocial, updateEquipamentoSocial, deleteEquipamentoSocial)
-- ✅ **Position update support**: Extended updatePosition function to handle equipment coordinate updates in map edit mode
-- ✅ **Schema alignment**: Added missing 'responsavel' field to equipamentos_sociais schema and insertSchema (varchar 255, nullable)
-- ✅ **Modal corrections**: Fixed AddEquipamentoModal to include 'responsavel' in submission payload, removed non-existent 'capacidade' field
-- ✅ **Database migration**: Successfully applied schema changes with drizzle-kit push --force
-- ✅ **Query cache management**: Proper invalidation on create/update/delete with toast notifications
-- ✅ **Bug fixes**: Corrected useReclassificar parameter order (method before URL) for apiRequest
-- ✅ **Architect approved**: All changes reviewed and validated for correctness and security
-
-## September 30, 2025 - Phase 9: Advanced Geocoding & Bulk Import System COMPLETED
-- ✅ **Google Places API integration**: Migrated from Geocoding API to Places API (Text Search) for superior precision
-- ✅ **Intelligent fallback chain**: Places API → Geocoding API → ViaCEP with automatic retry and backoff
-- ✅ **Multi-source geocoding**: ViaCEP enrichment + Google Places + Geocoding ensures maximum address coverage
-- ✅ **Bulk import endpoint**: POST /api/pacientes/importar with configurable batch processing (1-50 per batch)
-- ✅ **Retry mechanism**: 3 attempts with exponential backoff for geocoding (1s, 2s, 4s) and persistence (0.5s, 1s, 2s)
-- ✅ **Comprehensive validation**: Zod schema validation per record, graceful error handling, DoS prevention
-- ✅ **Progress metrics**: Real-time tracking with elapsed time, batches processed, success/error/warning counts
-- ✅ **Coordinate update API**: PUT /api/pacientes/:id/coordenadas for map-based coordinate adjustments
-- ✅ **Security hardening**: Batch size validation (1-50), latitude/longitude bounds checking, authentication enforcement
-- ✅ **Production-ready**: Architect-approved implementation with full test coverage
-
-## September 29, 2025 - Phase 8: Calendar Month View Implementation COMPLETED
-- ✅ **Calendar visualization**: Added third tab "Calendário" to Agenda page with full month grid view (7×6 layout)
-- ✅ **Event indicators**: Visual dots (blue for próximo, green for último) on days with patient appointments
-- ✅ **Month navigation**: Previous/next month buttons with proper date-fns locale support (pt-BR)
-- ✅ **Day selection system**: Click any day to view detailed patient list in responsive sidebar panel
-- ✅ **42-day fixed grid**: Proper calendar layout with Sunday-first alignment and trailing/leading dates
-- ✅ **Performance optimization**: Memoized events mapping (useMemo) for efficient data processing
-- ✅ **Quality assurance**: Complete data-testid coverage, architect-approved implementation
-
-## September 22, 2025 - Phase 7: System Corrections and Statistics Implementation COMPLETED
-- ✅ **Statistics API endpoint**: Implemented GET /api/estatisticas with comprehensive data insights
-- ✅ **Patient registration fixes**: Corrected React Query configuration for proper API integration
-- ✅ **Security improvements**: Added session cookie files to .gitignore to prevent exposure
-- ✅ **Data persistence verification**: Confirmed end-to-end patient creation and data storage
-- ✅ **Geolocation functionality**: Validated coordinate capture and storage in database
-- ✅ **Real API integration**: Complete migration from mock data to PostgreSQL backend
-- ✅ **Comprehensive testing**: All CRUD operations and statistics endpoints verified functional
-
-## September 22, 2025 - Phase 6: Production-Ready Authentication COMPLETED
-- ✅ **Security hardening completed**: SessionID removed from logs, session fixation prevention, auto-login blocked in production
-- ✅ **PostgreSQL session store**: Implemented with connect-pg-simple for persistent sessions
-- ✅ **Structured logging system**: JSON-formatted logs with audit trails and performance tracking  
-- ✅ **Production environment configuration**: SESSION_SECRET enforcement, secure cookies (httpOnly, sameSite, secure)
-- ✅ **Email verification flow**: Auto-verification disabled in production, verification required before login
-- ✅ **Architect approved**: System confirmed as production-ready with no critical security vulnerabilities
+This project is a georeferencing system designed for social assistance and health services in specific regions of Brazil (Samambaia, Recanto das Emas, and Águas Claras). Its primary purpose is to map healthcare facilities (UBS), NGOs, and patients, facilitating intelligent pairing between patients and the nearest healthcare units based on geographic proximity and service availability. Key capabilities include an interactive map interface, comprehensive management dashboards for various entities, and robust data import functionalities with advanced geocoding and validation. The system aims to optimize resource allocation, improve access to services, and enhance overall operational efficiency for social and health initiatives.
 
 # User Preferences
 
@@ -90,69 +9,62 @@ Preferred communication style: Simple, everyday language.
 # System Architecture
 
 ## Frontend Architecture
-The application uses a modern React-based stack with TypeScript for type safety and maintainability. The UI is built with shadcn/ui components providing a consistent design system, while Tailwind CSS handles styling with a healthcare-focused color theme. The application follows a modular component architecture with clear separation between layout, forms, data visualization, and business logic components.
+The application is built with React, TypeScript, and a modern component-based architecture using `shadcn/ui` and Tailwind CSS for a consistent and responsive design. It utilizes React Router DOM for client-side navigation with protected routes. State management primarily relies on React hooks and context, with `@tanstack/react-query` handling server state caching. A custom mock data layer is used for development.
 
-## State Management
-State is managed through React hooks and context patterns, with @tanstack/react-query handling server state caching and synchronization. A custom mock data hook (useMockData) provides a complete data layer abstraction for development and prototyping, simulating real backend operations including CRUD operations for UBS, ONGs, patients, and social equipment.
-
-## Routing and Navigation
-React Router DOM provides client-side routing with protected routes ensuring authentication requirements. The layout system includes a responsive sidebar navigation and mobile-friendly header with search capabilities.
+## Backend Architecture
+The backend is an Express.js server featuring a production-ready authentication system. It uses PostgreSQL for data storage, managed with Drizzle ORM, and `connect-pg-simple` for persistent session management. The system includes structured JSON logging for audit trails and performance tracking, comprehensive security measures (XSS prevention, CSRF protection, secure cookies, session regeneration), and robust error handling.
 
 ## Authentication System
-The application features a production-ready authentication system with PostgreSQL session persistence, structured audit logging, and comprehensive security hardening. Built with passport.js local strategy, the system enforces email verification in production, implements session regeneration to prevent fixation attacks, and uses secure cookie configuration. All authentication events are logged with JSON structure for monitoring and compliance.
+A secure authentication system built with `passport.js` local strategy is implemented. It includes PostgreSQL session persistence, enforces email verification in production, prevents session fixation attacks through session regeneration, and uses secure cookie configurations (`httpOnly`, `sameSite`, `secure`). All authentication events are logged in a structured JSON format.
 
 ## Map Integration
-Google Maps JavaScript API integration provides interactive mapping capabilities with custom markers for different entity types (UBS, ONGs, patients, social equipment). The map component supports layer toggling, edit mode for marker positioning with drag-and-drop coordinate updates, and real-time updates. Includes geolocation services through Capacitor for mobile device support. Advanced geocoding system uses Google Places API as primary source with intelligent fallback to Geocoding API and ViaCEP, featuring automatic retry with exponential backoff, address enrichment, and 4-layer filtering for maximum precision in Brazilian addresses.
+The system integrates the Google Maps JavaScript API for interactive mapping. It supports custom markers for different entity types (UBS, ONGs, patients, social equipment), layer toggling, and an edit mode for marker positioning with drag-and-drop functionality. Geolocation services are provided via Capacitor for mobile support. An advanced geocoding system uses Google Places API as the primary source, with intelligent fallbacks to Google Geocoding API and ViaCEP, featuring automatic retries, address enrichment, and multi-layer filtering for high precision, especially for Brazilian addresses.
+
+## Data Management and Import
+Data import capabilities include intelligent Google Places integration for Excel spreadsheets, automatically matching and enriching establishment data with phone numbers, business hours, and precise coordinates. It features a multi-criteria scoring algorithm for smart matching, confidence indicators, and a comprehensive validation system that detects duplicates and verifies data against Google Places before import. Bulk operations, including create, update, and delete for all entity types (UBS, ONGs, pacientes, equipamentos sociais), are supported with robust validation and error handling.
 
 ## Form Management
-React Hook Form with Zod validation provides robust form handling throughout the application. Forms include patient registration, UBS/ONG management, and data import interfaces with comprehensive validation and error handling.
+`React Hook Form` with `Zod` validation is used for all forms, ensuring robust handling, comprehensive validation, and clear error messaging.
 
 ## Calendar System
-The Agenda page features a sophisticated calendar month view that displays patient appointments in a visual grid format. The calendar uses date-fns with Portuguese Brazilian locale, showing a fixed 42-day layout (6 weeks × 7 days) with proper weekday alignment. Events are indicated with colored dots (blue for próximo atendimento, green for último atendimento), and clicking on any day reveals a detailed list of patients scheduled for that date. Month navigation is smooth with previous/next controls, and the system includes performance optimizations through memoized data processing.
+An advanced calendar month view is implemented for the "Agenda" page. It displays patient appointments in a 7x6 grid, with visual indicators for events, month navigation, and a responsive sidebar for detailed patient lists on day selection. The calendar uses `date-fns` with `pt-BR` locale for proper localization.
 
 ## Mobile Support
-Capacitor integration enables mobile app deployment with native device features like geolocation. The responsive design ensures optimal experience across desktop and mobile devices.
+Capacitor integration enables cross-platform mobile app deployment, leveraging native device features like geolocation. The application is designed to be responsive across desktop and mobile devices.
 
 # External Dependencies
 
 ## Core Technologies
-- React 18 with TypeScript for type-safe component development
-- Vite as the build tool and development server
-- Tailwind CSS for utility-first styling approach
+- **React 18**: Frontend framework
+- **TypeScript**: Type safety
+- **Vite**: Build tool and development server
+- **Tailwind CSS**: Utility-first styling
 
 ## UI Framework
-- shadcn/ui component library built on Radix UI primitives
-- Provides accessible, customizable components following design system principles
+- **shadcn/ui**: Component library built on Radix UI
 
 ## Mapping Services
-- Google Maps JavaScript API for interactive mapping functionality
-- @googlemaps/js-api-loader for efficient API loading and management
+- **Google Maps JavaScript API**: Interactive mapping
+- **@googlemaps/js-api-loader**: API loading
 
 ## Authentication
-- Passport.js with local strategy for user authentication
-- PostgreSQL session store with connect-pg-simple for persistence
-- Structured JSON logging with audit trails
-- Production security hardening (secure cookies, session regeneration)
-- Crypto module for secure password hashing
+- **Passport.js**: User authentication strategies
+- **connect-pg-simple**: PostgreSQL session store
+- **Crypto module**: Secure password hashing
 
 ## Form and Validation
-- React Hook Form for performant form management
-- Zod for runtime type validation and schema definition
-- @hookform/resolvers for seamless integration
+- **React Hook Form**: Form management
+- **Zod**: Runtime type validation
+- **@hookform/resolvers**: Integration with Zod
 
 ## Data Management
-- @tanstack/react-query for server state management and caching
-- Custom mock data layer simulating backend operations
+- **@tanstack/react-query**: Server state management and caching
+- **Drizzle ORM**: PostgreSQL ORM
 
 ## Mobile Development
-- Capacitor for cross-platform mobile app deployment
-- @capacitor/geolocation for device location services
-- Support for Android and iOS platforms
+- **Capacitor**: Cross-platform mobile app deployment
+- **@capacitor/geolocation**: Device location services
 
-## Development Tools
-- ESLint with TypeScript support for code quality
-- Lovable integration for AI-assisted development
-- PostCSS with Autoprefixer for CSS processing
-
-## Backend Architecture
-Express.js server with production-ready authentication system featuring PostgreSQL storage with Drizzle ORM, structured JSON logging with performance tracking, and comprehensive security measures. Session management uses PostgreSQL persistence via connect-pg-simple. Security hardening includes XSS prevention, CSRF protection, secure cookie configuration, and session regeneration. Error handling middleware positioned correctly with audit logging for all authentication events.
+## Backend Technologies
+- **Express.js**: Backend web framework
+- **PostgreSQL**: Primary database
