@@ -251,18 +251,18 @@ export const MapComponent = ({
         }
         
         // Determinar cor do marcador baseado na precisão da geocodificação
-        // Alta precisão (azul): ROOFTOP, PLACE, RANGE_INTERPOLATED
-        // Baixa precisão (amarelo): APPROXIMATE, GEOMETRIC_CENTER, null
+        // Alta precisão (roxo escuro): ROOFTOP, PLACE, RANGE_INTERPOLATED
+        // Baixa precisão (roxo claro): APPROXIMATE, GEOMETRIC_CENTER, null
         const precisao = (paciente as any).precisaoGeocode;
         const isLowPrecision = !precisao || precisao === 'APPROXIMATE' || precisao === 'GEOMETRIC_CENTER';
         
         let markerColor;
         if (editMode) {
-          markerColor = '#fbbf24'; // Amarelo em modo edição
+          markerColor = '#a855f7'; // Roxo claro em modo edição
         } else if (isLowPrecision) {
-          markerColor = '#fbbf24'; // Amarelo para baixa precisão (precisa validação)
+          markerColor = '#a855f7'; // Roxo claro para baixa precisão (precisa validação)
         } else {
-          markerColor = '#3b82f6'; // Azul para alta precisão
+          markerColor = '#9333ea'; // Roxo escuro para alta precisão
         }
         
         const marker = new google.maps.Marker({
