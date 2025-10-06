@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, FileSpreadsheet, Download, AlertCircle, X, CheckCircle, CheckCircle2, Plus, PlusCircle, Eye, Star } from 'lucide-react';
+import { Upload, FileSpreadsheet, Download, AlertCircle, X, CheckCircle, CheckCircle2, Plus, PlusCircle, Eye, Star, FileText } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useUploadPlanilha } from '@/hooks/useApiData';
@@ -72,12 +72,12 @@ const ImportacaoPlanilhas = () => {
   const { toast } = useToast();
   const uploadMutation = useUploadPlanilha();
 
-  const handleDownloadTemplate = (tipo: 'ubs' | 'ongs' | 'pacientes' | 'equipamentos') => {
+  const handleDownloadTemplate = (tipo: 'ubs' | 'ongs' | 'pacientes' | 'equipamentos', formato: 'xlsx' | 'csv' = 'xlsx') => {
     const fileNames = {
-      ubs: 'modelo_ubs_hospitais.xlsx',
-      ongs: 'modelo_ongs.xlsx',
-      pacientes: 'modelo_pacientes.xlsx',
-      equipamentos: 'modelo_equipamentos_sociais.xlsx'
+      ubs: formato === 'csv' ? 'modelo_ubs_hospitais.csv' : 'modelo_ubs_hospitais.xlsx',
+      ongs: formato === 'csv' ? 'modelo_ongs.csv' : 'modelo_ongs.xlsx',
+      pacientes: formato === 'csv' ? 'modelo_pacientes.csv' : 'modelo_pacientes.xlsx',
+      equipamentos: formato === 'csv' ? 'modelo_equipamentos_sociais.csv' : 'modelo_equipamentos_sociais.xlsx'
     };
     
     const fileName = fileNames[tipo];
@@ -588,6 +588,16 @@ const ImportacaoPlanilhas = () => {
             >
               <FileSpreadsheet className="h-4 w-4 mr-2" />
               Modelo - Dados Pacientes
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full justify-start bg-muted/30"
+              onClick={() => handleDownloadTemplate('pacientes', 'csv')}
+              data-testid="button-download-pacientes-csv"
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Modelo - Dados Pacientes (CSV)
+              <span className="ml-auto text-xs text-muted-foreground">Alternativa segura</span>
             </Button>
           </CardContent>
         </Card>
