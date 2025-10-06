@@ -71,7 +71,7 @@ const AuthPage = () => {
 
         {/* Authentication Forms */}
         <Card>
-          <CardHeader>
+          <CardHeader className="text-center">
             <CardTitle>Acesso ao Sistema</CardTitle>
             <CardDescription>
               Entre com suas credenciais
