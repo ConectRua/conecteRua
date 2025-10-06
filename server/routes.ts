@@ -152,6 +152,83 @@ const auditMiddleware = (action: string, tableName: string) => {
   };
 };
 
+// ============ FUNÇÕES DE VERIFICAÇÃO DE DUPLICATAS ============
+
+// Verificar duplicata UBS (por place_id ou nome+endereço)
+async function checkUBSDuplicate(nome: string, endereco: string, placeId?: string): Promise<boolean> {
+  try {
+    // Verificar por place_id se fornecido
+    if (placeId) {
+      const byPlaceId = await storage.query('SELECT id FROM ubs WHERE place_id = $1 LIMIT 1', [placeId]);
+      if (byPlaceId.rows.length > 0) return true;
+    }
+    
+    // Verificar por nome + endereço (normalizado)
+    const normalizedNome = nome.trim().toLowerCase();
+    const normalizedEndereco = endereco.trim().toLowerCase();
+    
+    const byNameAddress = await storage.query(
+      'SELECT id FROM ubs WHERE LOWER(TRIM(nome)) = $1 AND LOWER(TRIM(endereco)) = $2 LIMIT 1',
+      [normalizedNome, normalizedEndereco]
+    );
+    
+    return byNameAddress.rows.length > 0;
+  } catch (error) {
+    console.error('Erro ao verificar duplicata UBS:', error);
+    return false;
+  }
+}
+
+// Verificar duplicata ONG (por place_id ou nome+endereço)
+async function checkONGDuplicate(nome: string, endereco: string, placeId?: string): Promise<boolean> {
+  try {
+    // Verificar por place_id se fornecido
+    if (placeId) {
+      const byPlaceId = await storage.query('SELECT id FROM ongs WHERE place_id = $1 LIMIT 1', [placeId]);
+      if (byPlaceId.rows.length > 0) return true;
+    }
+    
+    // Verificar por nome + endereço (normalizado)
+    const normalizedNome = nome.trim().toLowerCase();
+    const normalizedEndereco = endereco.trim().toLowerCase();
+    
+    const byNameAddress = await storage.query(
+      'SELECT id FROM ongs WHERE LOWER(TRIM(nome)) = $1 AND LOWER(TRIM(endereco)) = $2 LIMIT 1',
+      [normalizedNome, normalizedEndereco]
+    );
+    
+    return byNameAddress.rows.length > 0;
+  } catch (error) {
+    console.error('Erro ao verificar duplicata ONG:', error);
+    return false;
+  }
+}
+
+// Verificar duplicata Equipamento Social (por place_id ou nome+endereço)
+async function checkEquipamentoSocialDuplicate(nome: string, endereco: string, placeId?: string): Promise<boolean> {
+  try {
+    // Verificar por place_id se fornecido
+    if (placeId) {
+      const byPlaceId = await storage.query('SELECT id FROM equipamentos_sociais WHERE place_id = $1 LIMIT 1', [placeId]);
+      if (byPlaceId.rows.length > 0) return true;
+    }
+    
+    // Verificar por nome + endereço (normalizado)
+    const normalizedNome = nome.trim().toLowerCase();
+    const normalizedEndereco = endereco.trim().toLowerCase();
+    
+    const byNameAddress = await storage.query(
+      'SELECT id FROM equipamentos_sociais WHERE LOWER(TRIM(nome)) = $1 AND LOWER(TRIM(endereco)) = $2 LIMIT 1',
+      [normalizedNome, normalizedEndereco]
+    );
+    
+    return byNameAddress.rows.length > 0;
+  } catch (error) {
+    console.error('Erro ao verificar duplicata Equipamento Social:', error);
+    return false;
+  }
+}
+
 export function registerRoutes(app: Express): Server {
   // Setup authentication routes: /api/register, /api/login, /api/logout, /api/user
   setupAuth(app);
