@@ -4,13 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { AddUBSModal } from '@/components/Forms/AddUBSModal';
+import { AddONGModal } from '@/components/Forms/AddONGModal';
+import { AddEquipamentoModal } from '@/components/Forms/AddEquipamentoModal';
 import { PatientForm } from '@/components/Forms/PatientForm';
+import { EquipamentoSocialIcon } from '@/components/icons/EquipamentoSocialIcon';
 import { useApiData } from '@/hooks/useApiData';
 import { useState } from 'react';
 import { 
   Map, 
   Filter,
-  Search,
   Download,
   Maximize,
   Building2,
@@ -18,8 +20,7 @@ import {
   Users,
   Building,
   Edit3,
-  Save,
-  UserPlus
+  Save
 } from 'lucide-react';
 
 const MapaInterativo = () => {
@@ -29,6 +30,8 @@ const MapaInterativo = () => {
     pacientesList,
     equipamentosSociais,
     addUBS,
+    addONG,
+    addEquipamentoSocial,
     addPaciente,
     updatePosition,
     loading 
@@ -39,15 +42,27 @@ const MapaInterativo = () => {
   const [showPacientes, setShowPacientes] = useState(true);
   const [showEquipamentosSociais, setShowEquipamentosSociais] = useState(true);
   const [showAddUBSModal, setShowAddUBSModal] = useState(false);
+  const [showAddONGModal, setShowAddONGModal] = useState(false);
+  const [showAddEquipamentoModal, setShowAddEquipamentoModal] = useState(false);
   const [showAddPatientModal, setShowAddPatientModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
 
   const handleAddUBS = (newUBS: Parameters<typeof addUBS>[0]) => {
     addUBS(newUBS);
+    setShowAddUBSModal(false);
+  };
+
+  const handleAddONG = (newONG: Parameters<typeof addONG>[0]) => {
+    addONG(newONG);
+    setShowAddONGModal(false);
+  };
+
+  const handleAddEquipamento = (newEquipamento: Parameters<typeof addEquipamentoSocial>[0]) => {
+    addEquipamentoSocial(newEquipamento);
+    setShowAddEquipamentoModal(false);
   };
 
   const handleAddPaciente = (newPaciente: Parameters<typeof addPaciente>[0]) => {
-    console.log('handleAddPaciente called:', newPaciente);
     addPaciente(newPaciente);
     setShowAddPatientModal(false);
   };
@@ -170,23 +185,35 @@ const MapaInterativo = () => {
               </div>
             </div>
 
-            {/* Quick Actions */}
+            {/* Ações Rápidas */}
             <div className="space-y-3 pt-4 border-t">
               <h4 className="text-sm font-medium">Ações Rápidas</h4>
-              <Button variant="outline" size="sm" className="w-full">
-                <Search className="h-4 w-4 mr-2" />
-                Buscar por CEP
+              <Button 
+                size="sm" 
+                className="w-full"
+                onClick={() => setShowAddPatientModal(true)}
+                data-testid="button-adicionar-paciente-mapa"
+              >
+                <Users className="h-4 w-4 mr-2" />
+                Adicionar Paciente
               </Button>
               <Button 
                 variant="outline" 
                 size="sm" 
                 className="w-full"
                 onClick={() => setShowAddUBSModal(true)}
+                data-testid="button-nova-ubs-mapa"
               >
                 <Building2 className="h-4 w-4 mr-2" />
                 Nova UBS
               </Button>
-              <Button variant="outline" size="sm" className="w-full">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full"
+                onClick={() => setShowAddONGModal(true)}
+                data-testid="button-nova-ong-mapa"
+              >
                 <Heart className="h-4 w-4 mr-2" />
                 Nova ONG
               </Button>
@@ -194,10 +221,11 @@ const MapaInterativo = () => {
                 variant="outline" 
                 size="sm" 
                 className="w-full"
-                onClick={() => setShowAddPatientModal(true)}
+                onClick={() => setShowAddEquipamentoModal(true)}
+                data-testid="button-novo-equipamento-mapa"
               >
-                <UserPlus className="h-4 w-4 mr-2" />
-                Adicionar Paciente
+                <EquipamentoSocialIcon className="h-4 w-4 mr-2" />
+                Novo Eqp Social
               </Button>
             </div>
 
@@ -293,14 +321,25 @@ const MapaInterativo = () => {
         </CardContent>
       </Card>
 
-      {/* Modal para adicionar UBS */}
+      {/* Modals */}
       <AddUBSModal
         open={showAddUBSModal}
         onOpenChange={setShowAddUBSModal}
         onAdd={handleAddUBS}
       />
 
-      {/* Modal para adicionar Paciente */}
+      <AddONGModal
+        open={showAddONGModal}
+        onOpenChange={setShowAddONGModal}
+        onAdd={handleAddONG}
+      />
+
+      <AddEquipamentoModal
+        open={showAddEquipamentoModal}
+        onOpenChange={setShowAddEquipamentoModal}
+        onAdd={handleAddEquipamento}
+      />
+
       <PatientForm
         open={showAddPatientModal}
         onOpenChange={setShowAddPatientModal}
