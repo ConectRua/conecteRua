@@ -62,9 +62,8 @@ export const AddONGModal = ({ open, onOpenChange, onAdd }: AddONGModalProps) => 
     tipo: 'Assistência Social',
     areasAtuacao: [] as string[],
     responsavel: '',
-
     horarioFuncionamento: '08:00 - 17:00',
-    status: 'ativo' as 'ativo' | 'inativo'
+    ativo: true
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -128,9 +127,8 @@ export const AddONGModal = ({ open, onOpenChange, onAdd }: AddONGModalProps) => 
       tipo: 'Assistência Social',
       areasAtuacao: [],
       responsavel: '',
-  
       horarioFuncionamento: '08:00 - 17:00',
-      status: 'ativo'
+      ativo: true
     });
     
     onOpenChange(false);
