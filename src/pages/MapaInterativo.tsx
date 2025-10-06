@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { AddUBSModal } from '@/components/Forms/AddUBSModal';
 import { AddONGModal } from '@/components/Forms/AddONGModal';
 import { AddEquipamentoModal } from '@/components/Forms/AddEquipamentoModal';
@@ -20,8 +21,19 @@ import {
   Users,
   Building,
   Edit3,
-  Save
+  Save,
+  X
 } from 'lucide-react';
+import type { Paciente, UBS, ONG, EquipamentoSocial } from '../../shared/schema';
+
+interface RadiusData {
+  paciente: Paciente;
+  entities: {
+    ubs: Array<UBS & {distance: number}>;
+    ongs: Array<ONG & {distance: number}>;
+    equipamentos: Array<EquipamentoSocial & {distance: number}>;
+  };
+}
 
 const MapaInterativo = () => {
   const { 
@@ -46,6 +58,7 @@ const MapaInterativo = () => {
   const [showAddEquipamentoModal, setShowAddEquipamentoModal] = useState(false);
   const [showAddPatientModal, setShowAddPatientModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [radiusData, setRadiusData] = useState<RadiusData | null>(null);
 
   const handleAddUBS = (newUBS: Parameters<typeof addUBS>[0]) => {
     addUBS(newUBS);
@@ -76,6 +89,14 @@ const MapaInterativo = () => {
 
   const handleEditModeToggle = () => {
     setEditMode(!editMode);
+  };
+
+  const handleRadiusActivated = (patient: Paciente, entities: RadiusData['entities']) => {
+    setRadiusData({ paciente: patient, entities });
+  };
+
+  const handleRadiusCleared = () => {
+    setRadiusData(null);
   };
 
   return (
@@ -122,7 +143,7 @@ const MapaInterativo = () => {
       </div>
 
       {/* Controls and Map */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className={`grid grid-cols-1 ${radiusData ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-6`}>
         {/* Sidebar with filters and controls */}
         <Card>
           <CardHeader>
@@ -248,6 +269,109 @@ const MapaInterativo = () => {
           </CardContent>
         </Card>
 
+        {/* Radius Panel - Only shown when radius is active */}
+        {radiusData && (
+          <Card data-testid="card-radius-panel">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-lg">
+                🎯 Raio de Apoio de 1km
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRadiusCleared}
+                data-testid="button-close-radius-panel"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="pb-2 border-b">
+                <p className="text-sm font-medium text-muted-foreground">Paciente</p>
+                <p className="text-base font-semibold" data-testid="text-radius-patient-name">
+                  {radiusData.paciente.nome}
+                </p>
+              </div>
+              
+              <ScrollArea className="h-[500px]">
+                <div className="space-y-2" data-testid="list-radius-entities">
+                  {/* Combine all entities and sort by distance */}
+                  {[
+                    ...radiusData.entities.ubs.map(ubs => ({ 
+                      type: 'UBS' as const, 
+                      entity: ubs, 
+                      distance: ubs.distance,
+                      icon: '🏥',
+                      color: 'text-blue-500',
+                      bgColor: 'bg-blue-50'
+                    })),
+                    ...radiusData.entities.ongs.map(ong => ({ 
+                      type: 'ONG' as const, 
+                      entity: ong, 
+                      distance: ong.distance,
+                      icon: '🏛️',
+                      color: 'text-green-500',
+                      bgColor: 'bg-green-50'
+                    })),
+                    ...radiusData.entities.equipamentos.map(eq => ({ 
+                      type: 'Equipamento' as const, 
+                      entity: eq, 
+                      distance: eq.distance,
+                      icon: '🎯',
+                      color: 'text-amber-500',
+                      bgColor: 'bg-amber-50'
+                    }))
+                  ]
+                    .sort((a, b) => a.distance - b.distance)
+                    .map((item, index) => (
+                      <div
+                        key={`${item.type}-${item.entity.id}`}
+                        className={`p-3 rounded-lg border ${item.bgColor} transition-all hover:shadow-sm`}
+                        data-testid={`item-radius-entity-${index}`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-lg">{item.icon}</span>
+                              <p className={`font-semibold text-sm ${item.color} truncate`}>
+                                {item.entity.nome}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge variant="secondary" className="text-xs">
+                                {item.type}
+                              </Badge>
+                              <span className="text-xs font-medium text-muted-foreground">
+                                {(item.distance / 1000).toFixed(2)} km
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  }
+                  
+                  {radiusData.entities.ubs.length === 0 && 
+                   radiusData.entities.ongs.length === 0 && 
+                   radiusData.entities.equipamentos.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p className="text-sm">
+                        Nenhuma entidade encontrada no raio de 1km
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+              
+              <div className="pt-2 border-t text-xs text-muted-foreground">
+                <p>
+                  Total: {radiusData.entities.ubs.length + radiusData.entities.ongs.length + radiusData.entities.equipamentos.length} entidades próximas
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Map */}
         <Card className="lg:col-span-3">
           <CardContent className="p-0">
@@ -262,6 +386,8 @@ const MapaInterativo = () => {
               zoom={11}
               editMode={editMode}
               onPositionUpdate={handlePositionUpdate}
+              onRadiusActivated={handleRadiusActivated}
+              onRadiusCleared={handleRadiusCleared}
             />
           </CardContent>
         </Card>

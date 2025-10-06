@@ -14,7 +14,7 @@ interface MapComponentProps {
   zoom?: number;
   editMode?: boolean;
   onPositionUpdate?: (id: string, type: 'ubs' | 'ong' | 'paciente' | 'equipamento', lat: number, lng: number) => void;
-  onRadiusActivated?: (patient: Paciente, entities: {ubs: UBS[], ongs: ONG[], equipamentos: EquipamentoSocial[]}) => void;
+  onRadiusActivated?: (patient: Paciente, entities: {ubs: Array<UBS & {distance: number}>, ongs: Array<ONG & {distance: number}>, equipamentos: Array<EquipamentoSocial & {distance: number}>}) => void;
   onRadiusCleared?: () => void;
 }
 
@@ -399,30 +399,36 @@ export const MapComponent = ({
                   radiusCircleRef.current = circle;
                   setActivePacienteId(paciente.id);
                   
-                  // Calculate entities within radius
-                  const ubsWithinRadius = dataRef.current.ubsList.filter((ubs: UBS) => {
-                    const ubsLat = typeof ubs.latitude === 'string' ? parseFloat(ubs.latitude) : ubs.latitude;
-                    const ubsLng = typeof ubs.longitude === 'string' ? parseFloat(ubs.longitude) : ubs.longitude;
-                    if (ubsLat == null || ubsLng == null) return false;
-                    const distance = haversineDistance(lat, lng, ubsLat, ubsLng);
-                    return distance <= 1000;
-                  });
+                  // Calculate entities within radius with distance
+                  const ubsWithinRadius = dataRef.current.ubsList
+                    .map((ubs: UBS) => {
+                      const ubsLat = typeof ubs.latitude === 'string' ? parseFloat(ubs.latitude) : ubs.latitude;
+                      const ubsLng = typeof ubs.longitude === 'string' ? parseFloat(ubs.longitude) : ubs.longitude;
+                      if (ubsLat == null || ubsLng == null) return null;
+                      const distance = haversineDistance(lat, lng, ubsLat, ubsLng);
+                      return distance <= 1000 ? { ...ubs, distance } : null;
+                    })
+                    .filter((ubs): ubs is UBS & { distance: number } => ubs !== null);
                   
-                  const ongsWithinRadius = dataRef.current.ongsList.filter((ong: ONG) => {
-                    const ongLat = typeof ong.latitude === 'string' ? parseFloat(ong.latitude) : ong.latitude;
-                    const ongLng = typeof ong.longitude === 'string' ? parseFloat(ong.longitude) : ong.longitude;
-                    if (ongLat == null || ongLng == null) return false;
-                    const distance = haversineDistance(lat, lng, ongLat, ongLng);
-                    return distance <= 1000;
-                  });
+                  const ongsWithinRadius = dataRef.current.ongsList
+                    .map((ong: ONG) => {
+                      const ongLat = typeof ong.latitude === 'string' ? parseFloat(ong.latitude) : ong.latitude;
+                      const ongLng = typeof ong.longitude === 'string' ? parseFloat(ong.longitude) : ong.longitude;
+                      if (ongLat == null || ongLng == null) return null;
+                      const distance = haversineDistance(lat, lng, ongLat, ongLng);
+                      return distance <= 1000 ? { ...ong, distance } : null;
+                    })
+                    .filter((ong): ong is ONG & { distance: number } => ong !== null);
                   
-                  const equipamentosWithinRadius = dataRef.current.equipamentosSociais.filter((eq: EquipamentoSocial) => {
-                    if (eq.latitude == null || eq.longitude == null) return false;
-                    const distance = haversineDistance(lat, lng, eq.latitude, eq.longitude);
-                    return distance <= 1000;
-                  });
+                  const equipamentosWithinRadius = dataRef.current.equipamentosSociais
+                    .map((eq: EquipamentoSocial) => {
+                      if (eq.latitude == null || eq.longitude == null) return null;
+                      const distance = haversineDistance(lat, lng, eq.latitude, eq.longitude);
+                      return distance <= 1000 ? { ...eq, distance } : null;
+                    })
+                    .filter((eq): eq is EquipamentoSocial & { distance: number } => eq !== null);
                   
-                  // Call callback with filtered data
+                  // Call callback with filtered data including distances
                   if (onRadiusActivated) {
                     onRadiusActivated(paciente, {
                       ubs: ubsWithinRadius,
