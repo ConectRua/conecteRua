@@ -23,12 +23,18 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { AddEquipamentoModal } from '@/components/Forms/AddEquipamentoModal';
+import { AddUBSModal } from '@/components/Forms/AddUBSModal';
+import { AddONGModal } from '@/components/Forms/AddONGModal';
+import { PatientForm } from '@/components/Forms/PatientForm';
 import { EquipamentoSocialIcon } from '@/components/icons/EquipamentoSocialIcon';
 
 const Dashboard = () => {
   // Use real API data directly
-  const { ubsList, ongsList, pacientesList, equipamentosSociais, getEstatisticas, loading, error, addEquipamentoSocial } = useApiData();
+  const { ubsList, ongsList, pacientesList, equipamentosSociais, getEstatisticas, loading, error, addEquipamentoSocial, addUBS, addONG, addPaciente } = useApiData();
   const [showAddEquipamento, setShowAddEquipamento] = useState(false);
+  const [showAddUBS, setShowAddUBS] = useState(false);
+  const [showAddONG, setShowAddONG] = useState(false);
+  const [showAddPaciente, setShowAddPaciente] = useState(false);
   
   const analytics = useAnalytics(ubsList, pacientesList, equipamentosSociais);
   const stats = getEstatisticas();
@@ -227,26 +233,44 @@ const Dashboard = () => {
                   <CardTitle className="text-lg">Ações Rápidas</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <Button className="w-full" size="sm">
-                    <Building2 className="h-4 w-4 mr-2" />
-                    Cadastrar UBS
+                  <Button 
+                    className="w-full" 
+                    size="sm"
+                    onClick={() => setShowAddPaciente(true)}
+                    data-testid="button-adicionar-paciente"
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    Adicionar Paciente
                   </Button>
-                  <Button className="w-full" variant="outline" size="sm">
+                  <Button 
+                    className="w-full" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setShowAddUBS(true)}
+                    data-testid="button-nova-ubs"
+                  >
+                    <Building2 className="h-4 w-4 mr-2" />
+                    Nova UBS
+                  </Button>
+                  <Button 
+                    className="w-full" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setShowAddONG(true)}
+                    data-testid="button-nova-ong"
+                  >
                     <Heart className="h-4 w-4 mr-2" />
-                    Adicionar ONG
+                    Nova ONG
                   </Button>
                   <Button 
                     className="w-full" 
                     variant="outline" 
                     size="sm"
                     onClick={() => setShowAddEquipamento(true)}
+                    data-testid="button-novo-equipamento"
                   >
                     <EquipamentoSocialIcon className="h-4 w-4 mr-2" />
-                    Novo Equipamento Social
-                  </Button>
-                  <Button className="w-full" variant="outline" size="sm">
-                    <Users className="h-4 w-4 mr-2" />
-                    Importar Pacientes
+                    Novo Eqp Social
                   </Button>
                 </CardContent>
               </Card>
@@ -275,13 +299,40 @@ const Dashboard = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Add Equipamento Social Modal */}
+      {/* Modals */}
       <AddEquipamentoModal
         open={showAddEquipamento}
         onOpenChange={setShowAddEquipamento}
         onAdd={(equipamento) => {
           addEquipamentoSocial(equipamento);
           setShowAddEquipamento(false);
+        }}
+      />
+      
+      <AddUBSModal
+        open={showAddUBS}
+        onOpenChange={setShowAddUBS}
+        onAdd={(ubs) => {
+          addUBS(ubs);
+          setShowAddUBS(false);
+        }}
+      />
+      
+      <AddONGModal
+        open={showAddONG}
+        onOpenChange={setShowAddONG}
+        onAdd={(ong) => {
+          addONG(ong);
+          setShowAddONG(false);
+        }}
+      />
+      
+      <PatientForm
+        open={showAddPaciente}
+        onOpenChange={setShowAddPaciente}
+        onAdd={(paciente) => {
+          addPaciente(paciente);
+          setShowAddPaciente(false);
         }}
       />
     </div>

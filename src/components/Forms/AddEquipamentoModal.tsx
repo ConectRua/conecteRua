@@ -21,6 +21,7 @@ interface AddEquipamentoModalProps {
 }
 
 const tiposEquipamento = [
+  'Equipamentos de Saúde',
   'CAPS - Centro de Atenção Psicossocial',
   'CAPS AD - CAPS Álcool e Drogas',
   'CAPS III - CAPS 24h',
