@@ -107,16 +107,16 @@ export const Sidebar = ({ className }: SidebarProps) => {
   return (
     <div className={cn(
       "flex flex-col border-r bg-card transition-all duration-300 h-screen",
-      collapsed ? "w-16" : "w-96",
+      collapsed ? "w-16" : "w-80",
       className
     )}>
       {/* Header */}
-      <div className="flex h-28 items-center justify-between px-4 border-b">
+      <div className="flex h-24 items-center justify-between px-4 border-b">
         {!collapsed && (
           <img 
             src={logoConecteRua} 
             alt="ConecteRua - Sistema de Georreferenciamento" 
-            className="w-[397px] h-[90px] object-contain"
+            className="max-w-[280px] h-auto object-contain"
           />
         )}
         
