@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import logoConecteRua from '@assets/conecte-rua-logomarca-vetor-cort_1759793157861.png';
+import logoConecteRua from '@/assets/logo-conecte-rua-cortada.png';
 
 // Validation schemas
 const loginSchema = z.object({

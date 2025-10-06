@@ -18,7 +18,7 @@ import {
   User,
   CalendarDays
 } from 'lucide-react';
-import logoConecteRua from '@/assets/logo-conecte-rua-final.png';
+import logoConecteRua from '@/assets/logo-conecte-rua-cortada.png';
 import { EquipamentoSocialIcon } from '@/components/icons/EquipamentoSocialIcon';
 
 interface NavItem {
