@@ -1785,10 +1785,8 @@ export function registerRoutes(app: Express): Server {
         return res.status(401).json({ error: "Não autenticado" });
       }
       
-      console.log("DEBUG - Dados recebidos para criar ONG:", JSON.stringify(req.body, null, 2));
       const validation = insertONGSchema.safeParse(req.body);
       if (!validation.success) {
-        console.log("DEBUG - Erro de validação:", JSON.stringify(validation.error.issues, null, 2));
         return res.status(400).json({ error: "Dados inválidos", details: validation.error.issues });
       }
       
