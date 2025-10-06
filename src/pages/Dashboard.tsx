@@ -29,7 +29,6 @@ import { PatientForm } from '@/components/Forms/PatientForm';
 import { EquipamentoSocialIcon } from '@/components/icons/EquipamentoSocialIcon';
 
 const Dashboard = () => {
-  // Use real API data directly
   const { ubsList, ongsList, pacientesList, equipamentosSociais, getEstatisticas, loading, error, addEquipamentoSocial, addUBS, addONG, addPaciente } = useApiData();
   const [showAddEquipamento, setShowAddEquipamento] = useState(false);
   const [showAddUBS, setShowAddUBS] = useState(false);
