@@ -589,16 +589,6 @@ const ImportacaoPlanilhas = () => {
               <FileSpreadsheet className="h-4 w-4 mr-2" />
               Modelo - Dados Pacientes
             </Button>
-            <Button 
-              variant="outline" 
-              className="w-full justify-start bg-muted/30"
-              onClick={() => handleDownloadTemplate('pacientes', 'csv')}
-              data-testid="button-download-pacientes-csv"
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Modelo - Dados Pacientes (CSV)
-              <span className="ml-auto text-xs text-muted-foreground">Alternativa segura</span>
-            </Button>
           </CardContent>
         </Card>
       </div>
