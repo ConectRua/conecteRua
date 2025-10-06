@@ -151,7 +151,8 @@ export function ExportDropdown({ ubsList, ongsList, pacientesList, equipamentosS
   };
   
   const exportToCSV = () => {
-    let csvContent = "";
+    const BOM = '\uFEFF';
+    let csvContent = BOM;
     
     csvContent += "UNIDADES BÁSICAS DE SAÚDE (UBS)\n";
     csvContent += "ID,Nome,Endereço,CEP,Latitude,Longitude,Telefone,Email,Horário de Funcionamento,Especialidades,Gestor,Avaliação Google,Ativo\n";
@@ -183,12 +184,15 @@ export function ExportDropdown({ ubsList, ongsList, pacientesList, equipamentosS
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `georeferenciamento_${getCurrentDate()}.csv`);
-    link.style.visibility = 'hidden';
+    link.href = url;
+    link.download = `georeferenciamento_${getCurrentDate()}.csv`;
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 100);
   };
   
   const exportToPDF = () => {
