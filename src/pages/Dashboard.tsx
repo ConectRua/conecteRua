@@ -226,7 +226,7 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
 
-              {/* Quick Actions */}
+              {/* Ações Rápidas - Mapa Interativo */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Ações Rápidas</CardTitle>
@@ -236,7 +236,7 @@ const Dashboard = () => {
                     className="w-full" 
                     size="sm"
                     onClick={() => setShowAddPaciente(true)}
-                    data-testid="button-adicionar-paciente"
+                    data-testid="button-adicionar-paciente-mapa"
                   >
                     <Users className="h-4 w-4 mr-2" />
                     Adicionar Paciente
@@ -246,7 +246,7 @@ const Dashboard = () => {
                     variant="outline" 
                     size="sm"
                     onClick={() => setShowAddUBS(true)}
-                    data-testid="button-nova-ubs"
+                    data-testid="button-nova-ubs-mapa"
                   >
                     <Building2 className="h-4 w-4 mr-2" />
                     Nova UBS
@@ -256,7 +256,7 @@ const Dashboard = () => {
                     variant="outline" 
                     size="sm"
                     onClick={() => setShowAddONG(true)}
-                    data-testid="button-nova-ong"
+                    data-testid="button-nova-ong-mapa"
                   >
                     <Heart className="h-4 w-4 mr-2" />
                     Nova ONG
@@ -266,7 +266,7 @@ const Dashboard = () => {
                     variant="outline" 
                     size="sm"
                     onClick={() => setShowAddEquipamento(true)}
-                    data-testid="button-novo-equipamento"
+                    data-testid="button-novo-equipamento-mapa"
                   >
                     <EquipamentoSocialIcon className="h-4 w-4 mr-2" />
                     Novo Eqp Social
