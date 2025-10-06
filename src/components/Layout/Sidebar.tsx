@@ -111,12 +111,12 @@ export const Sidebar = ({ className }: SidebarProps) => {
       className
     )}>
       {/* Header */}
-      <div className="flex h-20 items-center justify-center px-4 border-b">
+      <div className="flex h-20 items-center justify-between px-4 border-b">
         {!collapsed && (
           <img 
             src={logoConecteRua} 
             alt="ConecteRua - Sistema de Georreferenciamento" 
-            className="h-36 w-auto object-contain max-w-full"
+            className="h-16 w-auto object-contain"
           />
         )}
         
@@ -124,7 +124,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
           variant="ghost"
           size="sm"
           onClick={() => setCollapsed(!collapsed)}
-          className="h-8 w-8 p-0"
+          className={cn("h-8 w-8 p-0", collapsed && "mx-auto")}
         >
           <ChevronLeft className={cn(
             "h-4 w-4 transition-transform",
