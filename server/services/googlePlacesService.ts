@@ -32,6 +32,35 @@ interface EstablishmentData {
   longitude?: number;
 }
 
+// Bounding boxes para as regiões permitidas
+interface BoundingBox {
+  minLat: number;
+  maxLat: number;
+  minLng: number;
+  maxLng: number;
+}
+
+const REGION_BOUNDS: Record<string, BoundingBox> = {
+  'samambaia': {
+    minLat: -15.92,
+    maxLat: -15.82,
+    minLng: -48.15,
+    maxLng: -48.00
+  },
+  'recanto_das_emas': {
+    minLat: -15.95,
+    maxLat: -15.88,
+    minLng: -48.10,
+    maxLng: -48.03
+  },
+  'aguas_quentes': {
+    minLat: -15.75,
+    maxLat: -15.70,
+    minLng: -48.05,
+    maxLng: -47.98
+  }
+};
+
 export class GooglePlacesService {
   private client: Client;
   private apiKey: string;
@@ -237,6 +266,57 @@ export class GooglePlacesService {
     }
   }
 
+  // Detectar região baseada no padrão do endereço
+  private detectRegion(address: string): string | null {
+    if (!address) return null;
+    
+    const normalized = this.normalizeString(address);
+    
+    // Verificar se já menciona a região explicitamente
+    if (normalized.includes('samambaia')) return 'Samambaia';
+    if (normalized.includes('recanto') || normalized.includes('emas')) return 'Recanto das Emas';
+    if (normalized.includes('aguas quentes') || normalized.includes('águas quentes')) return 'Águas Quentes';
+    
+    // Detectar por padrões de quadra
+    // Samambaia: QN, QR, QS (seguido de números 100-900)
+    if (/q[nrs]\s*[1-9]\d{2}/i.test(address)) {
+      const quadra = address.match(/q[nrs]\s*(\d+)/i);
+      if (quadra) {
+        const num = parseInt(quadra[1]);
+        // QN/QR/QS 100-900 = Samambaia
+        if (num >= 100 && num <= 900) return 'Samambaia';
+      }
+    }
+    
+    // Recanto das Emas: QNM, QNR
+    if (/qn[mr]\s*\d+/i.test(address)) {
+      return 'Recanto das Emas';
+    }
+    
+    // Águas Quentes: geralmente usa Rua, Avenida
+    if (/^(rua|av|avenida)\s+/i.test(normalized)) {
+      return 'Águas Quentes';
+    }
+    
+    // Default para Samambaia se tiver padrão QN/QR/QS genérico
+    if (/q[nrs]\s+/i.test(address)) {
+      return 'Samambaia';
+    }
+    
+    return null;
+  }
+  
+  // Validar se coordenadas estão dentro das regiões permitidas
+  private isWithinAllowedRegions(lat: number, lng: number): boolean {
+    for (const region of Object.values(REGION_BOUNDS)) {
+      if (lat >= region.minLat && lat <= region.maxLat &&
+          lng >= region.minLng && lng <= region.maxLng) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   // Construir query de busca otimizada
   private buildSearchQuery(data: EstablishmentData): string {
     const parts: string[] = [];
@@ -251,6 +331,9 @@ export class GooglePlacesService {
       parts.push(data.tipo);
     }
     
+    // Detectar e adicionar região específica
+    const detectedRegion = this.detectRegion(data.endereco || '');
+    
     // Adicionar localização
     if (data.endereco) {
       // Simplificar endereço para bairro/região principal
@@ -262,7 +345,10 @@ export class GooglePlacesService {
       parts.push(data.cep);
     }
     
-    // Adicionar contexto de região
+    // Adicionar contexto de região específica ou geral
+    if (detectedRegion) {
+      parts.push(detectedRegion);
+    }
     parts.push('Brasília DF');
     
     return parts.join(' ');
@@ -270,16 +356,11 @@ export class GooglePlacesService {
 
   // Simplificar endereço para busca
   private simplifyAddress(address: string): string {
-    // Extrair bairro/região principal
+    // Extrair bairro/região principal - APENAS AS 3 REGIÕES PERMITIDAS
     const patterns = [
       /samambaia/i,
       /recanto das emas/i,
-      /águas claras/i,
-      /taguatinga/i,
-      /ceilândia/i,
-      /plano piloto/i,
-      /asa norte/i,
-      /asa sul/i
+      /águas quentes/i
     ];
 
     for (const pattern of patterns) {
@@ -290,7 +371,7 @@ export class GooglePlacesService {
     }
 
     // Tentar extrair quadra
-    const quadraMatch = address.match(/q[ru]?\s*\d+/i);
+    const quadraMatch = address.match(/q[nrs][mr]?\s*\d+/i);
     if (quadraMatch) {
       return quadraMatch[0];
     }
@@ -501,6 +582,18 @@ export class GooglePlacesService {
 
   // Criar resultado do Google
   private createGoogleResult(place: any, confidence: number, originalData: EstablishmentData): PlaceSearchResult {
+    const lat = place.geometry?.location?.lat || originalData.latitude || 0;
+    const lng = place.geometry?.location?.lng || originalData.longitude || 0;
+    
+    // CRÍTICO: Validar se coordenadas estão dentro das regiões permitidas
+    const withinRegions = this.isWithinAllowedRegions(lat, lng);
+    
+    if (!withinRegions) {
+      console.warn(`⚠️ Coordenadas fora das regiões permitidas: ${originalData.nome} (${lat}, ${lng})`);
+      // Reduzir drasticamente a confiança se coordenadas estiverem fora
+      confidence = Math.min(confidence, 30);
+    }
+    
     return {
       found: true,
       confidence,
@@ -509,8 +602,8 @@ export class GooglePlacesService {
       nome: place.name || originalData.nome,
       endereco: place.formatted_address || originalData.endereco || '',
       cep: this.extractCEP(place) || originalData.cep,
-      latitude: place.geometry?.location?.lat || originalData.latitude || 0,
-      longitude: place.geometry?.location?.lng || originalData.longitude || 0,
+      latitude: lat,
+      longitude: lng,
       telefone: place.international_phone_number || originalData.telefone,
       horarioFuncionamento: this.extractOpeningHours(place) || undefined,
       website: place.website || undefined,
