@@ -13,6 +13,8 @@ interface PlaceSearchResult {
   telefone?: string;
   horarioFuncionamento?: string;
   website?: string;
+  rating?: number;
+  photoUrl?: string;
   matchDetails?: {
     nameMatch: boolean;
     addressMatch: boolean;
@@ -251,6 +253,8 @@ export class GooglePlacesService {
             'international_phone_number',
             'opening_hours',
             'website',
+            'rating',
+            'photos',
             'types'
           ],
           language: 'pt-BR' as any,
@@ -580,6 +584,18 @@ export class GooglePlacesService {
     return null;
   }
 
+  // Extrair URL da primeira foto disponível
+  private extractPhotoUrl(place: any): string | null {
+    if (!place.photos || place.photos.length === 0) return null;
+
+    const photo = place.photos[0];
+    if (!photo.photo_reference) return null;
+
+    // Construir URL da foto usando a API do Google Maps
+    // maxwidth=400 para manter o tamanho razoável
+    return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${photo.photo_reference}&key=${this.apiKey}`;
+  }
+
   // Criar resultado do Google
   private createGoogleResult(place: any, confidence: number, originalData: EstablishmentData): PlaceSearchResult {
     const lat = place.geometry?.location?.lat || originalData.latitude || 0;
@@ -607,6 +623,8 @@ export class GooglePlacesService {
       telefone: place.international_phone_number || originalData.telefone,
       horarioFuncionamento: this.extractOpeningHours(place) || undefined,
       website: place.website || undefined,
+      rating: place.rating || undefined,
+      photoUrl: this.extractPhotoUrl(place) || undefined,
       matchDetails: {
         nameMatch: true,
         addressMatch: true,
