@@ -2,11 +2,14 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { ReclassificationModal } from '@/components/ReclassificationModal';
 import { AddONGModal } from '@/components/Forms/AddONGModal';
 import { EditONGModal } from '@/components/Forms/EditONGModal';
 import { useApiData } from '@/hooks/useApiData';
+import { useMultiSelect } from '@/hooks/useMultiSelect';
+import { useToast } from '@/hooks/use-toast';
 import type { InsertONG, ONG } from '../../shared/schema';
 import { 
   Heart, 
@@ -17,7 +20,8 @@ import {
   Edit,
   Trash2,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  AlertTriangle
 } from 'lucide-react';
 
 const GestaoONGs = () => {
@@ -25,6 +29,18 @@ const GestaoONGs = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedONG, setSelectedONG] = useState<ONG | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const { toast } = useToast();
+  
+  const {
+    selectedItems,
+    selectAll,
+    toggleItem,
+    toggleAll,
+    clearSelection,
+    isSelected,
+    selectedCount
+  } = useMultiSelect<ONG>();
 
   const handleAddONG = (ong: InsertONG) => {
     addONG(ong);
@@ -39,6 +55,30 @@ const GestaoONGs = () => {
 
   const handleDeleteONG = (id: number) => {
     deleteONG(id);
+  };
+
+  const handleDeleteMultiple = async () => {
+    try {
+      const itemsToDelete = Array.from(selectedItems);
+      
+      for (const id of itemsToDelete) {
+        await deleteONG(id);
+      }
+      
+      toast({
+        title: "Sucesso",
+        description: `${itemsToDelete.length} ONG(s) excluída(s) com sucesso.`,
+      });
+      
+      clearSelection();
+      setIsDeleteDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Erro ao excluir",
+        description: "Ocorreu um erro ao excluir as ONGs selecionadas.",
+        variant: "destructive",
+      });
+    }
   };
 
   const openEditModal = (ong: ONG) => {
@@ -68,11 +108,42 @@ const GestaoONGs = () => {
           </p>
         </div>
         
-        <Button className="bg-green-600 hover:bg-green-700" onClick={() => setIsAddModalOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nova ONG
-        </Button>
+        <div className="flex items-center space-x-2">
+          {selectedCount > 0 && (
+            <Button 
+              variant="destructive" 
+              onClick={() => setIsDeleteDialogOpen(true)}
+              data-testid="button-delete-selected"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Excluir {selectedCount} Selecionada{selectedCount > 1 ? 's' : ''}
+            </Button>
+          )}
+          <Button className="bg-green-600 hover:bg-green-700" onClick={() => setIsAddModalOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nova ONG
+          </Button>
+        </div>
       </div>
+
+      {/* Barra de Seleção */}
+      {ongsList.length > 0 && (
+        <div className="flex items-center space-x-4 p-4 bg-muted/50 rounded-lg">
+          <Checkbox
+            checked={selectAll}
+            onCheckedChange={() => toggleAll(ongsList)}
+            data-testid="checkbox-select-all"
+          />
+          <label className="text-sm font-medium cursor-pointer" onClick={() => toggleAll(ongsList)}>
+            Selecionar Todas ({ongsList.length} ONGs)
+          </label>
+          {selectedCount > 0 && (
+            <span className="text-sm text-muted-foreground">
+              • {selectedCount} selecionada{selectedCount > 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -134,22 +205,33 @@ const GestaoONGs = () => {
       {/* ONGs List */}
       <div className="grid gap-4">
         {ongsList.map((ong) => (
-          <Card key={ong.id} className="hover:shadow-lg transition-shadow">
+          <Card 
+            key={ong.id} 
+            className={`hover:shadow-lg transition-all ${isSelected(ong.id) ? 'ring-2 ring-green-600' : ''}`}
+          >
             <CardHeader>
               <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="flex items-center space-x-2">
-                    <Heart className="h-5 w-5 text-green-600" />
-                    <span>{ong.nome}</span>
-                  </CardTitle>
-                  <div className="flex items-center space-x-2 mt-2">
-                    <Badge 
-                      variant={ong.status === 'ativo' ? 'default' : 'secondary'}
-                      className={ong.status === 'ativo' ? 'bg-green-600' : ''}
-                    >
-                      {ong.status === 'ativo' ? 'Ativa' : 'Inativa'}
-                    </Badge>
-                    <Badge variant="outline">{ong.tipo}</Badge>
+                <div className="flex items-start space-x-3">
+                  <Checkbox
+                    checked={isSelected(ong.id)}
+                    onCheckedChange={() => toggleItem(ong.id)}
+                    className="mt-1"
+                    data-testid={`checkbox-ong-${ong.id}`}
+                  />
+                  <div className="flex-1">
+                    <CardTitle className="flex items-center space-x-2">
+                      <Heart className="h-5 w-5 text-green-600" />
+                      <span>{ong.nome}</span>
+                    </CardTitle>
+                    <div className="flex items-center space-x-2 mt-2">
+                      <Badge 
+                        variant={ong.status === 'ativo' ? 'default' : 'secondary'}
+                        className={ong.status === 'ativo' ? 'bg-green-600' : ''}
+                      >
+                        {ong.status === 'ativo' ? 'Ativa' : 'Inativa'}
+                      </Badge>
+                      <Badge variant="outline">{ong.tipo}</Badge>
+                    </div>
                   </div>
                 </div>
                 
@@ -270,6 +352,31 @@ const GestaoONGs = () => {
         onEdit={handleEditONG}
         ong={selectedONG}
       />
+
+      {/* Modal de Confirmação para Exclusão Múltipla */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center space-x-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              <span>Confirmar Exclusão Múltipla</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Você está prestes a excluir {selectedCount} ONG{selectedCount > 1 ? 's' : ''}.
+              Esta ação não pode ser desfeita. Tem certeza que deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteMultiple}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir {selectedCount} ONG{selectedCount > 1 ? 's' : ''}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
