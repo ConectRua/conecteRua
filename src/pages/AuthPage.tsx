@@ -71,13 +71,7 @@ const AuthPage = () => {
 
         {/* Authentication Forms */}
         <Card>
-          <CardHeader className="text-center">
-            <CardTitle>Acesso ao Sistema</CardTitle>
-            <CardDescription>
-              Entre com suas credenciais
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
                     <div>
                       <Label htmlFor="login-username">Nome de Usuário</Label>
