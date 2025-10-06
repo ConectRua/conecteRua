@@ -84,7 +84,6 @@ export class GooglePlacesService {
             'name',
             'formatted_address',
             'geometry',
-            'formatted_phone_number',
             'opening_hours',
             'website',
             'types'
@@ -220,7 +219,6 @@ export class GooglePlacesService {
             'formatted_address',
             'address_components',
             'geometry',
-            'formatted_phone_number',
             'international_phone_number',
             'opening_hours',
             'website',
@@ -340,9 +338,9 @@ export class GooglePlacesService {
     }
 
     // Telefone (10 pontos)
-    if (data.telefone && place.formatted_phone_number) {
+    if (data.telefone && place.international_phone_number) {
       const phoneMatch = this.normalizePhone(data.telefone) === 
-                        this.normalizePhone(place.formatted_phone_number);
+                        this.normalizePhone(place.international_phone_number);
       if (phoneMatch) {
         score += 10;
         matchDetails.phoneMatch = true;
@@ -513,14 +511,14 @@ export class GooglePlacesService {
       cep: this.extractCEP(place) || originalData.cep,
       latitude: place.geometry?.location?.lat || originalData.latitude || 0,
       longitude: place.geometry?.location?.lng || originalData.longitude || 0,
-      telefone: place.formatted_phone_number || originalData.telefone,
+      telefone: place.international_phone_number || originalData.telefone,
       horarioFuncionamento: this.extractOpeningHours(place) || undefined,
       website: place.website || undefined,
       matchDetails: {
         nameMatch: true,
         addressMatch: true,
         cepMatch: !!this.extractCEP(place),
-        phoneMatch: !!place.formatted_phone_number
+        phoneMatch: !!place.international_phone_number
       }
     };
   }
