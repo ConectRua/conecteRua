@@ -34,6 +34,23 @@ interface PreviewRecord {
   site?: string;
   responsavel?: string;
   idade?: number;
+  existeNoGooglePlaces?: boolean;
+  existeNoBanco?: boolean;
+  status?: 'VALIDADO_GOOGLE' | 'DUPLICADO_BANCO' | 'NAO_ENCONTRADO_GOOGLE';
+  placeId?: string;
+  avaliacaoGoogle?: number;
+  fotoGoogle?: string;
+  avisoValidacao?: string;
+  googleMatch?: {
+    found: boolean;
+    confidence: number;
+    source: string;
+    googlePlaceId?: string;
+    rating?: number;
+    photoUrl?: string;
+  };
+  latitude?: number;
+  longitude?: number;
 }
 
 const ImportacaoPlanilhas = () => {
