@@ -163,7 +163,10 @@ async function checkUBSDuplicate(nome: string, endereco: string, placeId?: strin
     if (placeId) {
       const byPlaceId = await db.select({ id: ubs.id })
         .from(ubs)
-        .where(eq(ubs.placeId, placeId))
+        .where(and(
+          eq(ubs.placeId, placeId),
+          eq(ubs.ativo, true)
+        ))
         .limit(1);
       if (byPlaceId.length > 0) return true;
     }
@@ -173,7 +176,8 @@ async function checkUBSDuplicate(nome: string, endereco: string, placeId?: strin
       .from(ubs)
       .where(and(
         sql`LOWER(TRIM(${ubs.nome})) = LOWER(TRIM(${nome}))`,
-        sql`LOWER(TRIM(${ubs.endereco})) = LOWER(TRIM(${endereco}))`
+        sql`LOWER(TRIM(${ubs.endereco})) = LOWER(TRIM(${endereco}))`,
+        eq(ubs.ativo, true)
       ))
       .limit(1);
     
@@ -191,7 +195,10 @@ async function checkONGDuplicate(nome: string, endereco: string, placeId?: strin
     if (placeId) {
       const byPlaceId = await db.select({ id: ongs.id })
         .from(ongs)
-        .where(eq(ongs.placeId, placeId))
+        .where(and(
+          eq(ongs.placeId, placeId),
+          eq(ongs.ativo, true)
+        ))
         .limit(1);
       if (byPlaceId.length > 0) return true;
     }
@@ -201,7 +208,8 @@ async function checkONGDuplicate(nome: string, endereco: string, placeId?: strin
       .from(ongs)
       .where(and(
         sql`LOWER(TRIM(${ongs.nome})) = LOWER(TRIM(${nome}))`,
-        sql`LOWER(TRIM(${ongs.endereco})) = LOWER(TRIM(${endereco}))`
+        sql`LOWER(TRIM(${ongs.endereco})) = LOWER(TRIM(${endereco}))`,
+        eq(ongs.ativo, true)
       ))
       .limit(1);
     
@@ -219,7 +227,10 @@ async function checkEquipamentoSocialDuplicate(nome: string, endereco: string, p
     if (placeId) {
       const byPlaceId = await db.select({ id: equipamentosSociais.id })
         .from(equipamentosSociais)
-        .where(eq(equipamentosSociais.placeId, placeId))
+        .where(and(
+          eq(equipamentosSociais.placeId, placeId),
+          eq(equipamentosSociais.ativo, true)
+        ))
         .limit(1);
       if (byPlaceId.length > 0) return true;
     }
@@ -229,7 +240,8 @@ async function checkEquipamentoSocialDuplicate(nome: string, endereco: string, p
       .from(equipamentosSociais)
       .where(and(
         sql`LOWER(TRIM(${equipamentosSociais.nome})) = LOWER(TRIM(${nome}))`,
-        sql`LOWER(TRIM(${equipamentosSociais.endereco})) = LOWER(TRIM(${endereco}))`
+        sql`LOWER(TRIM(${equipamentosSociais.endereco})) = LOWER(TRIM(${endereco}))`,
+        eq(equipamentosSociais.ativo, true)
       ))
       .limit(1);
     
