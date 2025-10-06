@@ -426,7 +426,7 @@ export const MapComponent = ({
         const loader = new Loader({
           apiKey: GOOGLE_MAPS_API_KEY,
           version: 'weekly',
-          libraries: ['marker']
+          libraries: ['marker', 'places']
         });
 
         await loader.load();

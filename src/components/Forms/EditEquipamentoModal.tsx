@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Geolocation } from '@capacitor/geolocation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -58,6 +58,7 @@ const servicosDisponiveis = [
 
 export const EditEquipamentoModal = ({ open, onOpenChange, equipamento, onUpdate }: EditEquipamentoModalProps) => {
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [isGeocodingAddress, setIsGeocodingAddress] = useState(false);
   const [formData, setFormData] = useState({
     nome: '',
     endereco: '',
@@ -73,6 +74,8 @@ export const EditEquipamentoModal = ({ open, onOpenChange, equipamento, onUpdate
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const geocodingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const geocodingRequestIdRef = useRef(0);
 
   useEffect(() => {
     if (equipamento) {
@@ -138,7 +141,7 @@ export const EditEquipamentoModal = ({ open, onOpenChange, equipamento, onUpdate
       telefone: formData.telefone || null,
       email: formData.email || null,
       horarioFuncionamento: formData.horarioFuncionamento || null,
-      servicos: formData.servicos.length > 0 ? formData.servicos : undefined,
+      servicos: formData.servicos.length > 0 ? formData.servicos : [],
       responsavel: formData.responsavel || null,
     };
 
@@ -154,6 +157,92 @@ export const EditEquipamentoModal = ({ open, onOpenChange, equipamento, onUpdate
         ? prev.servicos.filter(s => s !== servico)
         : [...prev.servicos, servico]
     }));
+  };
+
+  // Função de geocodificação automática
+  const geocodeAddress = async (endereco: string, cep: string, requestId: number) => {
+    if (!endereco.trim() || !cep.trim()) return;
+    
+    // Verificar se Google Maps API está disponível
+    if (typeof window === 'undefined' || !window.google || !window.google.maps) {
+      toast.error('Google Maps não está disponível. Tente novamente.');
+      return;
+    }
+    
+    // Validar formato do CEP
+    const cepPattern = /^\d{5}-?\d{3}$/;
+    if (!cepPattern.test(cep)) {
+      return; // CEP inválido, não faz geocoding
+    }
+    
+    setIsGeocodingAddress(true);
+    try {
+      const fullAddress = `${endereco}, ${cep}, Brasil`;
+      const geocoder = new google.maps.Geocoder();
+      
+      const result = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
+        geocoder.geocode(
+          { address: fullAddress },
+          (results, status) => {
+            // Verificar se esta resposta ainda é relevante
+            if (geocodingRequestIdRef.current !== requestId) {
+              reject(new Error('Request obsoleto'));
+              return;
+            }
+            
+            if (status === 'OK' && results && results.length > 0) {
+              resolve(results);
+            } else {
+              reject(new Error(`Geocoding failed: ${status}`));
+            }
+          }
+        );
+      });
+
+      // Verificar novamente se esta resposta ainda é relevante
+      if (geocodingRequestIdRef.current === requestId) {
+        const location = result[0].geometry.location;
+        const lat = location.lat();
+        const lng = location.lng();
+        
+        setFormData(prev => ({
+          ...prev,
+          latitude: lat.toString(),
+          longitude: lng.toString()
+        }));
+        
+        toast.success('Localização encontrada automaticamente!');
+      }
+    } catch (error) {
+      if (geocodingRequestIdRef.current === requestId) {
+        console.warn('Erro no geocoding:', error);
+        // Só mostrar erro se não for um request obsoleto
+        if (error instanceof Error && !error.message.includes('obsoleto')) {
+          toast.error('Não foi possível encontrar a localização. Verifique o endereço e CEP.');
+        }
+      }
+    } finally {
+      if (geocodingRequestIdRef.current === requestId) {
+        setIsGeocodingAddress(false);
+      }
+    }
+  };
+
+  // Função para trigger geocoding com debounce adequado
+  const triggerGeocoding = (endereco: string, cep: string) => {
+    // Cancelar timeout anterior se existir
+    if (geocodingTimeoutRef.current) {
+      clearTimeout(geocodingTimeoutRef.current);
+    }
+
+    // Incrementar ID da requisição para invalidar anteriores
+    geocodingRequestIdRef.current += 1;
+    const currentRequestId = geocodingRequestIdRef.current;
+
+    // Definir novo timeout (debounce de 1.5 segundos)
+    geocodingTimeoutRef.current = setTimeout(() => {
+      geocodeAddress(endereco, cep, currentRequestId);
+    }, 1500);
   };
 
   const getCurrentLocation = async () => {
@@ -278,12 +367,19 @@ export const EditEquipamentoModal = ({ open, onOpenChange, equipamento, onUpdate
                   id="endereco"
                   data-testid="input-equipamento-endereco"
                   value={formData.endereco}
-                  onChange={(e) => setFormData(prev => ({ ...prev, endereco: e.target.value }))}
+                  onChange={(e) => {
+                    const newEndereco = e.target.value;
+                    setFormData(prev => ({ ...prev, endereco: newEndereco }));
+                    triggerGeocoding(newEndereco, formData.cep);
+                  }}
                   placeholder="Ex: Quadra 302, Conjunto 05, Lote 01 - Recanto das Emas"
                   className={errors.endereco ? 'border-red-500' : ''}
                   rows={2}
                 />
                 {errors.endereco && <p className="text-sm text-red-500 mt-1">{errors.endereco}</p>}
+                {isGeocodingAddress && (
+                  <p className="text-xs text-blue-600 mt-1">Buscando localização...</p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-2">
@@ -293,7 +389,11 @@ export const EditEquipamentoModal = ({ open, onOpenChange, equipamento, onUpdate
                     id="cep"
                     data-testid="input-equipamento-cep"
                     value={formData.cep}
-                    onChange={(e) => setFormData(prev => ({ ...prev, cep: e.target.value }))}
+                    onChange={(e) => {
+                      const newCep = e.target.value;
+                      setFormData(prev => ({ ...prev, cep: newCep }));
+                      triggerGeocoding(formData.endereco, newCep);
+                    }}
                     placeholder="72302-101"
                     className={errors.cep ? 'border-red-500' : ''}
                   />

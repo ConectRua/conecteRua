@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { GooglePlacesAutocomplete } from '@/components/GooglePlacesAutocomplete';
 import type { InsertONG } from '../../../shared/schema';
 import { MapPin, Heart, Phone, Clock, Users, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -61,7 +62,7 @@ export const AddONGModal = ({ open, onOpenChange, onAdd }: AddONGModalProps) => 
     tipo: 'Assistência Social',
     areasAtuacao: [] as string[],
     responsavel: '',
-    capacidade: '',
+
     horarioFuncionamento: '08:00 - 17:00',
     status: 'ativo' as 'ativo' | 'inativo'
   });
@@ -108,7 +109,6 @@ export const AddONGModal = ({ open, onOpenChange, onAdd }: AddONGModalProps) => 
       ...formData,
       latitude: parseFloat(formData.latitude),
       longitude: parseFloat(formData.longitude),
-      capacidade: formData.capacidade ? parseInt(formData.capacidade) : null,
       cep: formData.cep.replace(/\D/g, '').replace(/(\d{5})(\d{3})/, '$1-$2')
     };
 
@@ -128,7 +128,7 @@ export const AddONGModal = ({ open, onOpenChange, onAdd }: AddONGModalProps) => 
       tipo: 'Assistência Social',
       areasAtuacao: [],
       responsavel: '',
-      capacidade: '',
+  
       horarioFuncionamento: '08:00 - 17:00',
       status: 'ativo'
     });
@@ -217,6 +217,28 @@ export const AddONGModal = ({ open, onOpenChange, onAdd }: AddONGModalProps) => 
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Busca no Google Maps */}
+          <div className="border-b pb-4">
+            <GooglePlacesAutocomplete
+              onPlaceSelected={(place) => {
+                // Preencher os campos com os dados do estabelecimento selecionado
+                setFormData(prev => ({
+                  ...prev,
+                  nome: place.nome || prev.nome,
+                  endereco: place.endereco || prev.endereco,
+                  cep: place.cep || prev.cep,
+                  latitude: place.latitude ? place.latitude.toString() : prev.latitude,
+                  longitude: place.longitude ? place.longitude.toString() : prev.longitude,
+                  telefone: place.telefone || prev.telefone,
+                  horarioFuncionamento: place.horarioFuncionamento || prev.horarioFuncionamento,
+                  email: place.email || prev.email
+                }));
+              }}
+              placeholder="Ex: Instituto Ação Social, Casa de Apoio..."
+              label="Buscar ONG no Google Maps"
+            />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Informações Básicas */}
             <div className="space-y-4">
@@ -311,30 +333,17 @@ export const AddONGModal = ({ open, onOpenChange, onAdd }: AddONGModalProps) => 
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label htmlFor="capacidade">Capacidade de Atendimento</Label>
-                  <Input
-                    id="capacidade"
-                    type="number"
-                    value={formData.capacidade}
-                    onChange={(e) => setFormData(prev => ({ ...prev, capacidade: e.target.value }))}
-                    placeholder="100"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="horario">
-                    <Clock className="h-4 w-4 inline mr-1" />
-                    Horário de Funcionamento
-                  </Label>
-                  <Input
-                    id="horario"
-                    value={formData.horarioFuncionamento}
-                    onChange={(e) => setFormData(prev => ({ ...prev, horarioFuncionamento: e.target.value }))}
-                    placeholder="08:00 - 17:00"
-                  />
-                </div>
+              <div>
+                <Label htmlFor="horario">
+                  <Clock className="h-4 w-4 inline mr-1" />
+                  Horário de Funcionamento
+                </Label>
+                <Input
+                  id="horario"
+                  value={formData.horarioFuncionamento}
+                  onChange={(e) => setFormData(prev => ({ ...prev, horarioFuncionamento: e.target.value }))}
+                  placeholder="08:00 - 17:00"
+                />
               </div>
             </div>
 

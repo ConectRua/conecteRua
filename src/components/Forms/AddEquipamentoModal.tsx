@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { GooglePlacesAutocomplete } from '@/components/GooglePlacesAutocomplete';
 import type { InsertEquipamentoSocial } from '../../../shared/schema';
 import { MapPin, Building, Phone, Clock, Users, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -237,6 +238,28 @@ export const AddEquipamentoModal = ({ open, onOpenChange, onAdd }: AddEquipament
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Busca no Google Maps */}
+          <div className="border-b pb-4">
+            <GooglePlacesAutocomplete
+              onPlaceSelected={(place) => {
+                // Preencher os campos com os dados do estabelecimento selecionado
+                setFormData(prev => ({
+                  ...prev,
+                  nome: place.nome || prev.nome,
+                  endereco: place.endereco || prev.endereco,
+                  cep: place.cep || prev.cep,
+                  latitude: place.latitude ? place.latitude.toString() : prev.latitude,
+                  longitude: place.longitude ? place.longitude.toString() : prev.longitude,
+                  telefone: place.telefone || prev.telefone,
+                  horarioFuncionamento: place.horarioFuncionamento || prev.horarioFuncionamento,
+                  email: place.email || prev.email
+                }));
+              }}
+              placeholder="Ex: CAPS Samambaia, CRAS Recanto das Emas, Centro POP..."
+              label="Buscar Estabelecimento no Google Maps"
+            />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Informações Básicas */}
             <div className="space-y-4">

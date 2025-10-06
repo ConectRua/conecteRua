@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { GooglePlacesAutocomplete } from '@/components/GooglePlacesAutocomplete';
 import type { InsertUBS } from '../../../shared/schema';
 import { MapPin, Building2, Phone, Clock, Stethoscope, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -315,6 +316,27 @@ export const AddUBSModal = ({ open, onOpenChange, onAdd }: AddUBSModalProps) => 
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Busca no Google Maps */}
+          <div className="border-b pb-4">
+            <GooglePlacesAutocomplete
+              onPlaceSelected={(place) => {
+                // Preencher os campos com os dados do estabelecimento selecionado
+                setFormData(prev => ({
+                  ...prev,
+                  nome: place.nome || prev.nome,
+                  endereco: place.endereco || prev.endereco,
+                  cep: place.cep || prev.cep,
+                  latitude: place.latitude ? place.latitude.toString() : prev.latitude,
+                  longitude: place.longitude ? place.longitude.toString() : prev.longitude,
+                  telefone: place.telefone || prev.telefone,
+                  horarioFuncionamento: place.horarioFuncionamento || prev.horarioFuncionamento
+                }));
+              }}
+              placeholder="Ex: UBS 1 Samambaia, Hospital Regional de Samambaia..."
+              label="Buscar Unidade de Saúde no Google Maps"
+            />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Informações Básicas */}
             <div className="space-y-4">
