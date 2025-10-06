@@ -14,7 +14,6 @@ import {
   ChevronLeft,
   Home,
   FileSpreadsheet,
-  Search,
   LogOut,
   User,
   CalendarDays
@@ -59,12 +58,6 @@ const navItems: NavItem[] = [
     href: '/importacao',
     icon: FileSpreadsheet,
     description: 'Upload de dados em lote'
-  },
-  {
-    title: 'Busca por CEP',
-    href: '/busca',
-    icon: Search,
-    description: 'Localizar serviços'
   },
   {
     title: 'Gestão UBS',
