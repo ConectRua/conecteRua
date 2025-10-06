@@ -14,6 +14,8 @@ interface MapComponentProps {
   zoom?: number;
   editMode?: boolean;
   onPositionUpdate?: (id: string, type: 'ubs' | 'ong' | 'paciente' | 'equipamento', lat: number, lng: number) => void;
+  onRadiusActivated?: (patient: Paciente, entities: {ubs: UBS[], ongs: ONG[], equipamentos: EquipamentoSocial[]}) => void;
+  onRadiusCleared?: () => void;
 }
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
@@ -29,6 +31,19 @@ const escapeHtml = (unsafe: string | null | undefined): string => {
     .replace(/'/g, "&#039;");
 };
 
+// Haversine formula to calculate distance between two points in meters
+const haversineDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+  const R = 6371000; // Earth's radius in meters
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
 export const MapComponent = ({
   height = '400px',
   showUBS = true,
@@ -39,17 +54,33 @@ export const MapComponent = ({
   centerLng = -48.0958,
   zoom = 12,
   editMode = false,
-  onPositionUpdate
+  onPositionUpdate,
+  onRadiusActivated,
+  onRadiusCleared
 }: MapComponentProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
+  const radiusCircleRef = useRef<google.maps.Circle | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [activePacienteId, setActivePacienteId] = useState<number | null>(null);
   const { ubsList, ongsList, pacientesList, equipamentosSociais } = useApiData();
 
   // Criar referências estáveis dos dados usando useRef para evitar re-renders
   const dataRef = useRef({ ubsList, ongsList, pacientesList, equipamentosSociais });
   
+  // Function to clear radius circle
+  const clearRadius = () => {
+    if (radiusCircleRef.current) {
+      radiusCircleRef.current.setMap(null);
+      radiusCircleRef.current = null;
+    }
+    setActivePacienteId(null);
+    if (onRadiusCleared) {
+      onRadiusCleared();
+    }
+  };
+
   // Atualizar referências quando os dados realmente mudarem
   useEffect(() => {
     console.log('Dados atualizados no MapComponent:', { 
@@ -290,6 +321,8 @@ export const MapComponent = ({
           : 'Baixa (aproximado)' 
           : 'Desconhecida';
         
+        const isRadiusActive = activePacienteId === paciente.id;
+        
         const infoWindow = new google.maps.InfoWindow({
           content: `
             <div class="p-3" style="min-width: 250px;">
@@ -309,6 +342,27 @@ export const MapComponent = ({
                     ).join('')}
                   </div>
                 </div>
+                ${!editMode ? `
+                  <div class="mt-3 pt-2 border-t">
+                    ${isRadiusActive ? `
+                      <button 
+                        data-testid="button-clear-radius"
+                        class="radius-clear-btn w-full px-3 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm font-medium transition-colors"
+                        style="cursor: pointer;"
+                      >
+                        ❌ Limpar Raio
+                      </button>
+                    ` : `
+                      <button 
+                        data-testid="button-show-radius"
+                        class="radius-btn w-full px-3 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 text-sm font-medium transition-colors"
+                        style="cursor: pointer;"
+                      >
+                        🎯 Ver Raio de Apoio (1km)
+                      </button>
+                    `}
+                  </div>
+                ` : ''}
               </div>
             </div>
           `
@@ -317,6 +371,81 @@ export const MapComponent = ({
         marker.addListener('click', () => {
           if (!editMode) {
             infoWindow.open(map, marker);
+            
+            // Add event listeners to radius buttons after InfoWindow opens
+            google.maps.event.addListenerOnce(infoWindow, 'domready', () => {
+              const showRadiusBtn = document.querySelector('.radius-btn');
+              const clearRadiusBtn = document.querySelector('.radius-clear-btn');
+              
+              if (showRadiusBtn) {
+                showRadiusBtn.addEventListener('click', () => {
+                  // Clear any existing radius first
+                  if (radiusCircleRef.current) {
+                    radiusCircleRef.current.setMap(null);
+                  }
+                  
+                  // Draw new radius circle
+                  const circle = new google.maps.Circle({
+                    strokeColor: '#a855f7',
+                    strokeOpacity: 0.8,
+                    strokeWeight: 2,
+                    fillColor: '#a855f7',
+                    fillOpacity: 0.2,
+                    map: map,
+                    center: { lat, lng },
+                    radius: 1000
+                  });
+                  
+                  radiusCircleRef.current = circle;
+                  setActivePacienteId(paciente.id);
+                  
+                  // Calculate entities within radius
+                  const ubsWithinRadius = dataRef.current.ubsList.filter((ubs: UBS) => {
+                    const ubsLat = typeof ubs.latitude === 'string' ? parseFloat(ubs.latitude) : ubs.latitude;
+                    const ubsLng = typeof ubs.longitude === 'string' ? parseFloat(ubs.longitude) : ubs.longitude;
+                    if (ubsLat == null || ubsLng == null) return false;
+                    const distance = haversineDistance(lat, lng, ubsLat, ubsLng);
+                    return distance <= 1000;
+                  });
+                  
+                  const ongsWithinRadius = dataRef.current.ongsList.filter((ong: ONG) => {
+                    const ongLat = typeof ong.latitude === 'string' ? parseFloat(ong.latitude) : ong.latitude;
+                    const ongLng = typeof ong.longitude === 'string' ? parseFloat(ong.longitude) : ong.longitude;
+                    if (ongLat == null || ongLng == null) return false;
+                    const distance = haversineDistance(lat, lng, ongLat, ongLng);
+                    return distance <= 1000;
+                  });
+                  
+                  const equipamentosWithinRadius = dataRef.current.equipamentosSociais.filter((eq: EquipamentoSocial) => {
+                    if (eq.latitude == null || eq.longitude == null) return false;
+                    const distance = haversineDistance(lat, lng, eq.latitude, eq.longitude);
+                    return distance <= 1000;
+                  });
+                  
+                  // Call callback with filtered data
+                  if (onRadiusActivated) {
+                    onRadiusActivated(paciente, {
+                      ubs: ubsWithinRadius,
+                      ongs: ongsWithinRadius,
+                      equipamentos: equipamentosWithinRadius
+                    });
+                  }
+                  
+                  // Update InfoWindow to show clear button
+                  infoWindow.close();
+                  updateMarkers();
+                  infoWindow.open(map, marker);
+                });
+              }
+              
+              if (clearRadiusBtn) {
+                clearRadiusBtn.addEventListener('click', () => {
+                  clearRadius();
+                  infoWindow.close();
+                  updateMarkers();
+                });
+              }
+            });
           }
         });
 
