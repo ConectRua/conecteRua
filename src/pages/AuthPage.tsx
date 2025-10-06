@@ -59,7 +59,7 @@ const AuthPage = () => {
           <img 
             src={logoConecteRua} 
             alt="Sistema de Georreferenciamento" 
-            className="h-36 w-auto mx-auto mb-4"
+            className="w-full max-w-md h-auto mx-auto mb-4"
           />
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
             Conectando Pessoas aos Cuidados
