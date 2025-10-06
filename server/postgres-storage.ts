@@ -321,7 +321,7 @@ export class PostgreSQLStorage implements IStorage {
     const result = await db.update(orientacoesEncaminhamento)
       .set({ ativo: false, updatedAt: new Date() })
       .where(eq(orientacoesEncaminhamento.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   async logAudit(userId: number, action: string, tableName: string, recordId: number, oldValues?: any, newValues?: any) {
@@ -337,5 +337,34 @@ export class PostgreSQLStorage implements IStorage {
 
   async close() {
     await this.pool.end();
+  }
+
+  // ============ MÉTODOS DE VERIFICAÇÃO DE DUPLICATAS ============
+  async findPacienteByCnsOuCpf(cnsOuCpf: string): Promise<Paciente | null> {
+    const result = await db.select().from(pacientes)
+      .where(eq(pacientes.cnsOuCpf, cnsOuCpf))
+      .limit(1);
+    return result[0] || null;
+  }
+
+  async findUBSByNome(nome: string): Promise<UBS | null> {
+    const result = await db.select().from(ubs)
+      .where(sql`LOWER(${ubs.nome}) = LOWER(${nome})`)
+      .limit(1);
+    return result[0] || null;
+  }
+
+  async findONGByNome(nome: string): Promise<ONG | null> {
+    const result = await db.select().from(ongs)
+      .where(sql`LOWER(${ongs.nome}) = LOWER(${nome})`)
+      .limit(1);
+    return result[0] || null;
+  }
+
+  async findEquipamentoSocialByNome(nome: string): Promise<EquipamentoSocial | null> {
+    const result = await db.select().from(equipamentosSociais)
+      .where(sql`LOWER(${equipamentosSociais.nome}) = LOWER(${nome})`)
+      .limit(1);
+    return result[0] || null;
   }
 }

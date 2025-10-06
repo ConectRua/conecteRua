@@ -1210,6 +1210,95 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Endpoints de verificação de duplicatas
+  app.get("/api/pacientes/verificar", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      const { cnsOuCpf } = req.query;
+      if (!cnsOuCpf || typeof cnsOuCpf !== 'string') {
+        return res.status(400).json({ error: "cnsOuCpf é obrigatório" });
+      }
+      
+      const existente = await storage.findPacienteByCnsOuCpf(cnsOuCpf);
+      res.json({ 
+        existe: !!existente,
+        paciente: existente || null
+      });
+    } catch (error) {
+      console.error("Error verificando paciente:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.get("/api/ubs/verificar", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      const { nome } = req.query;
+      if (!nome || typeof nome !== 'string') {
+        return res.status(400).json({ error: "nome é obrigatório" });
+      }
+      
+      const existente = await storage.findUBSByNome(nome);
+      res.json({ 
+        existe: !!existente,
+        ubs: existente || null
+      });
+    } catch (error) {
+      console.error("Error verificando UBS:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.get("/api/ongs/verificar", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      const { nome } = req.query;
+      if (!nome || typeof nome !== 'string') {
+        return res.status(400).json({ error: "nome é obrigatório" });
+      }
+      
+      const existente = await storage.findONGByNome(nome);
+      res.json({ 
+        existe: !!existente,
+        ong: existente || null
+      });
+    } catch (error) {
+      console.error("Error verificando ONG:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.get("/api/equipamentos-sociais/verificar", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      const { nome } = req.query;
+      if (!nome || typeof nome !== 'string') {
+        return res.status(400).json({ error: "nome é obrigatório" });
+      }
+      
+      const existente = await storage.findEquipamentoSocialByNome(nome);
+      res.json({ 
+        existe: !!existente,
+        equipamento: existente || null
+      });
+    } catch (error) {
+      console.error("Error verificando equipamento social:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
   // UBS CRUD routes
   app.post("/api/ubs", auditMiddleware('CREATE', 'ubs'), async (req, res) => {
     try {

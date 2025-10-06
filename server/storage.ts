@@ -63,6 +63,12 @@ export interface IStorage {
   createOrientacao(orientacao: Omit<OrientacaoEncaminhamento, 'id' | 'createdAt' | 'updatedAt'>): Promise<OrientacaoEncaminhamento>;
   updateOrientacao(id: number, updates: Partial<OrientacaoEncaminhamento>): Promise<OrientacaoEncaminhamento | null>;
   deleteOrientacao(id: number): Promise<boolean>;
+  
+  // Métodos de verificação de duplicatas
+  findPacienteByCnsOuCpf(cnsOuCpf: string): Promise<Paciente | null>;
+  findUBSByNome(nome: string): Promise<UBS | null>;
+  findONGByNome(nome: string): Promise<ONG | null>;
+  findEquipamentoSocialByNome(nome: string): Promise<EquipamentoSocial | null>;
 }
 
 export class MemStorage implements IStorage {
@@ -645,6 +651,23 @@ export class MemStorage implements IStorage {
       updatedAt: new Date(),
     };
     return true;
+  }
+
+  // Métodos de verificação de duplicatas
+  async findPacienteByCnsOuCpf(cnsOuCpf: string): Promise<Paciente | null> {
+    return this.pacientesList.find(p => p.cnsOuCpf === cnsOuCpf) || null;
+  }
+
+  async findUBSByNome(nome: string): Promise<UBS | null> {
+    return this.ubsList.find(u => u.nome.toLowerCase() === nome.toLowerCase()) || null;
+  }
+
+  async findONGByNome(nome: string): Promise<ONG | null> {
+    return this.ongsList.find(o => o.nome.toLowerCase() === nome.toLowerCase()) || null;
+  }
+
+  async findEquipamentoSocialByNome(nome: string): Promise<EquipamentoSocial | null> {
+    return this.equipamentosSociais.find(e => e.nome.toLowerCase() === nome.toLowerCase()) || null;
   }
 }
 

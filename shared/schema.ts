@@ -127,7 +127,7 @@ export const pacientes = pgTable("pacientes", {
   naturalidade: varchar("naturalidade", { length: 255 }),
   dataNascimento: timestamp("data_nascimento"),
   idade: integer("idade"),
-  cnsOuCpf: varchar("cns_ou_cpf", { length: 20 }),
+  cnsOuCpf: varchar("cns_ou_cpf", { length: 20 }).unique(),
   
   // ENDEREÇO E LOCALIZAÇÃO
   endereco: text("endereco").notNull(),
