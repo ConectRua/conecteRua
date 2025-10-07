@@ -6,8 +6,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { DayPicker } from 'react-day-picker';
-import { Calendar, Clock, User, MapPin, Phone, ChevronLeft, ChevronRight, Route, Navigation, ExternalLink, MoreVertical, Trash2, CalendarClock } from 'lucide-react';
+import { Calendar, Clock, User, MapPin, Phone, ChevronLeft, ChevronRight, Route, Navigation, ExternalLink, MoreVertical, Trash2, CalendarClock, Plus, Check, ChevronsUpDown } from 'lucide-react';
 import { useApiData } from '@/hooks/useApiData';
 import { format, startOfMonth, startOfWeek, eachDayOfInterval, isSameDay, addMonths, subMonths, isSameMonth, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -30,6 +31,10 @@ const Agenda = () => {
   const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false);
   const [selectedPacienteForReschedule, setSelectedPacienteForReschedule] = useState<any>(null);
   const [newAppointmentDate, setNewAppointmentDate] = useState<Date | undefined>(undefined);
+  const [addAppointmentDialogOpen, setAddAppointmentDialogOpen] = useState(false);
+  const [selectedPacienteForAdd, setSelectedPacienteForAdd] = useState<any>(null);
+  const [addAppointmentDate, setAddAppointmentDate] = useState<Date | undefined>(undefined);
+  const [openCombobox, setOpenCombobox] = useState(false);
   const { toast } = useToast();
 
   // Filtrar pacientes que têm datas de atendimento
@@ -215,6 +220,41 @@ const Agenda = () => {
     }
   });
 
+  // Mutation para adicionar novo agendamento
+  const addAppointmentMutation = useMutation({
+    mutationFn: async ({ pacienteId, date }: { pacienteId: number; date: Date }) => {
+      const response = await fetch(`/api/pacientes/${pacienteId}/agendamento`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ proximoAtendimento: date.toISOString() })
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao criar agendamento');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/pacientes'] });
+      toast({
+        title: "Agendamento criado",
+        description: "O agendamento foi criado com sucesso."
+      });
+      setAddAppointmentDialogOpen(false);
+      setSelectedPacienteForAdd(null);
+      setAddAppointmentDate(undefined);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao criar agendamento",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
   // Funções auxiliares
   const handleRemoveFromAgenda = (paciente: any) => {
     if (confirm(`Deseja remover ${paciente.nome} da agenda?`)) {
@@ -234,6 +274,21 @@ const Agenda = () => {
     rescheduleMutation.mutate({
       pacienteId: selectedPacienteForReschedule.id,
       newDate: newAppointmentDate
+    });
+  };
+
+  const handleAddAppointment = () => {
+    setAddAppointmentDialogOpen(true);
+    setSelectedPacienteForAdd(null);
+    setAddAppointmentDate(undefined);
+  };
+
+  const confirmAddAppointment = () => {
+    if (!selectedPacienteForAdd || !addAppointmentDate) return;
+    
+    addAppointmentMutation.mutate({
+      pacienteId: selectedPacienteForAdd.id,
+      date: addAppointmentDate
     });
   };
 
@@ -368,9 +423,18 @@ const Agenda = () => {
             Visualize quem foi atendido e próximos agendamentos
           </p>
         </div>
-        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-          <Calendar className="h-4 w-4" />
-          <span>{format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</span>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+            <Calendar className="h-4 w-4" />
+            <span>{format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</span>
+          </div>
+          <Button 
+            onClick={handleAddAppointment}
+            data-testid="button-add-appointment"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Agendamento
+          </Button>
         </div>
       </div>
 
@@ -862,6 +926,117 @@ const Agenda = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Diálogo de Novo Agendamento */}
+      <Dialog open={addAppointmentDialogOpen} onOpenChange={setAddAppointmentDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Novo Agendamento</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Selecionar Paciente</label>
+              <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openCombobox}
+                    className="w-full justify-between"
+                    data-testid="button-select-patient"
+                  >
+                    {selectedPacienteForAdd
+                      ? selectedPacienteForAdd.nome
+                      : "Buscar paciente..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[400px] p-0">
+                  <Command>
+                    <CommandInput placeholder="Buscar paciente..." />
+                    <CommandList>
+                      <CommandEmpty>Nenhum paciente encontrado.</CommandEmpty>
+                      <CommandGroup>
+                        {pacientesList.map((paciente) => (
+                          <CommandItem
+                            key={paciente.id}
+                            value={`${paciente.nome} ${paciente.cnsOuCpf || ''}`}
+                            onSelect={() => {
+                              setSelectedPacienteForAdd(paciente);
+                              setOpenCombobox(false);
+                            }}
+                            data-testid={`patient-option-${paciente.id}`}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedPacienteForAdd?.id === paciente.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <div className="flex flex-col">
+                              <span>{paciente.nome}</span>
+                              {paciente.cnsOuCpf && (
+                                <span className="text-xs text-muted-foreground">
+                                  {paciente.cnsOuCpf}
+                                </span>
+                              )}
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {selectedPacienteForAdd && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Selecionar Data</label>
+                  <div className="flex justify-center">
+                    <DayPicker
+                      mode="single"
+                      selected={addAppointmentDate}
+                      onSelect={setAddAppointmentDate}
+                      locale={ptBR}
+                      className="border rounded-md p-3"
+                      disabled={{ before: new Date() }}
+                    />
+                  </div>
+                </div>
+                
+                {!addAppointmentDate && (
+                  <p className="text-sm text-amber-600 text-center">
+                    Por favor, selecione uma data para continuar
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAddAppointmentDialogOpen(false);
+                setSelectedPacienteForAdd(null);
+                setAddAppointmentDate(undefined);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={confirmAddAppointment}
+              disabled={!selectedPacienteForAdd || !addAppointmentDate || addAppointmentMutation.isPending}
+              data-testid="button-confirm-add-appointment"
+            >
+              {addAppointmentMutation.isPending ? "Criando..." : "Confirmar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Diálogo de Remarcar Agendamento */}
       <Dialog open={rescheduleDialogOpen} onOpenChange={setRescheduleDialogOpen}>
