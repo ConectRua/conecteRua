@@ -18,7 +18,19 @@ The backend is an Express.js server featuring a production-ready authentication 
 A secure authentication system built with `passport.js` local strategy is implemented. It includes PostgreSQL session persistence, enforces email verification in production, prevents session fixation attacks through session regeneration, and uses secure cookie configurations (`httpOnly`, `sameSite`, `secure`). All authentication events are logged in a structured JSON format.
 
 ## Map Integration
-The system integrates the Google Maps JavaScript API for interactive mapping. It supports custom markers for different entity types (UBS, ONGs, patients, social equipment), layer toggling, and an edit mode for marker positioning with drag-and-drop functionality. Geolocation services are provided via Capacitor for mobile support. An advanced geocoding system uses Google Places API as the primary source, with intelligent fallbacks to Google Geocoding API and ViaCEP, featuring automatic retries, address enrichment, and multi-layer filtering for high precision, especially for Brazilian addresses.
+The system integrates the Google Maps JavaScript API for interactive mapping. It supports custom markers for different entity types (UBS, ONGs, patients, social equipment), layer toggling, and an edit mode for marker positioning with drag-and-drop functionality. 
+
+### Geolocation Services
+Geolocation is provided through a unified helper system (`geolocation-helper.ts`) that:
+- Detects iOS/iPhone devices using user agent analysis
+- Provides platform-specific error messages and instructions
+- Uses Capacitor Geolocation API with browser fallback
+- Offers clear, actionable guidance for users when location permissions are denied
+- Includes step-by-step instructions for enabling location services on iOS devices
+- Integrates with toast notifications for user feedback
+
+### Geocoding System
+An advanced geocoding system uses Google Places API as the primary source, with intelligent fallbacks to Google Geocoding API and ViaCEP, featuring automatic retries, address enrichment, and multi-layer filtering for high precision, especially for Brazilian addresses.
 
 ## Data Management and Import
 Data import capabilities include intelligent Google Places integration for Excel spreadsheets, automatically matching and enriching establishment data with phone numbers, business hours, and precise coordinates. It features a multi-criteria scoring algorithm for smart matching, confidence indicators, and a comprehensive validation system that detects duplicates and verifies data against Google Places before import. Bulk operations, including create, update, and delete for all entity types (UBS, ONGs, pacientes, equipamentos sociais), are supported with robust validation and error handling.
