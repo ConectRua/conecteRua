@@ -3,13 +3,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, User, MapPin, Phone, ChevronLeft, ChevronRight, Route, Navigation, ExternalLink } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { DayPicker } from 'react-day-picker';
+import { Calendar, Clock, User, MapPin, Phone, ChevronLeft, ChevronRight, Route, Navigation, ExternalLink, MoreVertical, Trash2, CalendarClock } from 'lucide-react';
 import { useApiData } from '@/hooks/useApiData';
 import { format, startOfMonth, startOfWeek, eachDayOfInterval, isSameDay, addMonths, subMonths, isSameMonth, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 type EventType = {
   paciente: any;
@@ -19,9 +23,13 @@ type EventType = {
 
 const Agenda = () => {
   const { pacientesList, loading } = useApiData();
+  const queryClient = useQueryClient();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | null>(null);
   const [optimizedRoute, setOptimizedRoute] = useState<any>(null);
+  const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false);
+  const [selectedPacienteForReschedule, setSelectedPacienteForReschedule] = useState<any>(null);
+  const [newAppointmentDate, setNewAppointmentDate] = useState<Date | undefined>(undefined);
   const { toast } = useToast();
 
   // Filtrar pacientes que têm datas de atendimento
@@ -139,6 +147,95 @@ const Agenda = () => {
   useEffect(() => {
     setOptimizedRoute(null);
   }, [selectedCalendarDate]);
+
+  // Mutation para remover da agenda (limpar proximoAtendimento)
+  const removeFromAgendaMutation = useMutation({
+    mutationFn: async (pacienteId: number) => {
+      const response = await fetch(`/api/pacientes/${pacienteId}/agendamento`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ proximoAtendimento: null })
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao remover agendamento');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/pacientes'] });
+      toast({
+        title: "Removido da agenda",
+        description: "O agendamento foi removido com sucesso."
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao remover",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Mutation para remarcar agendamento
+  const rescheduleMutation = useMutation({
+    mutationFn: async ({ pacienteId, newDate }: { pacienteId: number; newDate: Date }) => {
+      const response = await fetch(`/api/pacientes/${pacienteId}/agendamento`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ proximoAtendimento: newDate.toISOString() })
+      });
+
+      if (!response.ok) {
+        throw new Error('Erro ao remarcar agendamento');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/pacientes'] });
+      toast({
+        title: "Agendamento remarcado",
+        description: "A data foi atualizada com sucesso."
+      });
+      setRescheduleDialogOpen(false);
+      setSelectedPacienteForReschedule(null);
+      setNewAppointmentDate(undefined);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao remarcar",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Funções auxiliares
+  const handleRemoveFromAgenda = (paciente: any) => {
+    if (confirm(`Deseja remover ${paciente.nome} da agenda?`)) {
+      removeFromAgendaMutation.mutate(paciente.id);
+    }
+  };
+
+  const handleReschedule = (paciente: any) => {
+    setSelectedPacienteForReschedule(paciente);
+    setNewAppointmentDate(paciente.proximoAtendimento ? new Date(paciente.proximoAtendimento) : undefined);
+    setRescheduleDialogOpen(true);
+  };
+
+  const confirmReschedule = () => {
+    if (!selectedPacienteForReschedule || !newAppointmentDate) return;
+    
+    rescheduleMutation.mutate({
+      pacienteId: selectedPacienteForReschedule.id,
+      newDate: newAppointmentDate
+    });
+  };
 
   // Função para gerar URL do Google Maps com a rota otimizada
   const generateGoogleMapsUrl = () => {
@@ -589,16 +686,54 @@ const Agenda = () => {
                       {selectedDateEvents.map((event, index) => (
                         <div
                           key={index}
-                          className="p-3 rounded-lg border bg-muted/30"
+                          className="p-3 rounded-lg border bg-muted/30 relative"
                           data-testid={`event-${event.type}-${event.paciente.id}`}
                         >
-                          <div className="flex items-center space-x-2 mb-2">
-                            <div className={cn(
-                              "w-3 h-3 rounded-full",
-                              event.type === 'proximo' ? "bg-blue-500" : "bg-green-500"
-                            )} />
-                            <span className="font-medium text-sm">{event.paciente.nome}</span>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              <div className={cn(
+                                "w-3 h-3 rounded-full",
+                                event.type === 'proximo' ? "bg-blue-500" : "bg-green-500"
+                              )} />
+                              <span className="font-medium text-sm">{event.paciente.nome}</span>
+                            </div>
+                            
+                            {/* Menu de ações - apenas para próximos atendimentos */}
+                            {event.type === 'proximo' && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0"
+                                    data-testid={`menu-${event.paciente.id}`}
+                                  >
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => handleReschedule(event.paciente)}
+                                    disabled={rescheduleMutation.isPending || removeFromAgendaMutation.isPending}
+                                    data-testid={`reschedule-${event.paciente.id}`}
+                                  >
+                                    <CalendarClock className="h-4 w-4 mr-2" />
+                                    Remarcar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleRemoveFromAgenda(event.paciente)}
+                                    disabled={rescheduleMutation.isPending || removeFromAgendaMutation.isPending}
+                                    className="text-destructive"
+                                    data-testid={`remove-${event.paciente.id}`}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    {removeFromAgendaMutation.isPending ? "Removendo..." : "Remover da Agenda"}
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
                           </div>
+                          
                           <div className="text-xs text-muted-foreground space-y-1">
                             <div className="flex items-center space-x-2">
                               {event.type === 'proximo' ? (
@@ -727,6 +862,54 @@ const Agenda = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Diálogo de Remarcar Agendamento */}
+      <Dialog open={rescheduleDialogOpen} onOpenChange={setRescheduleDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remarcar Agendamento</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Selecione a nova data para o agendamento de <strong>{selectedPacienteForReschedule?.nome}</strong>
+            </p>
+            
+            <div className="flex justify-center">
+              <DayPicker
+                mode="single"
+                selected={newAppointmentDate}
+                onSelect={setNewAppointmentDate}
+                locale={ptBR}
+                className="border rounded-md p-3"
+                disabled={{ before: new Date() }}
+              />
+            </div>
+            
+            {!newAppointmentDate && (
+              <p className="text-sm text-amber-600 text-center">
+                Por favor, selecione uma data para continuar
+              </p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRescheduleDialogOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={confirmReschedule}
+              disabled={!newAppointmentDate || rescheduleMutation.isPending}
+              data-testid="button-confirm-reschedule"
+            >
+              {rescheduleMutation.isPending ? "Remarcando..." : "Confirmar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

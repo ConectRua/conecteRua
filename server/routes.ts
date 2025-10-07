@@ -2352,6 +2352,56 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: "Erro interno do servidor" });
     }
   });
+
+  // Endpoint para atualizar agendamento (próximo atendimento)
+  app.patch("/api/pacientes/:id/agendamento", auditMiddleware('UPDATE', 'pacientes'), async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID inválido" });
+      }
+      
+      const { proximoAtendimento } = req.body;
+      
+      // Validar data (pode ser null para remover)
+      const updateData: any = {};
+      if (proximoAtendimento === null) {
+        updateData.proximoAtendimento = null;
+      } else if (proximoAtendimento) {
+        const date = new Date(proximoAtendimento);
+        if (isNaN(date.getTime())) {
+          return res.status(400).json({ error: "Data inválida" });
+        }
+        updateData.proximoAtendimento = date;
+      }
+      
+      const oldPaciente = await storage.getPaciente(id);
+      const paciente = await storage.updatePaciente(id, updateData);
+      
+      if (!paciente) {
+        return res.status(404).json({ error: "Paciente não encontrado" });
+      }
+
+      res.locals.oldValues = oldPaciente;
+      res.locals.newValues = paciente;
+      
+      res.json({
+        success: true,
+        paciente: {
+          id: paciente.id,
+          nome: paciente.nome,
+          proximoAtendimento: paciente.proximoAtendimento
+        }
+      });
+    } catch (error) {
+      console.error("Error updating patient appointment:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
   
   app.delete("/api/pacientes/:id", auditMiddleware('DELETE', 'pacientes'), async (req, res) => {
     try {
