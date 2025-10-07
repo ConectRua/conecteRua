@@ -1316,7 +1316,7 @@ export function registerRoutes(app: Express): Server {
                     (pacienteData as any).precisaoGeocode = geocodeResult.precisao || 'APPROXIMATE';
                     
                     // Se conseguiu geocodificar e não tinha CEP, tentar extrair do endereço geocodificado
-                    if (!pacienteData.cep && geocodeResult.address) {
+                    if (!pacienteData.cep && geocodeResult.address && typeof geocodeResult.address === 'string') {
                       const cepMatch = geocodeResult.address.match(/\d{5}-?\d{3}/);
                       if (cepMatch) {
                         pacienteData.cep = cepMatch[0];
@@ -2321,11 +2321,14 @@ export function registerRoutes(app: Express): Server {
         return res.status(401).json({ error: "Não autenticado" });
       }
       
+      console.log('[DELETE-BATCH] Dados recebidos:', JSON.stringify(req.body));
+      
       const validation = z.object({
         ids: z.array(z.number()).min(1).max(100)
       }).safeParse(req.body);
       
       if (!validation.success) {
+        console.error('[DELETE-BATCH] Erro de validação:', validation.error.issues);
         return res.status(400).json({ 
           error: "Dados inválidos", 
           details: validation.error.issues 
