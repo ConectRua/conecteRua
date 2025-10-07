@@ -15,6 +15,7 @@ import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { getCurrentLocation } from '@/lib/geolocation-helper';
 
 type EventType = {
   paciente: any;
@@ -109,28 +110,50 @@ const Agenda = () => {
   // Mutation para calcular rota otimizada
   const optimizeRouteMutation = useMutation({
     mutationFn: async () => {
-      if (proximosAtendimentosComCoordenadas.length < 2) {
-        throw new Error('É necessário pelo menos 2 pacientes para otimizar rota');
+      if (proximosAtendimentosComCoordenadas.length < 1) {
+        throw new Error('É necessário pelo menos 1 paciente agendado para otimizar rota');
       }
 
-      // Usar primeiro paciente como origem
-      const origin = proximosAtendimentosComCoordenadas[0];
-      // Todos os outros pacientes são destinos
-      const destinations = proximosAtendimentosComCoordenadas.slice(1);
+      // Capturar localização atual do usuário
+      return new Promise((resolve, reject) => {
+        getCurrentLocation({
+          onSuccess: async (location) => {
+            try {
+              // Usar localização atual como origem
+              const origin = {
+                id: 0, // ID especial para localização atual
+                nome: 'Sua Localização',
+                latitude: parseFloat(location.latitude),
+                longitude: parseFloat(location.longitude),
+                endereco: 'Localização Atual'
+              };
+              
+              // Todos os pacientes agendados são destinos
+              const destinations = proximosAtendimentosComCoordenadas;
 
-      const response = await fetch('/api/routes/optimize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ origin, destinations })
+              const response = await fetch('/api/routes/optimize', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ origin, destinations })
+              });
+
+              if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erro ao calcular rota');
+              }
+
+              const result = await response.json();
+              resolve(result);
+            } catch (error) {
+              reject(error);
+            }
+          },
+          onError: (error) => {
+            reject(new Error('Não foi possível obter sua localização'));
+          }
+        });
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Erro ao calcular rota');
-      }
-
-      return response.json();
     },
     onSuccess: (data) => {
       setOptimizedRoute(data);
@@ -303,20 +326,23 @@ const Agenda = () => {
   const generateGoogleMapsUrl = () => {
     if (!optimizedRoute || proximosAtendimentosComCoordenadas.length === 0) return '';
 
-    // Origem: primeiro paciente
-    const origin = proximosAtendimentosComCoordenadas[0];
-    const originCoords = `${origin.latitude},${origin.longitude}`;
+    // Origem: localização atual do usuário (armazenada na rota otimizada)
+    const originCoords = optimizedRoute.userLocation 
+      ? `${optimizedRoute.userLocation.latitude},${optimizedRoute.userLocation.longitude}`
+      : '';
+
+    if (!originCoords) return '';
 
     // Destino: último paciente na ordem otimizada
     const lastIndex = optimizedRoute.optimizedOrder[optimizedRoute.optimizedOrder.length - 1];
-    const destination = proximosAtendimentosComCoordenadas[lastIndex + 1];
+    const destination = proximosAtendimentosComCoordenadas[lastIndex];
     const destinationCoords = `${destination.latitude},${destination.longitude}`;
 
     // Waypoints: pacientes intermediários na ordem otimizada
     const waypoints = optimizedRoute.optimizedOrder
       .slice(0, -1) // Remove o último (que já é o destino)
       .map((index: number) => {
-        const paciente = proximosAtendimentosComCoordenadas[index + 1];
+        const paciente = proximosAtendimentosComCoordenadas[index];
         return `${paciente.latitude},${paciente.longitude}`;
       })
       .join('|');
@@ -835,7 +861,7 @@ const Agenda = () => {
               </Card>
 
               {/* Seção de Rota Otimizada - Nova funcionalidade */}
-              {selectedCalendarDate && proximosAtendimentosComCoordenadas.length > 1 && (
+              {selectedCalendarDate && proximosAtendimentosComCoordenadas.length >= 1 && (
                 <Card className="mt-4 h-fit">
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center space-x-2">
@@ -883,14 +909,30 @@ const Agenda = () => {
 
                         <div className="space-y-2">
                           <p className="text-xs font-medium text-muted-foreground">Ordem sugerida de visitas:</p>
+                          
+                          {/* Ponto de partida: Sua Localização */}
+                          <div
+                            className="flex items-center space-x-2 p-2 rounded-lg bg-green-500/20 border border-green-500/30"
+                            data-testid="route-step-start"
+                          >
+                            <div className="flex items-center justify-center w-6 h-6 rounded-full bg-green-600 text-white text-xs font-medium">
+                              📍
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-green-700 dark:text-green-400">Sua Localização</p>
+                              <p className="text-xs text-muted-foreground">Ponto de partida</p>
+                            </div>
+                          </div>
+
+                          {/* Pacientes na ordem otimizada */}
                           {optimizedRoute.optimizedOrder.map((index: number, position: number) => {
-                            const paciente = proximosAtendimentosComCoordenadas[index + 1]; // +1 porque origin não está na ordem
+                            const paciente = proximosAtendimentosComCoordenadas[index];
                             const leg = optimizedRoute.legs[position];
                             return (
                               <div
                                 key={index}
                                 className="flex items-center space-x-2 p-2 rounded-lg bg-muted/30"
-                                data-testid={`route-step-${position}`}
+                                data-testid={`route-step-${position + 1}`}
                               >
                                 <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-medium">
                                   {position + 1}
