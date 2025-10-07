@@ -1,13 +1,15 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, User, MapPin, Phone, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Clock, User, MapPin, Phone, ChevronLeft, ChevronRight, Route, Navigation } from 'lucide-react';
 import { useApiData } from '@/hooks/useApiData';
 import { format, startOfMonth, startOfWeek, eachDayOfInterval, isSameDay, addMonths, subMonths, isSameMonth, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import { useMutation } from '@tanstack/react-query';
 
 type EventType = {
   paciente: any;
@@ -19,6 +21,8 @@ const Agenda = () => {
   const { pacientesList, loading } = useApiData();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | null>(null);
+  const [optimizedRoute, setOptimizedRoute] = useState<any>(null);
+  const { toast } = useToast();
 
   // Filtrar pacientes que têm datas de atendimento
   const pacientesComAtendimento = pacientesList.filter(paciente => 
@@ -74,6 +78,67 @@ const Agenda = () => {
   const selectedDateEvents = selectedCalendarDate 
     ? eventsByDate[format(selectedCalendarDate, 'yyyy-MM-dd')] || []
     : [];
+
+  // Filtrar apenas próximos atendimentos (visitas agendadas) com coordenadas válidas
+  const proximosAtendimentosComCoordenadas = useMemo(() => {
+    return selectedDateEvents
+      .filter(event => event.type === 'proximo')
+      .filter(event => event.paciente.latitude && event.paciente.longitude)
+      .map(event => ({
+        id: event.paciente.id,
+        nome: event.paciente.nome,
+        latitude: event.paciente.latitude,
+        longitude: event.paciente.longitude,
+        endereco: event.paciente.endereco
+      }));
+  }, [selectedDateEvents]);
+
+  // Mutation para calcular rota otimizada
+  const optimizeRouteMutation = useMutation({
+    mutationFn: async () => {
+      if (proximosAtendimentosComCoordenadas.length < 2) {
+        throw new Error('É necessário pelo menos 2 pacientes para otimizar rota');
+      }
+
+      // Usar primeiro paciente como origem
+      const origin = proximosAtendimentosComCoordenadas[0];
+      // Todos os outros pacientes são destinos
+      const destinations = proximosAtendimentosComCoordenadas.slice(1);
+
+      const response = await fetch('/api/routes/optimize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ origin, destinations })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Erro ao calcular rota');
+      }
+
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setOptimizedRoute(data);
+      toast({
+        title: "Rota otimizada calculada!",
+        description: `Distância total: ${data.totalDistanceText}, Tempo: ${data.totalDurationText}`
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao calcular rota",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Limpar rota otimizada quando a data selecionada mudar
+  useEffect(() => {
+    setOptimizedRoute(null);
+  }, [selectedCalendarDate]);
 
   // Navegar entre meses
   const goToPreviousMonth = () => {
@@ -525,6 +590,92 @@ const Agenda = () => {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Seção de Rota Otimizada - Nova funcionalidade */}
+              {selectedCalendarDate && proximosAtendimentosComCoordenadas.length > 1 && (
+                <Card className="mt-4 h-fit">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center space-x-2">
+                      <Route className="h-5 w-5" />
+                      <span>Rota Otimizada</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {!optimizedRoute ? (
+                      <div className="text-center py-4">
+                        <Button
+                          onClick={() => optimizeRouteMutation.mutate()}
+                          disabled={optimizeRouteMutation.isPending}
+                          className="w-full"
+                          data-testid="button-optimize-route"
+                        >
+                          {optimizeRouteMutation.isPending ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                              Calculando...
+                            </>
+                          ) : (
+                            <>
+                              <Navigation className="h-4 w-4 mr-2" />
+                              Calcular Melhor Rota
+                            </>
+                          )}
+                        </Button>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {proximosAtendimentosComCoordenadas.length} visitas agendadas
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="bg-muted/50 p-3 rounded-lg">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground">Distância total:</span>
+                            <span className="font-semibold">{optimizedRoute.totalDistanceText}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-sm mt-1">
+                            <span className="text-muted-foreground">Tempo estimado:</span>
+                            <span className="font-semibold">{optimizedRoute.totalDurationText}</span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-muted-foreground">Ordem sugerida de visitas:</p>
+                          {optimizedRoute.optimizedOrder.map((index: number, position: number) => {
+                            const paciente = proximosAtendimentosComCoordenadas[index + 1]; // +1 porque origin não está na ordem
+                            const leg = optimizedRoute.legs[position];
+                            return (
+                              <div
+                                key={index}
+                                className="flex items-center space-x-2 p-2 rounded-lg bg-muted/30"
+                                data-testid={`route-step-${position}`}
+                              >
+                                <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-medium">
+                                  {position + 1}
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium">{paciente?.nome || 'Paciente'}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {leg?.distanceText} • {leg?.durationText}
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setOptimizedRoute(null)}
+                          className="w-full mt-2"
+                        >
+                          Limpar Rota
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         </TabsContent>

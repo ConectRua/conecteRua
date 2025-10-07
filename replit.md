@@ -118,6 +118,42 @@ PDF report generation system for territorial activities with precise formatting:
 - Clean, professional filename format: `Relatorio-Georreferenciado-{region}-{start-date}-a-{end-date}.pdf`
 - PDF metadata added to prevent antivirus false positives
 
+## Route Optimization (Otimização de Rotas)
+Intelligent route optimization system for daily scheduled patient visits using Google Directions API:
+
+**Core Features:**
+- Automatic route calculation for scheduled appointments on selected calendar day
+- Waypoint optimization to minimize travel distance and time
+- Visual display of optimized visit order with distances between stops
+- Total distance and estimated travel time calculations
+- Smart filtering to include only patients with valid GPS coordinates
+
+**User Workflow:**
+1. User selects a day in the Agenda calendar with multiple scheduled appointments
+2. System displays "Rota Otimizada" section if 2+ patients have valid coordinates
+3. User clicks "Calcular Melhor Rota" button
+4. Backend calls Google Directions API with waypoint optimization enabled
+5. System displays optimized visit order with numbered sequence
+6. Each visit shows patient name, distance from previous stop, and estimated time
+7. Summary shows total route distance and duration
+8. Route resets automatically when user changes calendar date
+
+**Technical Implementation:**
+- Backend service: `GoogleDirectionsService` at `server/services/googleDirectionsService.ts`
+- API endpoint: POST `/api/routes/optimize` with origin/destinations payload
+- Uses Google Directions API with `optimizeWaypoints: true` parameter
+- Frontend component integrated in `src/pages/Agenda.tsx` below daily events
+- Mutation-based approach using `@tanstack/react-query` with loading states
+- Validates minimum 2 patients with coordinates before optimization
+- Extracts first patient as origin, remaining patients as destinations
+- Parses API response to extract optimized order, distances, and durations
+- Toast notifications for success/error feedback
+
+**API Usage:**
+- Free tier: 40,000 requests/month (Google Directions API)
+- Cost-effective for typical usage patterns
+- Results cached client-side until date changes
+
 ## Mobile Support
 Capacitor integration enables cross-platform mobile app deployment, leveraging native device features like geolocation. The application is designed to be responsive across desktop and mobile devices.
 
@@ -134,7 +170,9 @@ Capacitor integration enables cross-platform mobile app deployment, leveraging n
 
 ## Mapping Services
 - **Google Maps JavaScript API**: Interactive mapping
+- **Google Directions API**: Route optimization and waypoint calculation
 - **@googlemaps/js-api-loader**: API loading
+- **@googlemaps/google-maps-services-js**: Server-side Google Maps APIs client
 
 ## Authentication
 - **Passport.js**: User authentication strategies

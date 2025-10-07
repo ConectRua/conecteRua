@@ -7,6 +7,7 @@ import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { createGeocodingService } from "./services/geocoding";
 import { createGooglePlacesService } from "./services/googlePlacesService";
+import { createGoogleDirectionsService } from "./services/googleDirectionsService";
 import { insertUBSSchema, insertONGSchema, insertPacienteSchema, insertEquipamentoSocialSchema, insertOrientacaoEncaminhamentoSchema, insertAtividadeTerritorialSchema, ubs, ongs, equipamentosSociais } from "../shared/schema";
 import { z } from "zod";
 import multer from "multer";
@@ -341,6 +342,64 @@ export function registerRoutes(app: Express): Server {
       });
     } catch (error) {
       console.error("Erro no reverse geocoding:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  // Otimizar rota entre múltiplos pontos
+  app.post("/api/routes/optimize", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+
+      const optimizeRouteSchema = z.object({
+        origin: z.object({
+          latitude: z.number(),
+          longitude: z.number(),
+          id: z.number().optional(),
+          nome: z.string().optional()
+        }),
+        destinations: z.array(z.object({
+          latitude: z.number(),
+          longitude: z.number(),
+          id: z.number().optional(),
+          nome: z.string().optional()
+        })).min(1, "Pelo menos um destino é necessário")
+      });
+
+      const validation = optimizeRouteSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ error: "Dados inválidos", details: validation.error.issues });
+      }
+
+      const { origin, destinations } = validation.data;
+      const directionsService = createGoogleDirectionsService();
+
+      if (!directionsService) {
+        return res.status(500).json({ error: "Serviço de rotas não disponível" });
+      }
+
+      const result = await directionsService.optimizeRoute(origin, destinations);
+
+      if (result.status === 'error') {
+        return res.status(400).json({ 
+          error: result.errorMessage || "Erro ao calcular rota otimizada" 
+        });
+      }
+
+      res.json({
+        success: true,
+        optimizedOrder: result.optimizedOrder,
+        totalDistance: result.totalDistance,
+        totalDuration: result.totalDuration,
+        totalDistanceText: `${(result.totalDistance / 1000).toFixed(1)} km`,
+        totalDurationText: `${Math.round(result.totalDuration / 60)} min`,
+        legs: result.legs
+      });
+
+    } catch (error) {
+      console.error("Erro ao otimizar rota:", error);
       res.status(500).json({ error: "Erro interno do servidor" });
     }
   });
