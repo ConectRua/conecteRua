@@ -94,6 +94,16 @@ const Relatorios = () => {
 
     try {
       const doc = new jsPDF();
+      
+      // Adicionar metadados ao PDF para evitar falsos positivos de antivírus
+      doc.setProperties({
+        title: 'Mapa Georreferenciado - Equipe ECR Samambaia',
+        subject: `Relatório de Atividades Territoriais - ${regiao}`,
+        author: 'Equipe ECR Samambaia',
+        creator: 'Sistema de Georeferenciamento',
+        keywords: 'georeferenciamento, atividades territoriais, saúde, assistência social'
+      });
+      
       const pageWidth = doc.internal.pageSize.getWidth();
       let yPosition = 20;
 
@@ -168,8 +178,14 @@ const Relatorios = () => {
         adicionarSecaoRegiao(regiao, atividadesFiltradas);
       }
 
-      // Salvar PDF
-      const nomeArquivo = `mapa_georreferenciado_${regiao.toLowerCase().replace(/\s/g, '_')}_${format(dataInicial, 'dd-MM-yyyy')}_${format(dataFinal, 'dd-MM-yyyy')}.pdf`;
+      // Salvar PDF com nome limpo e descritivo
+      const regiaoFormatada = regiao.toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, '-');
+      const periodoInicio = format(dataInicial, 'dd-MM-yyyy');
+      const periodoFim = format(dataFinal, 'dd-MM-yyyy');
+      const nomeArquivo = `Relatorio-Georreferenciado-${regiaoFormatada}-${periodoInicio}-a-${periodoFim}.pdf`;
       doc.save(nomeArquivo);
 
       toast({
