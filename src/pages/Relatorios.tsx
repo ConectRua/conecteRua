@@ -162,7 +162,8 @@ const Relatorios = () => {
 
       // Se "Todas as Regiões", criar seções separadas
       if (regiao === 'Todas as Regiões') {
-        const regioesUnicas = [...new Set(atividadesFiltradas.map(a => a.regiao).filter(Boolean))];
+        // Agrupar por região, incluindo atividades sem região
+        const regioesUnicas = [...new Set(atividadesFiltradas.map(a => a.regiao || 'Sem Região Definida'))];
         
         regioesUnicas.forEach((regiaoNome, index) => {
           if (index > 0) {
@@ -170,8 +171,11 @@ const Relatorios = () => {
             yPosition = 20;
           }
           
-          const atividadesRegiao = atividadesFiltradas.filter(a => a.regiao === regiaoNome);
-          adicionarSecaoRegiao(regiaoNome || 'Sem Região', atividadesRegiao);
+          // Filtrar atividades desta região (incluindo as sem região)
+          const atividadesRegiao = atividadesFiltradas.filter(a => 
+            (a.regiao || 'Sem Região Definida') === regiaoNome
+          );
+          adicionarSecaoRegiao(regiaoNome, atividadesRegiao);
         });
       } else {
         // Uma única região

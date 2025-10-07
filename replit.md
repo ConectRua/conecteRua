@@ -108,11 +108,13 @@ PDF report generation system for territorial activities with precise formatting:
 
 **Technical Implementation:**
 - Frontend page at `/relatorios` with date pickers and region selector
-- Uses jspdf and jspdf-autotable for PDF generation
+- Uses jspdf for PDF generation with complete metadata (title, author, creator, keywords)
 - Filters activities by date range (inclusive of last day using 23:59:59.999 timestamp)
 - Filters by region when specific region selected
-- Groups activities by region when "Todas" selected
+- Groups activities by region when "Todas" selected, including activities without region as "Sem Região Definida"
 - Real-time preview of filtered activities count
+- Clean, professional filename format: `Relatorio-Georreferenciado-{region}-{start-date}-a-{end-date}.pdf`
+- PDF metadata added to prevent antivirus false positives
 
 ## Mobile Support
 Capacitor integration enables cross-platform mobile app deployment, leveraging native device features like geolocation. The application is designed to be responsive across desktop and mobile devices.
