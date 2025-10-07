@@ -100,7 +100,6 @@ exposeLocalhost = true
 [[ports]]
 localPort = 44047
 externalPort = 6800
-exposeLocalhost = true
 
 [[ports]]
 localPort = 44665
