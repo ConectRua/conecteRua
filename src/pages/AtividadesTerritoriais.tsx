@@ -98,6 +98,34 @@ export default function AtividadesTerritoriais() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: any }) => {
+      const response = await fetch(`/api/atividades-territoriais/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Erro ao atualizar atividade");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/atividades-territoriais"] });
+      toast({ title: "Atividade territorial atualizada com sucesso" });
+      setIsDialogOpen(false);
+      setEditingId(null);
+      setLocationData(null);
+      form.reset();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erro ao atualizar atividade",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
       const response = await fetch(`/api/atividades-territoriais/${id}`, {
@@ -169,7 +197,7 @@ export default function AtividadesTerritoriais() {
   };
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (!locationData) {
+    if (!locationData && !editingId) {
       toast({
         title: "Localização não capturada",
         description: "Por favor, use o botão 'Usar GPS' para capturar a localização",
@@ -178,12 +206,42 @@ export default function AtividadesTerritoriais() {
       return;
     }
     
-    createMutation.mutate({
-      ...values,
-      latitude: locationData.latitude,
-      longitude: locationData.longitude,
-      dataAtividade: new Date(),
+    if (editingId) {
+      updateMutation.mutate({
+        id: editingId,
+        data: {
+          ...values,
+          ...(locationData && {
+            latitude: locationData.latitude,
+            longitude: locationData.longitude,
+          }),
+        },
+      });
+    } else {
+      createMutation.mutate({
+        ...values,
+        latitude: locationData!.latitude,
+        longitude: locationData!.longitude,
+        dataAtividade: new Date(),
+      });
+    }
+  };
+
+  const handleEdit = (atividade: AtividadeTerritorial) => {
+    setEditingId(atividade.id);
+    form.reset({
+      titulo: atividade.titulo,
+      quantidadePessoas: atividade.quantidadePessoas,
+      descricaoLocal: atividade.descricaoLocal,
+      endereco: atividade.endereco || "",
+      cep: atividade.cep || "",
+      regiao: atividade.regiao || undefined,
     });
+    setLocationData({
+      latitude: atividade.latitude,
+      longitude: atividade.longitude,
+    });
+    setIsDialogOpen(true);
   };
 
   const handleDelete = (id: number) => {
@@ -203,6 +261,7 @@ export default function AtividadesTerritoriais() {
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
           setIsDialogOpen(open);
           if (!open) {
+            setEditingId(null);
             setLocationData(null);
             form.reset();
           }
@@ -215,7 +274,7 @@ export default function AtividadesTerritoriais() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Registrar Atividade Territorial</DialogTitle>
+              <DialogTitle>{editingId ? "Editar Atividade Territorial" : "Registrar Atividade Territorial"}</DialogTitle>
             </DialogHeader>
             
             <Form {...form}>
@@ -350,10 +409,13 @@ export default function AtividadesTerritoriais() {
                 <Button 
                   type="submit" 
                   className="w-full" 
-                  disabled={createMutation.isPending || !locationData}
+                  disabled={(editingId ? updateMutation.isPending : createMutation.isPending || !locationData)}
                   data-testid="button-submit"
                 >
-                  {createMutation.isPending ? "Registrando..." : "Registrar Atividade"}
+                  {editingId 
+                    ? (updateMutation.isPending ? "Atualizando..." : "Atualizar Atividade")
+                    : (createMutation.isPending ? "Registrando..." : "Registrar Atividade")
+                  }
                 </Button>
               </form>
             </Form>
@@ -378,14 +440,24 @@ export default function AtividadesTerritoriais() {
               <CardHeader>
                 <CardTitle className="text-lg flex items-start justify-between">
                   <span>{atividade.titulo}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDelete(atividade.id)}
-                    data-testid={`button-delete-${atividade.id}`}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEdit(atividade)}
+                      data-testid={`button-edit-${atividade.id}`}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(atividade.id)}
+                      data-testid={`button-delete-${atividade.id}`}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
