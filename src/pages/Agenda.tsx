@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, User, MapPin, Phone, ChevronLeft, ChevronRight, Route, Navigation } from 'lucide-react';
+import { Calendar, Clock, User, MapPin, Phone, ChevronLeft, ChevronRight, Route, Navigation, ExternalLink } from 'lucide-react';
 import { useApiData } from '@/hooks/useApiData';
 import { format, startOfMonth, startOfWeek, eachDayOfInterval, isSameDay, addMonths, subMonths, isSameMonth, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -139,6 +139,43 @@ const Agenda = () => {
   useEffect(() => {
     setOptimizedRoute(null);
   }, [selectedCalendarDate]);
+
+  // Função para gerar URL do Google Maps com a rota otimizada
+  const generateGoogleMapsUrl = () => {
+    if (!optimizedRoute || proximosAtendimentosComCoordenadas.length === 0) return '';
+
+    // Origem: primeiro paciente
+    const origin = proximosAtendimentosComCoordenadas[0];
+    const originCoords = `${origin.latitude},${origin.longitude}`;
+
+    // Destino: último paciente na ordem otimizada
+    const lastIndex = optimizedRoute.optimizedOrder[optimizedRoute.optimizedOrder.length - 1];
+    const destination = proximosAtendimentosComCoordenadas[lastIndex + 1];
+    const destinationCoords = `${destination.latitude},${destination.longitude}`;
+
+    // Waypoints: pacientes intermediários na ordem otimizada
+    const waypoints = optimizedRoute.optimizedOrder
+      .slice(0, -1) // Remove o último (que já é o destino)
+      .map((index: number) => {
+        const paciente = proximosAtendimentosComCoordenadas[index + 1];
+        return `${paciente.latitude},${paciente.longitude}`;
+      })
+      .join('|');
+
+    // Montar URL do Google Maps
+    const baseUrl = 'https://www.google.com/maps/dir/?api=1';
+    const params = new URLSearchParams({
+      origin: originCoords,
+      destination: destinationCoords,
+      travelmode: 'driving'
+    });
+
+    if (waypoints) {
+      params.append('waypoints', waypoints);
+    }
+
+    return `${baseUrl}&${params.toString()}`;
+  };
 
   // Navegar entre meses
   const goToPreviousMonth = () => {
@@ -663,14 +700,24 @@ const Agenda = () => {
                           })}
                         </div>
 
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setOptimizedRoute(null)}
-                          className="w-full mt-2"
-                        >
-                          Limpar Rota
-                        </Button>
+                        <div className="flex gap-2 mt-2">
+                          <Button
+                            onClick={() => window.open(generateGoogleMapsUrl(), '_blank')}
+                            className="flex-1"
+                            data-testid="button-open-google-maps"
+                          >
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            Abrir no Google Maps
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setOptimizedRoute(null)}
+                            className="flex-1"
+                          >
+                            Limpar Rota
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </CardContent>
