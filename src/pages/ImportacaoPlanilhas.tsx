@@ -62,7 +62,7 @@ interface PreviewRecord {
 const ImportacaoPlanilhas = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [selectedType, setSelectedType] = useState<'ubs' | 'ongs' | 'pacientes' | 'equipamentos' | 'auto' | null>('auto');
+  const [selectedType, setSelectedType] = useState<'ubs' | 'ongs' | 'pacientes' | 'equipamentos' | 'lista-alfabetica' | 'auto' | null>('auto');
   const [previewData, setPreviewData] = useState<PreviewRecord[]>([]);
   const [selectedRecords, setSelectedRecords] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
@@ -471,6 +471,7 @@ const ImportacaoPlanilhas = () => {
                     <SelectItem value="ongs" data-testid="option-ongs">ONGs - Organizações Não Governamentais</SelectItem>
                     <SelectItem value="pacientes" data-testid="option-pacientes">Pacientes</SelectItem>
                     <SelectItem value="equipamentos" data-testid="option-equipamentos">Equipamentos Sociais</SelectItem>
+                    <SelectItem value="lista-alfabetica" data-testid="option-lista-alfabetica">📋 Lista Alfabética (Formato Personalizado)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

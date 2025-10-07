@@ -616,8 +616,8 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ success: false, message: 'Nenhum arquivo enviado' });
       }
 
-      const tipo = req.body.tipo as 'ubs' | 'ongs' | 'pacientes' | 'equipamentos' | 'auto' | undefined;
-      const permitirDetecaoAutomatica = tipo === 'auto' || tipo === undefined || !['ubs', 'ongs', 'pacientes', 'equipamentos'].includes(tipo);
+      const tipo = req.body.tipo as 'ubs' | 'ongs' | 'pacientes' | 'equipamentos' | 'lista-alfabetica' | 'auto' | undefined;
+      const permitirDetecaoAutomatica = tipo === 'auto' || tipo === undefined || !['ubs', 'ongs', 'pacientes', 'equipamentos', 'lista-alfabetica'].includes(tipo);
 
       const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
       const sheetName = workbook.SheetNames[0];
@@ -1003,6 +1003,53 @@ export function registerRoutes(app: Express): Server {
               idade: parseInt(row['idade'] || row['Idade'] || row['age'] || '0') || null
             };
             break;
+          
+          case 'lista-alfabetica':
+            // Formato personalizado: NOME (A), QR (B), LOCAL (C), DN (D), CPF (E), ATUALIZAÇÃO (F)
+            const qr = row['QR'] || row['qr'] || '';
+            const local = row['LOCAL'] || row['local'] || row['Local'] || '';
+            
+            // Montar endereço completo combinando QR + LOCAL
+            let enderecoCompleto = '';
+            if (qr && local) {
+              enderecoCompleto = `${qr} ${local}`.trim();
+            } else {
+              enderecoCompleto = local || qr || '';
+            }
+            
+            // Extrair bairro/região do LOCAL para ajudar na geocodificação
+            let bairroExtraido = '';
+            const localUpper = local.toUpperCase();
+            if (localUpper.includes('SAMAMBAIA')) {
+              bairroExtraido = 'Samambaia';
+            } else if (localUpper.includes('RECANTO')) {
+              bairroExtraido = 'Recanto das Emas';
+            } else if (localUpper.includes('ÁGUA QUENTE') || localUpper.includes('AGUA QUENTE')) {
+              bairroExtraido = 'Água Quente';
+            }
+            
+            // Adicionar bairro ao endereço se identificado
+            if (bairroExtraido && !enderecoCompleto.includes(bairroExtraido)) {
+              enderecoCompleto += `, ${bairroExtraido}`;
+            }
+            
+            // Adicionar DF ao final se não tiver
+            if (!enderecoCompleto.toUpperCase().includes(' DF') && !enderecoCompleto.toUpperCase().includes('BRASÍLIA')) {
+              enderecoCompleto += ' - DF';
+            }
+            
+            dadosExtraidos = {
+              ...dadosExtraidos,
+              tipo: 'pacientes', // Lista Alfabética sempre importa como pacientes
+              nome: row['NOME'] || row['Nome'] || row['nome'] || '',
+              endereco: enderecoCompleto,
+              cep: '', // CEP geralmente não vem nessa planilha, será geocodificado
+              telefone: '',
+              cpf: row['CPF'] || row['cpf'] || '',
+              observacoes: row['ATUALIZAÇÃO'] || row['Atualização'] || row['atualizacao'] || row['atualização'] || '',
+              dataNascimento: row['DN'] || row['dn'] || null
+            };
+            break;
         }
 
         // Validar dados extraídos
@@ -1175,22 +1222,35 @@ export function registerRoutes(app: Express): Server {
               break;
               
             case 'pacientes':
+            case 'lista-alfabetica': // Lista alfabética também importa como pacientes
               const pacienteData = {
                 nome: registro.nome,
                 endereco: registro.endereco,
-                cep: registro.cep,
-                telefone: registro.telefone,
+                cep: registro.cep || '', // CEP pode estar vazio na lista alfabética
+                telefone: registro.telefone || '',
                 idade: registro.idade,
-                condicoesSaude: registro.condicoesSaude || []
+                condicoesSaude: registro.condicoesSaude || [],
+                cnsOuCpf: registro.cpf || undefined,
+                observacoes: registro.observacoes || undefined
               };
               
-              // Geocodificar
-              if (pacienteData.endereco && pacienteData.cep) {
+              // Geocodificar (para lista alfabética, o endereço já foi montado no preview)
+              if (pacienteData.endereco) {
                 try {
-                  const geocodeResult = await geocodingService.geocodeAddress(pacienteData.endereco, pacienteData.cep);
+                  // Para lista alfabética sem CEP, geocodificar apenas com endereço
+                  const geocodeResult = await geocodingService.geocodeAddress(
+                    pacienteData.endereco, 
+                    pacienteData.cep || undefined
+                  );
                   if (geocodeResult.coordinates) {
                     (pacienteData as any).latitude = geocodeResult.coordinates.latitude;
                     (pacienteData as any).longitude = geocodeResult.coordinates.longitude;
+                    (pacienteData as any).precisaoGeocode = geocodeResult.precision;
+                    
+                    // Se conseguiu geocodificar e não tinha CEP, tentar pegar do resultado
+                    if (!pacienteData.cep && geocodeResult.cep) {
+                      pacienteData.cep = geocodeResult.cep;
+                    }
                   }
                 } catch (geoError) {
                   console.warn(`Erro ao geocodificar paciente ${pacienteData.nome}:`, geoError);
