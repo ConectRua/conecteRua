@@ -35,6 +35,25 @@ An advanced geocoding system uses Google Places API as the primary source, with 
 ## Data Management and Import
 Data import capabilities include intelligent Google Places integration for Excel spreadsheets, automatically matching and enriching establishment data with phone numbers, business hours, and precise coordinates. It features a multi-criteria scoring algorithm for smart matching, confidence indicators, and a comprehensive validation system that detects duplicates and verifies data against Google Places before import. Bulk operations, including create, update, and delete for all entity types (UBS, ONGs, pacientes, equipamentos sociais), are supported with robust validation and error handling.
 
+### Custom Import Formats
+The system supports specialized import formats for different use cases:
+
+#### Lista Alfabética (Personalized Patient Import)
+A custom format for patient spreadsheets with the following structure:
+- **NOME** (Column A): Patient name
+- **QR** (Column B): Region/neighborhood identifier (e.g., "QR 101", "QR 115")
+- **LOCAL** (Column C): Specific address or location within the region
+- **DN** (Column D): Date of birth (optional)
+- **CPF** (Column E): Brazilian tax ID number
+- **ATUALIZAÇÃO** (Column F): Update notes or observations
+
+**Special Features:**
+- Automatically combines QR + LOCAL columns to create the full address
+- Maps CPF field to cnsOuCpf (unified identification field)
+- Maps ATUALIZAÇÃO field to observacoes (notes)
+- CEP field is optional - when not provided, the system uses geocoding to automatically populate coordinates
+- Supports geocoding-first approach where address precision is prioritized over postal code
+
 ## Form Management
 `React Hook Form` with `Zod` validation is used for all forms, ensuring robust handling, comprehensive validation, and clear error messaging.
 
