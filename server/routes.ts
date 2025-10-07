@@ -7,7 +7,7 @@ import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { createGeocodingService } from "./services/geocoding";
 import { createGooglePlacesService } from "./services/googlePlacesService";
-import { insertUBSSchema, insertONGSchema, insertPacienteSchema, insertEquipamentoSocialSchema, insertOrientacaoEncaminhamentoSchema, ubs, ongs, equipamentosSociais } from "../shared/schema";
+import { insertUBSSchema, insertONGSchema, insertPacienteSchema, insertEquipamentoSocialSchema, insertOrientacaoEncaminhamentoSchema, insertAtividadeTerritorialSchema, ubs, ongs, equipamentosSociais } from "../shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import * as XLSX from "xlsx";
@@ -2419,6 +2419,99 @@ export function registerRoutes(app: Express): Server {
       res.json({ success });
     } catch (error) {
       console.error("Error deleting EquipamentoSocial:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  // ============ ATIVIDADES TERRITORIAIS CRUD ROUTES ============
+  app.get("/api/atividades-territoriais", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+
+      const atividades = await storage.getAtividadesTerritoriais();
+      res.json(atividades);
+    } catch (error) {
+      console.error("Error fetching atividades territoriais:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.post("/api/atividades-territoriais", auditMiddleware('CREATE', 'atividades_territoriais'), async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+
+      const validation = insertAtividadeTerritorialSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ error: "Dados inválidos", details: validation.error.issues });
+      }
+
+      const atividade = await storage.createAtividadeTerritorial({
+        ...validation.data,
+        usuarioId: req.user!.id
+      });
+      
+      res.locals.recordId = atividade.id;
+      res.locals.newValues = atividade;
+      res.status(201).json(atividade);
+    } catch (error) {
+      console.error("Error creating atividade territorial:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.put("/api/atividades-territoriais/:id", auditMiddleware('UPDATE', 'atividades_territoriais'), async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID inválido" });
+      }
+
+      const validation = insertAtividadeTerritorialSchema.partial().safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ error: "Dados inválidos", details: validation.error.issues });
+      }
+
+      const oldAtividade = await storage.getAtividadeTerritorial(id);
+      const atividade = await storage.updateAtividadeTerritorial(id, validation.data);
+      if (!atividade) {
+        return res.status(404).json({ error: "Atividade territorial não encontrada" });
+      }
+
+      res.locals.recordId = id;
+      res.locals.oldValues = oldAtividade;
+      res.locals.newValues = atividade;
+      res.json(atividade);
+    } catch (error) {
+      console.error("Error updating atividade territorial:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.delete("/api/atividades-territoriais/:id", auditMiddleware('DELETE', 'atividades_territoriais'), async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID inválido" });
+      }
+
+      const oldAtividade = await storage.getAtividadeTerritorial(id);
+      const success = await storage.deleteAtividadeTerritorial(id);
+      res.locals.oldValues = oldAtividade;
+      res.json({ success });
+    } catch (error) {
+      console.error("Error deleting atividade territorial:", error);
       res.status(500).json({ error: "Erro interno do servidor" });
     }
   });

@@ -14,6 +14,7 @@ import {
   orientacoesEncaminhamento,
   auditLog,
   geocodingCache,
+  atividadesTerritoriais,
   type User, 
   type InsertUser,
   type UBS,
@@ -23,7 +24,8 @@ import {
   type OrientacaoEncaminhamento,
   type InsertOrientacaoEncaminhamento,
   type GeocodingCache,
-  type InsertGeocodingCache
+  type InsertGeocodingCache,
+  type AtividadeTerritorial
 } from "../shared/schema";
 import { eq, sql } from "drizzle-orm";
 import { IStorage } from "./storage";
@@ -234,6 +236,40 @@ export class PostgreSQLStorage implements IStorage {
     const result = await db.update(equipamentosSociais)
       .set({ ativo: false, updatedAt: new Date() })
       .where(eq(equipamentosSociais.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  // ============ ATIVIDADES TERRITORIAIS CRUD METHODS ============
+  async getAtividadesTerritoriais(): Promise<AtividadeTerritorial[]> {
+    return await db.select().from(atividadesTerritoriais);
+  }
+
+  async getAtividadeTerritorial(id: number): Promise<AtividadeTerritorial | null> {
+    const result = await db.select().from(atividadesTerritoriais)
+      .where(eq(atividadesTerritoriais.id, id))
+      .limit(1);
+    return result[0] || null;
+  }
+
+  async createAtividadeTerritorial(data: Partial<AtividadeTerritorial>): Promise<AtividadeTerritorial> {
+    const result = await db.insert(atividadesTerritoriais)
+      .values(data as any)
+      .returning();
+    return result[0];
+  }
+
+  async updateAtividadeTerritorial(id: number, updates: Partial<AtividadeTerritorial>): Promise<AtividadeTerritorial | null> {
+    const result = await db.update(atividadesTerritoriais)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(atividadesTerritoriais.id, id))
+      .returning();
+    return result[0] || null;
+  }
+
+  async deleteAtividadeTerritorial(id: number): Promise<boolean> {
+    const result = await db.delete(atividadesTerritoriais)
+      .where(eq(atividadesTerritoriais.id, id))
       .returning();
     return result.length > 0;
   }

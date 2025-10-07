@@ -16,7 +16,8 @@ import {
   FileSpreadsheet,
   LogOut,
   User,
-  CalendarDays
+  CalendarDays,
+  MapPinned
 } from 'lucide-react';
 import logoConecteRua from '@/assets/logo-conecte-rua-cortada.png';
 import { EquipamentoSocialIcon } from '@/components/icons/EquipamentoSocialIcon';
@@ -52,6 +53,12 @@ const navItems: NavItem[] = [
     href: '/agenda',
     icon: CalendarDays,
     description: 'Atendimentos e agendamentos'
+  },
+  {
+    title: 'Atividades Territoriais',
+    href: '/atividades-territoriais',
+    icon: MapPinned,
+    description: 'Registro de atividades com GPS'
   },
   {
     title: 'Import Planilhas',

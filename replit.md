@@ -60,6 +60,30 @@ A custom format for patient spreadsheets with the following structure:
 ## Calendar System
 An advanced calendar month view is implemented for the "Agenda" page. It displays patient appointments in a 7x6 grid, with visual indicators for events, month navigation, and a responsive sidebar for detailed patient lists on day selection. The calendar uses `date-fns` with `pt-BR` locale for proper localization.
 
+## Territorial Activities (Atividades Territoriais)
+A complete feature for tracking territorial activities with GPS location capture:
+
+**Core Features:**
+- Real-time GPS location capture using Capacitor Geolocation API with browser fallback
+- Activity registration form with title, people count, location description, and region
+- Automatic GPS coordinate capture when creating activities
+- Card-based activity listing with complete information display
+- Full CRUD operations (Create, Read, Update, Delete)
+
+**Technical Implementation:**
+- Database table: `atividades_territoriais` with columns for GPS coordinates, metadata, and timestamps
+- Backend REST API endpoints: GET, POST, PUT, DELETE at `/api/atividades-territoriais/*`
+- Frontend page at `/atividades-territoriais` with form dialog and responsive card layout
+- Integration with existing authentication and audit logging system
+- Validation using Zod schemas with type coercion for seamless data handling
+
+**User Workflow:**
+1. User clicks "Nova Atividade" button to open registration dialog
+2. Fills in activity details (title, people count, description, region)
+3. On submit, system automatically captures current GPS location
+4. Activity is saved with coordinates and displayed in card grid
+5. Users can view all activities with timestamps and delete as needed
+
 ## Mobile Support
 Capacitor integration enables cross-platform mobile app deployment, leveraging native device features like geolocation. The application is designed to be responsive across desktop and mobile devices.
 

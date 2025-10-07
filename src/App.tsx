@@ -17,6 +17,7 @@ import GestaoUBS from "./pages/GestaoUBS";
 import GestaoEquipamentos from "./pages/GestaoEquipamentos";
 import Pacientes from "./pages/Pacientes";
 import Agenda from "./pages/Agenda";
+import AtividadesTerritoriais from "./pages/AtividadesTerritoriais";
 import Relatorios from "./pages/Relatorios";
 import Configuracoes from "./pages/Configuracoes";
 import Perfil from "./pages/Perfil";
@@ -40,6 +41,7 @@ const App = () => (
               <Route path="mapa" element={<MapaInterativo />} />
               <Route path="pacientes" element={<Pacientes />} />
               <Route path="agenda" element={<Agenda />} />
+              <Route path="atividades-territoriais" element={<AtividadesTerritoriais />} />
               <Route path="cadastro" element={<CadastroManual />} />
               <Route path="importacao" element={<ImportacaoPlanilhas />} />
               <Route path="busca" element={<BuscaCEP />} />

@@ -3,7 +3,7 @@
 
 import session from "express-session";
 import createMemoryStore from "memorystore";
-import { User, InsertUser, UBS, ONG, Paciente, EquipamentoSocial, GeocodingCache, InsertGeocodingCache, OrientacaoEncaminhamento, InsertOrientacaoEncaminhamento } from "../shared/schema";
+import { User, InsertUser, UBS, ONG, Paciente, EquipamentoSocial, GeocodingCache, InsertGeocodingCache, OrientacaoEncaminhamento, InsertOrientacaoEncaminhamento, AtividadeTerritorial } from "../shared/schema";
 
 const MemoryStore = createMemoryStore(session);
 
@@ -47,6 +47,13 @@ export interface IStorage {
   createEquipamentoSocial(equipamento: Omit<EquipamentoSocial, 'id' | 'createdAt' | 'updatedAt'>): Promise<EquipamentoSocial>;
   updateEquipamentoSocial(id: number, updates: Partial<EquipamentoSocial>): Promise<EquipamentoSocial | null>;
   deleteEquipamentoSocial(id: number): Promise<boolean>;
+  
+  // Atividades Territoriais CRUD methods
+  getAtividadesTerritoriais(): Promise<AtividadeTerritorial[]>;
+  getAtividadeTerritorial(id: number): Promise<AtividadeTerritorial | null>;
+  createAtividadeTerritorial(data: Partial<AtividadeTerritorial>): Promise<AtividadeTerritorial>;
+  updateAtividadeTerritorial(id: number, updates: Partial<AtividadeTerritorial>): Promise<AtividadeTerritorial | null>;
+  deleteAtividadeTerritorial(id: number): Promise<boolean>;
   
   // Geographic queries
   findNearbyUBS(latitude: number, longitude: number, radiusKm?: number): Promise<UBS[]>;
@@ -557,6 +564,27 @@ export class MemStorage implements IStorage {
     
     this.equipamentosSociais.splice(index, 1);
     return true;
+  }
+
+  // Atividades Territoriais CRUD methods (stub implementations for memory storage)
+  async getAtividadesTerritoriais(): Promise<AtividadeTerritorial[]> {
+    return [];
+  }
+
+  async getAtividadeTerritorial(id: number): Promise<AtividadeTerritorial | null> {
+    return null;
+  }
+
+  async createAtividadeTerritorial(data: Partial<AtividadeTerritorial>): Promise<AtividadeTerritorial> {
+    throw new Error("Atividades Territoriais require PostgreSQL storage");
+  }
+
+  async updateAtividadeTerritorial(id: number, updates: Partial<AtividadeTerritorial>): Promise<AtividadeTerritorial | null> {
+    return null;
+  }
+
+  async deleteAtividadeTerritorial(id: number): Promise<boolean> {
+    return false;
   }
   
   // Geographic queries

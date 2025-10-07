@@ -567,6 +567,34 @@ export const insertGeocodingCacheSchema = z.object({
 export type GeocodingCache = typeof geocodingCache.$inferSelect;
 export type InsertGeocodingCache = z.infer<typeof insertGeocodingCacheSchema>;
 
+// ============ ATIVIDADES TERRITORIAIS ============
+export const atividadesTerritoriais = pgTable("atividades_territoriais", {
+  id: serial("id").primaryKey(),
+  titulo: varchar("titulo", { length: 255 }).notNull(),
+  latitude: doublePrecision("latitude").notNull(),
+  longitude: doublePrecision("longitude").notNull(),
+  quantidadePessoas: integer("quantidade_pessoas").notNull(),
+  descricaoLocal: text("descricao_local").notNull(),
+  regiao: varchar("regiao", { length: 100 }), // Samambaia, Recanto das Emas, Água Quente
+  usuarioId: integer("usuario_id").references(() => users.id),
+  dataAtividade: timestamp("data_atividade").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAtividadeTerritorialSchema = z.object({
+  titulo: z.string().min(1, "Título é obrigatório"),
+  latitude: z.coerce.number(),
+  longitude: z.coerce.number(),
+  quantidadePessoas: z.coerce.number().min(1, "Quantidade deve ser no mínimo 1"),
+  descricaoLocal: z.string().min(1, "Descrição é obrigatória"),
+  regiao: z.string().optional(),
+  dataAtividade: z.coerce.date().optional(),
+});
+
+export type AtividadeTerritorial = typeof atividadesTerritoriais.$inferSelect;
+export type InsertAtividadeTerritorial = z.infer<typeof insertAtividadeTerritorialSchema>;
+
 // ============ RELATIONS ============
 export const usersRelations = relations(users, ({ many }) => ({
   auditLogs: many(auditLog),
