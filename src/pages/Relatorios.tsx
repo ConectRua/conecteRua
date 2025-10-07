@@ -30,6 +30,13 @@ const Relatorios = () => {
 
   const { data: atividades = [], isLoading } = useQuery<AtividadeTerritorial[]>({
     queryKey: ['/api/atividades-territoriais'],
+    queryFn: async () => {
+      const response = await fetch('/api/atividades-territoriais', {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Erro ao buscar atividades');
+      return response.json();
+    },
   });
 
   const filtrarAtividades = (atividades: AtividadeTerritorial[]) => {

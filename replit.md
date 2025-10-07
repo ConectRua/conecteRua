@@ -65,24 +65,54 @@ A complete feature for tracking territorial activities with GPS location capture
 
 **Core Features:**
 - Real-time GPS location capture using Capacitor Geolocation API with browser fallback
-- Activity registration form with title, people count, location description, and region
-- Automatic GPS coordinate capture when creating activities
-- Card-based activity listing with complete information display
-- Full CRUD operations (Create, Read, Update, Delete)
+- Activity registration form with title, people count, location description, address, CEP, and region
+- Automatic GPS coordinate capture with reverse geocoding to auto-fill address and CEP
+- Card-based activity listing with complete information display including address and CEP
+- Full CRUD operations (Create, Read, Delete)
 
 **Technical Implementation:**
-- Database table: `atividades_territoriais` with columns for GPS coordinates, metadata, and timestamps
-- Backend REST API endpoints: GET, POST, PUT, DELETE at `/api/atividades-territoriais/*`
+- Database table: `atividades_territoriais` with columns for GPS coordinates (latitude/longitude), address (endereco), CEP, metadata, and timestamps
+- Backend REST API endpoints: GET, POST, DELETE at `/api/atividades-territoriais/*`
 - Frontend page at `/atividades-territoriais` with form dialog and responsive card layout
+- Integration with reverse geocoding endpoint `/api/geocode/reverse` for automatic address lookup
 - Integration with existing authentication and audit logging system
 - Validation using Zod schemas with type coercion for seamless data handling
 
 **User Workflow:**
 1. User clicks "Nova Atividade" button to open registration dialog
-2. Fills in activity details (title, people count, description, region)
-3. On submit, system automatically captures current GPS location
-4. Activity is saved with coordinates and displayed in card grid
-5. Users can view all activities with timestamps and delete as needed
+2. Clicks "Usar GPS" button to capture current location
+3. System automatically performs reverse geocoding and fills address and CEP fields
+4. User fills in remaining activity details (title, people count, description, region)
+5. Activity is saved with coordinates, address, CEP and displayed in card grid
+6. Users can view all activities with timestamps, location data, and delete as needed
+
+## Georeferenced Reports (Relatórios Georreferenciados)
+PDF report generation system for territorial activities with precise formatting:
+
+**Core Features:**
+- Period filter: Select date range (start date and end date) for activities
+- Region filter: Select specific region (Samambaia, Recanto das Emas, Água Quente) or all regions
+- PDF generation following exact institutional format
+- Activity preview with count before generating report
+
+**PDF Format:**
+- Fixed title: "MAPA GEORREFERENCIADO - EQUIPE ECR SAMAMBAIA"
+- Dynamic subtitle: "LOCAIS DE ABORDAGEM - [SELECTED REGION]"
+- For each activity, displays with checkboxes:
+  * ☐ Activity title in bold
+  * ☐ Coordenadas: decimal format with 6 decimal places (e.g., -15.883707, -48.100167)
+  * ☐ Quantidade de pessoas: XX PSR format
+  * ☐ Descrição do local: full description text
+- When "Todas as Regiões" selected, creates separate sections for each region
+- Automatic pagination for long lists
+
+**Technical Implementation:**
+- Frontend page at `/relatorios` with date pickers and region selector
+- Uses jspdf and jspdf-autotable for PDF generation
+- Filters activities by date range (inclusive of last day using 23:59:59.999 timestamp)
+- Filters by region when specific region selected
+- Groups activities by region when "Todas" selected
+- Real-time preview of filtered activities count
 
 ## Mobile Support
 Capacitor integration enables cross-platform mobile app deployment, leveraging native device features like geolocation. The application is designed to be responsive across desktop and mobile devices.
