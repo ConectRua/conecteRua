@@ -575,6 +575,8 @@ export const atividadesTerritoriais = pgTable("atividades_territoriais", {
   longitude: doublePrecision("longitude").notNull(),
   quantidadePessoas: integer("quantidade_pessoas").notNull(),
   descricaoLocal: text("descricao_local").notNull(),
+  endereco: text("endereco"),
+  cep: varchar("cep", { length: 10 }),
   regiao: varchar("regiao", { length: 100 }), // Samambaia, Recanto das Emas, Água Quente
   usuarioId: integer("usuario_id").references(() => users.id),
   dataAtividade: timestamp("data_atividade").defaultNow(),
@@ -588,6 +590,8 @@ export const insertAtividadeTerritorialSchema = z.object({
   longitude: z.coerce.number(),
   quantidadePessoas: z.coerce.number().min(1, "Quantidade deve ser no mínimo 1"),
   descricaoLocal: z.string().min(1, "Descrição é obrigatória"),
+  endereco: z.string().optional(),
+  cep: z.string().optional(),
   regiao: z.string().optional(),
   dataAtividade: z.coerce.date().optional(),
 });

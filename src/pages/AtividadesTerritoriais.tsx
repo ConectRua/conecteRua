@@ -20,6 +20,8 @@ const formSchema = z.object({
   titulo: z.string().min(1, "Título é obrigatório"),
   quantidadePessoas: z.number().min(1, "Quantidade deve ser no mínimo 1"),
   descricaoLocal: z.string().min(1, "Descrição é obrigatória"),
+  endereco: z.string().optional(),
+  cep: z.string().optional(),
   regiao: z.string().optional(),
 });
 
@@ -30,6 +32,8 @@ type AtividadeTerritorial = {
   longitude: number;
   quantidadePessoas: number;
   descricaoLocal: string;
+  endereco: string | null;
+  cep: string | null;
   regiao: string | null;
   dataAtividade: string | null;
   createdAt: string | null;
@@ -39,6 +43,8 @@ export default function AtividadesTerritoriais() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [loadingLocation, setLoadingLocation] = useState(false);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [locationData, setLocationData] = useState<{ latitude: number; longitude: number } | null>(null);
   const { toast } = useToast();
 
   const { data: atividades = [], isLoading } = useQuery<AtividadeTerritorial[]>({
@@ -58,6 +64,8 @@ export default function AtividadesTerritoriais() {
       titulo: "",
       quantidadePessoas: 1,
       descricaoLocal: "",
+      endereco: "",
+      cep: "",
       regiao: "",
     },
   });
@@ -77,6 +85,7 @@ export default function AtividadesTerritoriais() {
       queryClient.invalidateQueries({ queryKey: ["/api/atividades-territoriais"] });
       toast({ title: "Atividade territorial registrada com sucesso" });
       setIsDialogOpen(false);
+      setLocationData(null);
       form.reset();
     },
     onError: (error: any) => {
@@ -110,28 +119,69 @@ export default function AtividadesTerritoriais() {
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    setLoadingLocation(true);
+  const handleGetLocation = async () => {
+    setIsGettingLocation(true);
     
     getCurrentLocation({
-      onSuccess: (location) => {
-        setLoadingLocation(false);
+      onSuccess: async (location) => {
+        const lat = parseFloat(location.latitude);
+        const lng = parseFloat(location.longitude);
         
-        createMutation.mutate({
-          ...values,
-          latitude: parseFloat(location.latitude),
-          longitude: parseFloat(location.longitude),
-          dataAtividade: new Date(),
-        });
+        setLocationData({ latitude: lat, longitude: lng });
+        
+        // Fazer reverse geocoding para obter CEP e endereço
+        try {
+          const response = await fetch('/api/geocode/reverse', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ latitude: lat, longitude: lng })
+          });
+          
+          const data = await response.json();
+          
+          if (data.sucesso && data.cep) {
+            form.setValue('cep', data.cep);
+            if (data.endereco) {
+              form.setValue('endereco', data.endereco);
+            }
+            toast({ title: "📍 Localização e endereço capturados com sucesso!" });
+          } else {
+            toast({ title: "📍 Localização capturada (sem endereço disponível)" });
+          }
+        } catch (error) {
+          console.error('Erro no reverse geocoding:', error);
+          toast({ title: "📍 Localização capturada (sem endereço disponível)" });
+        }
+        
+        setIsGettingLocation(false);
       },
       onError: (error) => {
-        setLoadingLocation(false);
+        setIsGettingLocation(false);
         toast({
           title: "Erro ao obter localização",
           description: error.message,
           variant: "destructive",
         });
       },
+    });
+  };
+
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (!locationData) {
+      toast({
+        title: "Localização não capturada",
+        description: "Por favor, use o botão 'Usar GPS' para capturar a localização",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    createMutation.mutate({
+      ...values,
+      latitude: locationData.latitude,
+      longitude: locationData.longitude,
+      dataAtividade: new Date(),
     });
   };
 
@@ -149,7 +199,13 @@ export default function AtividadesTerritoriais() {
           <p className="text-muted-foreground">Registre e acompanhe atividades territoriais com localização GPS</p>
         </div>
         
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) {
+            setLocationData(null);
+            form.reset();
+          }
+        }}>
           <DialogTrigger asChild>
             <Button data-testid="button-new-activity">
               <Plus className="h-4 w-4 mr-2" />
@@ -208,6 +264,64 @@ export default function AtividadesTerritoriais() {
                     </FormItem>
                   )}
                 />
+
+                <div className="space-y-2">
+                  <FormLabel>Localização</FormLabel>
+                  <Button
+                    type="button"
+                    onClick={handleGetLocation}
+                    disabled={isGettingLocation}
+                    className="w-full"
+                    variant="outline"
+                    data-testid="button-get-location"
+                  >
+                    {isGettingLocation ? (
+                      <>Capturando localização...</>
+                    ) : locationData ? (
+                      <>📍 Localização capturada - Clique para atualizar</>
+                    ) : (
+                      <>📍 Usar GPS</>
+                    )}
+                  </Button>
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="endereco"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Endereço (preenchido automaticamente)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Será preenchido ao usar GPS" 
+                          {...field} 
+                          data-testid="input-endereco"
+                          readOnly
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="cep"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CEP (preenchido automaticamente)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Será preenchido ao usar GPS" 
+                          {...field} 
+                          data-testid="input-cep"
+                          readOnly
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 
                 <FormField
                   control={form.control}
@@ -223,18 +337,13 @@ export default function AtividadesTerritoriais() {
                   )}
                 />
                 
-                <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-md text-sm">
-                  <MapPin className="h-4 w-4 inline mr-2" />
-                  A localização GPS será capturada automaticamente ao salvar
-                </div>
-                
                 <Button 
                   type="submit" 
                   className="w-full" 
-                  disabled={createMutation.isPending || loadingLocation}
+                  disabled={createMutation.isPending || !locationData}
                   data-testid="button-submit"
                 >
-                  {loadingLocation ? "Capturando localização..." : "Registrar Atividade"}
+                  {createMutation.isPending ? "Registrando..." : "Registrar Atividade"}
                 </Button>
               </form>
             </Form>
@@ -274,6 +383,18 @@ export default function AtividadesTerritoriais() {
                   <Users className="h-4 w-4 mr-2" />
                   <span>{atividade.quantidadePessoas} pessoas</span>
                 </div>
+                
+                {atividade.endereco && (
+                  <div className="text-sm">
+                    <strong>Endereço:</strong> {atividade.endereco}
+                  </div>
+                )}
+
+                {atividade.cep && (
+                  <div className="text-sm">
+                    <strong>CEP:</strong> {atividade.cep}
+                  </div>
+                )}
                 
                 <div className="flex items-center text-sm text-muted-foreground">
                   <MapPin className="h-4 w-4 mr-2" />
