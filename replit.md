@@ -68,15 +68,16 @@ A complete feature for tracking territorial activities with GPS location capture
 - Activity registration form with title, people count, location description, address, CEP, and region
 - Automatic GPS coordinate capture with reverse geocoding to auto-fill address and CEP
 - Card-based activity listing with complete information display including address and CEP
-- Full CRUD operations (Create, Read, Delete)
+- Full CRUD operations (Create, Read, Update, Delete)
+- Edit functionality with pencil icon button on each activity card
 
 **Technical Implementation:**
 - Database table: `atividades_territoriais` with columns for GPS coordinates (latitude/longitude), address (endereco), CEP, metadata, and timestamps
-- Backend REST API endpoints: GET, POST, DELETE at `/api/atividades-territoriais/*`
+- Backend REST API endpoints: GET, POST, PUT, DELETE at `/api/atividades-territoriais/*`
 - Frontend page at `/atividades-territoriais` with form dialog and responsive card layout
 - Integration with reverse geocoding endpoint `/api/geocode/reverse` for automatic address lookup
 - Integration with existing authentication and audit logging system
-- Validation using Zod schemas with type coercion for seamless data handling
+- Validation using Zod schemas with type coercion (z.coerce.number()) for seamless number field handling
 
 **User Workflow:**
 1. User clicks "Nova Atividade" button to open registration dialog
@@ -84,7 +85,8 @@ A complete feature for tracking territorial activities with GPS location capture
 3. System automatically performs reverse geocoding and fills address and CEP fields
 4. User fills in remaining activity details (title, people count, description, region)
 5. Activity is saved with coordinates, address, CEP and displayed in card grid
-6. Users can view all activities with timestamps, location data, and delete as needed
+6. Users can view all activities with timestamps, location data, edit or delete as needed
+7. Editing: Click pencil icon on card → form opens pre-filled with activity data → make changes → save updates
 
 ## Georeferenced Reports (Relatórios Georreferenciados)
 PDF report generation system for territorial activities with precise formatting:
