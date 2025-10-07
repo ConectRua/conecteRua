@@ -118,7 +118,7 @@ export const useAnalytics = (
 
   // Processar cobertura regional
   const processCoberturaRegional = (ubsList: UBS[], pacientesList: Paciente[]) => {
-    const regioes = ['Samambaia', 'Recanto das Emas', 'Águas Claras'];
+    const regioes = ['Samambaia', 'Recanto das Emas', 'Águas Quentes'];
     
     return regioes.map(regiao => {
       const ubsRegiao = ubsList.filter(ubs => 

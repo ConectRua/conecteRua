@@ -99,8 +99,8 @@ const mockUBS: UBS[] = [
   },
   {
     id: '3',
-    nome: 'Hospital Regional de Águas Claras',
-    endereco: 'Rua 10, Lote 1, Águas Claras',
+    nome: 'Hospital Regional de Águas Quentes',
+    endereco: 'Rua 10, Lote 1, Águas Quentes',
     cep: '71916-000',
     telefone: '(61) 3901-4567',
     latitude: -15.8347,
@@ -202,7 +202,7 @@ const mockPacientes: Paciente[] = [
     id: '3',
     nome: 'Isabella Santos',
     cns: '456789123456789',
-    endereco: 'Rua 12, Casa 45, Águas Claras',
+    endereco: 'Rua 12, Casa 45, Águas Quentes',
     cep: '71916-012',
     telefone: '(61) 9999-3333',
     latitude: -15.8350,
@@ -575,7 +575,7 @@ export const useMockData = () => {
       coberturaPorRegiao: {
         'Samambaia': pacientesList.filter(p => p.endereco.includes('Samambaia')).length,
         'Recanto das Emas': pacientesList.filter(p => p.endereco.includes('Recanto')).length,
-        'Águas Claras': pacientesList.filter(p => p.endereco.includes('Águas Claras')).length,
+        'Águas Quentes': pacientesList.filter(p => p.endereco.includes('Águas Quentes')).length,
       },
       distanciaMedia: isNaN(distanciaMedia) ? 0 : distanciaMedia
     };

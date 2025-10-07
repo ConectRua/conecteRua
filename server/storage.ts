@@ -210,8 +210,8 @@ export class MemStorage implements IStorage {
       },
       {
         id: 3,
-        nome: "Centro de Saúde Águas Claras",
-        endereco: "Rua 25 Norte, Lote 2, Águas Claras",
+        nome: "Centro de Saúde Águas Quentes",
+        endereco: "Rua 25 Norte, Lote 2, Águas Quentes",
         cep: "71906-050",
         telefone: "(61) 3901-4567",
         especialidades: ["Clínica Geral", "Cardiologia", "Dermatologia", "Ortopedia"],
@@ -331,7 +331,7 @@ export class MemStorage implements IStorage {
       {
         id: 3,
         nome: "Fernanda Lima Souza",
-        endereco: "Rua 25 Norte, Casa 8, Águas Claras",
+        endereco: "Rua 25 Norte, Casa 8, Águas Quentes",
         cep: "71906-050",
         telefone: "(61) 97654-3210",
         idade: 28,
@@ -382,9 +382,9 @@ export class MemStorage implements IStorage {
       },
       {
         id: 3,
-        nome: "Conselho Tutelar Águas Claras",
+        nome: "Conselho Tutelar Águas Quentes",
         tipo: "Conselho Tutelar",
-        endereco: "Rua 25 Norte, Lote 5, Águas Claras",
+        endereco: "Rua 25 Norte, Lote 5, Águas Quentes",
         cep: "71906-050",
         telefone: "(61) 3901-3333",
         email: "ct.aguasclaras@df.gov.br",

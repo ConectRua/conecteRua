@@ -2343,7 +2343,7 @@ export function registerRoutes(app: Express): Server {
       pacientesList.forEach(paciente => {
         const regiao = paciente.endereco.includes('Samambaia') ? 'Samambaia' : 
                       paciente.endereco.includes('Recanto') ? 'Recanto das Emas' :
-                      paciente.endereco.includes('Águas Claras') ? 'Águas Claras' : 'Outras';
+                      paciente.endereco.includes('Águas Quentes') ? 'Águas Quentes' : 'Outras';
         coberturaPorRegiao[regiao] = (coberturaPorRegiao[regiao] || 0) + 1;
       });
       
