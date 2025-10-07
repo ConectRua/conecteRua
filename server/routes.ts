@@ -1006,8 +1006,76 @@ export function registerRoutes(app: Express): Server {
           
           case 'lista-alfabetica':
             // Formato personalizado: NOME (A), QR (B), LOCAL (C), DN (D), CPF (E), ATUALIZAÇÃO (F)
-            const qr = row['QR'] || row['qr'] || '';
-            const local = row['LOCAL'] || row['local'] || row['Local'] || '';
+            
+            // Função auxiliar para normalizar nomes de colunas (remove espaços, converte para uppercase)
+            const normalizeKey = (key: string): string => {
+              return key.trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            };
+            
+            // Criar mapa normalizado de colunas para busca flexível
+            const normalizedRow: Record<string, any> = {};
+            Object.keys(row).forEach(key => {
+              const normalizedKey = normalizeKey(key);
+              normalizedRow[normalizedKey] = row[key];
+            });
+            
+            // Log das colunas detectadas (apenas primeira linha)
+            if (index === 0) {
+              console.log('[LISTA-ALFABETICA] Colunas detectadas:', Object.keys(row));
+              console.log('[LISTA-ALFABETICA] Colunas normalizadas:', Object.keys(normalizedRow));
+            }
+            
+            // Converter row para array para fallback por índice
+            const rowValues = Object.values(row);
+            
+            // Buscar valores com múltiplas variações e fallback por índice
+            const getNome = () => {
+              return normalizedRow['NOME'] || 
+                     normalizedRow['NAME'] || 
+                     rowValues[0] || ''; // Coluna A (índice 0)
+            };
+            
+            const getQR = () => {
+              return normalizedRow['QR'] || 
+                     normalizedRow['QUADRA'] || 
+                     rowValues[1] || ''; // Coluna B (índice 1)
+            };
+            
+            const getLocal = () => {
+              return normalizedRow['LOCAL'] || 
+                     normalizedRow['ENDERECO'] || 
+                     normalizedRow['END'] || 
+                     rowValues[2] || ''; // Coluna C (índice 2)
+            };
+            
+            const getDN = () => {
+              return normalizedRow['DN'] || 
+                     normalizedRow['DATA_NASCIMENTO'] || 
+                     normalizedRow['DATANASCIMENTO'] || 
+                     normalizedRow['NASCIMENTO'] || 
+                     rowValues[3] || null; // Coluna D (índice 3)
+            };
+            
+            const getCPF = () => {
+              return normalizedRow['CPF'] || 
+                     normalizedRow['CNS'] || 
+                     rowValues[4] || ''; // Coluna E (índice 4)
+            };
+            
+            const getAtualizacao = () => {
+              return normalizedRow['ATUALIZACAO'] || 
+                     normalizedRow['OBS'] || 
+                     normalizedRow['OBSERVACOES'] || 
+                     normalizedRow['OBSERVACAO'] || 
+                     rowValues[5] || ''; // Coluna F (índice 5)
+            };
+            
+            const nome = getNome();
+            const qr = getQR();
+            const local = getLocal();
+            const dn = getDN();
+            const cpf = getCPF();
+            const atualizacao = getAtualizacao();
             
             // Montar endereço completo combinando QR + LOCAL
             let enderecoCompleto = '';
@@ -1019,7 +1087,7 @@ export function registerRoutes(app: Express): Server {
             
             // Extrair bairro/região do LOCAL para ajudar na geocodificação
             let bairroExtraido = '';
-            const localUpper = local.toUpperCase();
+            const localUpper = String(local).toUpperCase();
             if (localUpper.includes('SAMAMBAIA')) {
               bairroExtraido = 'Samambaia';
             } else if (localUpper.includes('RECANTO')) {
@@ -1041,13 +1109,13 @@ export function registerRoutes(app: Express): Server {
             dadosExtraidos = {
               ...dadosExtraidos,
               tipo: 'pacientes', // Lista Alfabética sempre importa como pacientes
-              nome: row['NOME'] || row['Nome'] || row['nome'] || '',
+              nome: String(nome || '').trim(),
               endereco: enderecoCompleto,
               cep: '', // CEP geralmente não vem nessa planilha, será geocodificado
               telefone: '',
-              cpf: row['CPF'] || row['cpf'] || '',
-              observacoes: row['ATUALIZAÇÃO'] || row['Atualização'] || row['atualizacao'] || row['atualização'] || '',
-              dataNascimento: row['DN'] || row['dn'] || null
+              cpf: String(cpf || '').trim(),
+              observacoes: String(atualizacao || '').trim(),
+              dataNascimento: dn || null
             };
             break;
         }
