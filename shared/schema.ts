@@ -143,7 +143,7 @@ export const pacientes = pgTable("pacientes", {
   
   // ENDEREÇO E LOCALIZAÇÃO
   endereco: text("endereco").notNull(),
-  cep: varchar("cep", { length: 10 }).notNull(),
+  cep: varchar("cep", { length: 10 }), // Nullable para permitir importação sem CEP (será geocodificado depois)
   latitude: doublePrecision("latitude"),
   longitude: doublePrecision("longitude"),
   precisaoGeocode: varchar("precisao_geocode", { length: 30 }), // ROOFTOP, RANGE_INTERPOLATED, GEOMETRIC_CENTER, APPROXIMATE, PLACE
@@ -308,7 +308,9 @@ export const insertPacienteSchema = z.object({
   
   // ENDEREÇO E LOCALIZAÇÃO
   endereco: z.string().min(1),
-  cep: z.string().regex(/^\d{5}-?\d{3}$/),
+  cep: z.string().refine((val) => !val || /^\d{5}-?\d{3}$/.test(val), {
+    message: "CEP deve estar no formato 00000-000"
+  }).optional().or(z.literal('')),
   latitude: z.number().nullable().optional(),
   longitude: z.number().nullable().optional(),
   precisaoGeocode: z.string().nullable().optional(),

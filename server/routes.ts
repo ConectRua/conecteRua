@@ -1245,11 +1245,14 @@ export function registerRoutes(app: Express): Server {
                   if (geocodeResult.coordinates) {
                     (pacienteData as any).latitude = geocodeResult.coordinates.latitude;
                     (pacienteData as any).longitude = geocodeResult.coordinates.longitude;
-                    (pacienteData as any).precisaoGeocode = geocodeResult.precision;
+                    (pacienteData as any).precisaoGeocode = geocodeResult.precisao || 'APPROXIMATE';
                     
-                    // Se conseguiu geocodificar e não tinha CEP, tentar pegar do resultado
-                    if (!pacienteData.cep && geocodeResult.cep) {
-                      pacienteData.cep = geocodeResult.cep;
+                    // Se conseguiu geocodificar e não tinha CEP, tentar extrair do endereço geocodificado
+                    if (!pacienteData.cep && geocodeResult.address) {
+                      const cepMatch = geocodeResult.address.match(/\d{5}-?\d{3}/);
+                      if (cepMatch) {
+                        pacienteData.cep = cepMatch[0];
+                      }
                     }
                   }
                 } catch (geoError) {
