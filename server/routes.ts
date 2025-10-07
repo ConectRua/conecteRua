@@ -2324,7 +2324,7 @@ export function registerRoutes(app: Express): Server {
       console.log('[DELETE-BATCH] Dados recebidos:', JSON.stringify(req.body));
       
       const validation = z.object({
-        ids: z.array(z.number()).min(1).max(100)
+        ids: z.array(z.number()).min(1).max(500) // Aumentado para 500 para permitir exclusão em massa
       }).safeParse(req.body);
       
       if (!validation.success) {
