@@ -62,7 +62,7 @@ interface PreviewRecord {
 const ImportacaoPlanilhas = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [selectedType, setSelectedType] = useState<'ubs' | 'ongs' | 'pacientes' | 'equipamentos' | 'lista-alfabetica' | 'auto' | null>('auto');
+  const [selectedType, setSelectedType] = useState<'ubs' | 'ongs' | 'pacientes' | 'equipamentos' | 'lista-alfabetica' | null>(null);
   const [previewData, setPreviewData] = useState<PreviewRecord[]>([]);
   const [selectedRecords, setSelectedRecords] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
@@ -182,7 +182,9 @@ const ImportacaoPlanilhas = () => {
     try {
       const formData = new FormData();
       formData.append('arquivo', selectedFiles[0]); // Processar primeiro arquivo
-      formData.append('tipo', selectedType || 'auto');
+      if (selectedType) {
+        formData.append('tipo', selectedType);
+      }
       
       const response = await fetch('/api/upload/preview', {
         method: 'POST',
@@ -466,7 +468,6 @@ const ImportacaoPlanilhas = () => {
                     <SelectValue placeholder="Selecione o tipo de dados da planilha" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="auto" data-testid="option-auto">🤖 Detecção Automática</SelectItem>
                     <SelectItem value="ubs" data-testid="option-ubs">UBS - Unidades Básicas de Saúde</SelectItem>
                     <SelectItem value="ongs" data-testid="option-ongs">ONGs - Organizações Não Governamentais</SelectItem>
                     <SelectItem value="pacientes" data-testid="option-pacientes">Pacientes</SelectItem>
