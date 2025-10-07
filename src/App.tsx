@@ -19,6 +19,7 @@ import Pacientes from "./pages/Pacientes";
 import Agenda from "./pages/Agenda";
 import Relatorios from "./pages/Relatorios";
 import Configuracoes from "./pages/Configuracoes";
+import Perfil from "./pages/Perfil";
 import NotFound from "./pages/NotFound";
 import AuthPage from "./pages/AuthPage";
 
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="ongs" element={<GestaoONGs />} />
               <Route path="equipamentos" element={<GestaoEquipamentos />} />
               <Route path="relatorios" element={<Relatorios />} />
+              <Route path="perfil" element={<Perfil />} />
               <Route path="configuracoes" element={<Configuracoes />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             </Route>
