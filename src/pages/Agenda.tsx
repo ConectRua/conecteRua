@@ -155,7 +155,7 @@ const Agenda = () => {
         });
       });
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       setOptimizedRoute(data);
       
       // Verificar se foi usado cálculo aproximado

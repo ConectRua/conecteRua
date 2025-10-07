@@ -395,7 +395,9 @@ export function registerRoutes(app: Express): Server {
         totalDuration: result.totalDuration,
         totalDistanceText: `${(result.totalDistance / 1000).toFixed(1)} km`,
         totalDurationText: `${Math.round(result.totalDuration / 60)} min`,
-        legs: result.legs
+        legs: result.legs,
+        errorMessage: result.errorMessage,
+        userLocation: origin // Incluir localização do usuário para uso no Google Maps
       });
 
     } catch (error) {
