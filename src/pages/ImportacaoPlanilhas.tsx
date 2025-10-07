@@ -199,7 +199,7 @@ const ImportacaoPlanilhas = () => {
         setShowPreview(true);
         
         // Selecionar automaticamente todos os registros válidos
-        const validRecordIds = new Set(
+        const validRecordIds = new Set<string>(
           data.registrosProcessados
             .filter((r: PreviewRecord) => r.valido)
             .map((r: PreviewRecord) => r.id)
