@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -22,7 +23,7 @@ const formSchema = z.object({
   descricaoLocal: z.string().min(1, "Descrição é obrigatória"),
   endereco: z.string().optional(),
   cep: z.string().optional(),
-  regiao: z.string().optional(),
+  regiao: z.string().min(1, "Região é obrigatória"),
 });
 
 type AtividadeTerritorial = {
@@ -66,7 +67,7 @@ export default function AtividadesTerritoriais() {
       descricaoLocal: "",
       endereco: "",
       cep: "",
-      regiao: "",
+      regiao: undefined,
     },
   });
 
@@ -328,10 +329,19 @@ export default function AtividadesTerritoriais() {
                   name="regiao"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Região (opcional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ex: Samambaia" {...field} data-testid="input-regiao" />
-                      </FormControl>
+                      <FormLabel>Região *</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-regiao">
+                            <SelectValue placeholder="Selecione a região" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Samambaia">Samambaia</SelectItem>
+                          <SelectItem value="Recanto das Emas">Recanto das Emas</SelectItem>
+                          <SelectItem value="Água Quente">Água Quente</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
