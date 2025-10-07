@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-import { Geolocation } from '@capacitor/geolocation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +10,7 @@ import type { Paciente } from '../../../shared/schema';
 import { MapPin, User, Phone, Calendar, Heart, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { toast } from 'sonner';
+import { getCurrentLocation as getLocation } from '@/lib/geolocation-helper';
 
 interface EditPatientModalProps {
   open: boolean;
@@ -230,25 +230,22 @@ export const EditPatientModal = ({ open, onOpenChange, onEdit, paciente }: EditP
 
   const getCurrentLocation = async () => {
     setIsGettingLocation(true);
-    try {
-      const coordinates = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: true,
-        timeout: 10000
-      });
-      
-      setFormData(prev => ({
-        ...prev,
-        latitude: coordinates.coords.latitude.toString(),
-        longitude: coordinates.coords.longitude.toString()
-      }));
-      
-      toast.success('Localização atual obtida com sucesso!');
-    } catch (error) {
-      console.error('Erro ao obter localização:', error);
-      toast.error('Não foi possível obter a localização atual.');
-    } finally {
-      setIsGettingLocation(false);
-    }
+    
+    await getLocation({
+      onSuccess: (location) => {
+        setFormData(prev => ({
+          ...prev,
+          latitude: location.latitude,
+          longitude: location.longitude
+        }));
+        setIsGettingLocation(false);
+      },
+      onError: () => {
+        setIsGettingLocation(false);
+      },
+      timeout: 10000,
+      enableHighAccuracy: true
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
