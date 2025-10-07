@@ -1,6 +1,6 @@
 # Overview
 
-This project is a georeferencing system designed for social assistance and health services in specific regions of Brazil (Samambaia, Recanto das Emas, and Águas Quentes). Its primary purpose is to map healthcare facilities (UBS), NGOs, and patients, facilitating intelligent pairing between patients and the nearest healthcare units based on geographic proximity and service availability. Key capabilities include an interactive map interface, comprehensive management dashboards for various entities, and robust data import functionalities with advanced geocoding and validation. The system aims to optimize resource allocation, improve access to services, and enhance overall operational efficiency for social and health initiatives.
+This project is a georeferencing system designed for social assistance and health services in specific regions of Brazil (Samambaia, Recanto das Emas, and Água Quente). Its primary purpose is to map healthcare facilities (UBS), NGOs, and patients, facilitating intelligent pairing between patients and the nearest healthcare units based on geographic proximity and service availability. Key capabilities include an interactive map interface, comprehensive management dashboards for various entities, and robust data import functionalities with advanced geocoding and validation. The system aims to optimize resource allocation, improve access to services, and enhance overall operational efficiency for social and health initiatives.
 
 # User Preferences
 

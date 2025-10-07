@@ -81,8 +81,8 @@ async function migrate() {
         gestor: "Dra. Maria Santos"
       },
       {
-        nome: "UBS Águas Quentes",
-        endereco: "Rua Alecrim Lote 05 - Águas Quentes",
+        nome: "UBS Água Quente",
+        endereco: "Rua Alecrim Lote 05 - Água Quente",
         cep: "71936-250",
         latitude: "-15.8359",
         longitude: "-48.0287",
@@ -188,9 +188,9 @@ async function migrate() {
         servicos: ["Saúde Mental", "Atendimento Psicológico", "Grupos Terapêuticos"]
       },
       {
-        nome: "Conselho Tutelar Águas Quentes",
+        nome: "Conselho Tutelar Água Quente",
         tipo: "Conselho Tutelar",
-        endereco: "Avenida Castanheiras 3000 - Águas Quentes",
+        endereco: "Avenida Castanheiras 3000 - Água Quente",
         cep: "71936-250",
         latitude: "-15.8339",
         longitude: "-48.0267",

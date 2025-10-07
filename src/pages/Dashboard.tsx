@@ -54,7 +54,7 @@ const Dashboard = () => {
           Sistema de Georreferenciamento
         </h1>
         <p className="text-white/90 text-lg">
-          Assistência Social e Saúde - Samambaia, Recanto das Emas e Águas Quentes
+          Assistência Social e Saúde - Samambaia, Recanto das Emas e Água Quente
         </p>
         <div className="flex items-center mt-4 space-x-4">
           <div className="flex items-center space-x-2">
