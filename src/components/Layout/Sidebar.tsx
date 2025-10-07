@@ -9,7 +9,7 @@ import {
   Users, 
   Building2, 
   Heart, 
-  BarChart3, 
+  FileText, 
   Settings, 
   ChevronLeft,
   Home,
@@ -87,8 +87,8 @@ const navItems: NavItem[] = [
   {
     title: 'Relatórios',
     href: '/relatorios',
-    icon: BarChart3,
-    description: 'Análises e estatísticas'
+    icon: FileText,
+    description: 'Mapas georreferenciados em PDF'
   },
   {
     title: 'Configurações',
