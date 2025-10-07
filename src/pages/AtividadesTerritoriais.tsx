@@ -19,7 +19,7 @@ import { getCurrentLocation } from "@/lib/geolocation-helper";
 
 const formSchema = z.object({
   titulo: z.string().min(1, "Título é obrigatório"),
-  quantidadePessoas: z.number().min(1, "Quantidade deve ser no mínimo 1"),
+  quantidadePessoas: z.coerce.number().min(1, "Quantidade deve ser no mínimo 1"),
   descricaoLocal: z.string().min(1, "Descrição é obrigatória"),
   endereco: z.string().optional(),
   cep: z.string().optional(),
