@@ -313,7 +313,7 @@ const GestaoONGs = () => {
                 <div>
                   <p className="text-sm font-medium mb-2">Serviços Oferecidos</p>
                   <div className="flex flex-wrap gap-1">
-                    {ong.servicos.map((servico, index) => (
+                    {(ong.servicos ?? []).map((servico, index) => (
                       <Badge key={index} variant="secondary" className="text-xs">
                         {servico}
                       </Badge>
