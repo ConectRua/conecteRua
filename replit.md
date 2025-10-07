@@ -118,6 +118,35 @@ PDF report generation system for territorial activities with precise formatting:
 - Clean, professional filename format: `Relatorio-Georreferenciado-{region}-{start-date}-a-{end-date}.pdf`
 - PDF metadata added to prevent antivirus false positives
 
+## Agenda Management (Gerenciamento de Agenda)
+Enhanced agenda functionality with full appointment management capabilities:
+
+**Core Features:**
+- Dropdown menu on each "Próximos Atendimentos" patient card with action options
+- "Remover da Agenda" option: Clears the scheduled appointment (sets proximoAtendimento to null)
+- "Remarcar" option: Opens date picker dialog to reschedule appointment to a new date
+- Real-time validation: Shows inline message when no date selected in reschedule dialog
+- Loading states: Dropdown options disabled during API operations with visual feedback
+- Query invalidation: Uses React Query cache invalidation for instant UI updates without page reload
+- Confirmation dialogs with clear user feedback via toast notifications
+
+**Technical Implementation:**
+- Backend endpoint: PATCH `/api/pacientes/:id/agendamento` accepts { proximoAtendimento: string | null }
+- Frontend mutations using `@tanstack/react-query` with proper error handling
+- Date validation: Prevents past dates, validates ISO string format on backend
+- Audit logging: Records oldValues/newValues for all appointment changes
+- UX optimization: queryClient.invalidateQueries instead of window.location.reload for better SPA experience
+- Accessibility: Disabled states on buttons tied to mutation `.isPending` flags
+
+**User Workflow:**
+1. Navigate to Agenda page and view upcoming appointments
+2. Click three-dot menu (MoreVertical icon) on any "Próximos Atendimentos" card
+3. Select "Remover da Agenda" to clear appointment (with confirmation dialog)
+4. OR select "Remarcar" to open date picker dialog
+5. Choose new date from calendar (validates future dates only)
+6. Click "Confirmar" to save new appointment date
+7. Receive instant visual feedback and see updated calendar without reload
+
 ## Route Optimization (Otimização de Rotas)
 Intelligent route optimization system for daily scheduled patient visits using Google Directions API:
 
