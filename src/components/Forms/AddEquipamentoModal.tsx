@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Geolocation } from '@capacitor/geolocation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +12,7 @@ import type { InsertEquipamentoSocial } from '../../../shared/schema';
 import { MapPin, Building, Phone, Clock, Users, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { toast } from 'sonner';
+import { getCurrentLocation as getLocation } from '@/lib/geolocation-helper';
 
 interface AddEquipamentoModalProps {
   open: boolean;
@@ -169,63 +169,22 @@ export const AddEquipamentoModal = ({ open, onOpenChange, onAdd }: AddEquipament
 
   const getCurrentLocation = async () => {
     setIsGettingLocation(true);
-    try {
-      // Primeiro tenta a API Capacitor (para mobile)
-      try {
-        const coordinates = await Geolocation.getCurrentPosition({
-          enableHighAccuracy: true,
-          timeout: 10000
-        });
-        
-        const location = {
-          latitude: coordinates.coords.latitude.toString(),
-          longitude: coordinates.coords.longitude.toString()
-        };
-        
+    
+    await getLocation({
+      onSuccess: (location) => {
         setFormData(prev => ({
           ...prev,
           latitude: location.latitude,
           longitude: location.longitude
         }));
-        
-        toast.success('Localização obtida com sucesso!');
-        return;
-      } catch (capacitorError) {
-        // Fallback para API do browser (para web)
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              const location = {
-                latitude: position.coords.latitude.toString(),
-                longitude: position.coords.longitude.toString()
-              };
-              
-              setFormData(prev => ({
-                ...prev,
-                latitude: location.latitude,
-                longitude: location.longitude
-              }));
-              
-              toast.success('Localização obtida com sucesso!');
-              setIsGettingLocation(false);
-            },
-            (error) => {
-              console.error('Erro browser geolocation:', error);
-              throw error;
-            },
-            { enableHighAccuracy: true, timeout: 10000 }
-          );
-          return;
-        } else {
-          throw new Error('Geolocalização não suportada pelo navegador');
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao obter localização:', error);
-      toast.error('Não foi possível obter a localização. Verifique as permissões.');
-    } finally {
-      setIsGettingLocation(false);
-    }
+        setIsGettingLocation(false);
+      },
+      onError: () => {
+        setIsGettingLocation(false);
+      },
+      timeout: 10000,
+      enableHighAccuracy: true
+    });
   };
 
   return (

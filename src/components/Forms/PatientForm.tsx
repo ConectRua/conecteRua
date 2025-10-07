@@ -2,8 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Geolocation } from '@capacitor/geolocation';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { getCurrentLocation as getLocation } from '@/lib/geolocation-helper';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -418,78 +418,34 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
   // Obter localização atual
   const getCurrentLocation = async () => {
     setIsGettingLocation(true);
-    try {
-      let lat: number, lng: number;
-      
-      try {
-        const coordinates = await Geolocation.getCurrentPosition({
-          enableHighAccuracy: true,
-          timeout: 10000
-        });
-        
-        lat = coordinates.coords.latitude;
-        lng = coordinates.coords.longitude;
+    
+    await getLocation({
+      onSuccess: (location) => {
+        const lat = parseFloat(location.latitude);
+        const lng = parseFloat(location.longitude);
         
         setFormData(prev => ({
           ...prev,
-          latitude: lat.toString(),
-          longitude: lng.toString()
+          latitude: location.latitude,
+          longitude: location.longitude
         }));
         
         form.setValue('latitude', lat);
         form.setValue('longitude', lng);
-        
-        toast.success('📍 Localização atual obtida com sucesso!');
         
         // Acionar reverse geocoding para buscar o CEP
         geocodingRequestIdRef.current += 1;
         const currentRequestId = geocodingRequestIdRef.current;
         reverseGeocodeCoordinates(lat, lng, currentRequestId);
         
-        return;
-      } catch (capacitorError) {
-        console.log('Capacitor failed, trying browser API:', capacitorError);
-        
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              lat = position.coords.latitude;
-              lng = position.coords.longitude;
-              
-              setFormData(prev => ({
-                ...prev,
-                latitude: lat.toString(),
-                longitude: lng.toString()
-              }));
-              
-              form.setValue('latitude', lat);
-              form.setValue('longitude', lng);
-              
-              toast.success('📍 Localização atual obtida com sucesso!');
-              setIsGettingLocation(false);
-              
-              // Acionar reverse geocoding para buscar o CEP
-              geocodingRequestIdRef.current += 1;
-              const currentRequestId = geocodingRequestIdRef.current;
-              reverseGeocodeCoordinates(lat, lng, currentRequestId);
-            },
-            (error) => {
-              console.error('Erro browser geolocation:', error);
-              throw error;
-            },
-            { enableHighAccuracy: true, timeout: 10000 }
-          );
-          return;
-        } else {
-          throw new Error('Geolocalização não suportada pelo navegador');
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao obter localização:', error);
-      toast.error('Não foi possível obter a localização. Verifique as permissões.');
-    } finally {
-      setIsGettingLocation(false);
-    }
+        setIsGettingLocation(false);
+      },
+      onError: () => {
+        setIsGettingLocation(false);
+      },
+      timeout: 10000,
+      enableHighAccuracy: true
+    });
   };
 
   const onSubmit = async (data: PacienteFormData) => {
