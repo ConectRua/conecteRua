@@ -134,9 +134,16 @@ const Agenda = () => {
     },
     onSuccess: (data) => {
       setOptimizedRoute(data);
+      
+      // Verificar se foi usado cálculo aproximado
+      const isApproximateCalculation = data.errorMessage?.includes('aproximada');
+      
       toast({
-        title: "Rota otimizada calculada!",
-        description: `Distância total: ${data.totalDistanceText}, Tempo: ${data.totalDurationText}`
+        title: isApproximateCalculation ? "Rota calculada (aproximada)" : "Rota otimizada calculada!",
+        description: isApproximateCalculation 
+          ? `⚠️ ${data.errorMessage}. Distância: ${data.totalDistanceText}, Tempo estimado: ${data.totalDurationText}`
+          : `Distância total: ${data.totalDistanceText}, Tempo: ${data.totalDurationText}`,
+        variant: isApproximateCalculation ? "default" : "default"
       });
     },
     onError: (error: any) => {
