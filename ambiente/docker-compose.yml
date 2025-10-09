@@ -9,29 +9,34 @@ services:
     container_name: geo-map-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-geomap}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-geomap}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-geomap}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - geo-map-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-geomap} -d ${POSTGRES_DB:-geomap}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-geomap}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   backend:
     build:
-      context: .
+      context: ..
       dockerfile: server/Dockerfile
     container_name: geo-map-backend
     restart: unless-stopped
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgres://geomap:geomap@postgres:5432/geomap}
+      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:postgres@postgres:5432/${POSTGRES_DB:-geomap}}
       NODE_ENV: production
       PORT: 3000
+      SESSION_SECRET: ${SESSION_SECRET:-74f64982ae90e10407a13d7e146205a03ae608127a442ee9eb292f7a734953ca}
+      LOCAL_CLIENT_PORT: ${LOCAL_CLIENT_PORT:-5173}
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
+      CORS_ORIGIN_2: ${CORS_ORIGIN_2:-}
+      VIACEP_API_URL: ${VIACEP_API_URL:-https://viacep.com.br/ws}
     depends_on:
       postgres:
         condition: service_healthy
@@ -42,7 +47,7 @@ services:
 
   frontend:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile.frontend
       args:
         NODE_ENV: production
@@ -52,6 +57,7 @@ services:
       NODE_ENV: production
       VITE_API_URL: ${VITE_API_URL:-http://backend:3000}
       VITE_API_PROXY_TARGET: ${VITE_API_PROXY_TARGET:-http://backend:3000}
+      VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY:-your-google-maps-api-key}
     depends_on:
       - backend
     networks:

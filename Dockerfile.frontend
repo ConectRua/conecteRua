@@ -1,5 +1,5 @@
 # Dockerfile para o frontend Vite/React
-FROM --platform=linux/amd64 node:20-alpine AS build
+FROM node:20-alpine AS build
 WORKDIR /app
 
 # Accept build args
@@ -9,8 +9,8 @@ ENV NODE_ENV=$NODE_ENV
 # Copy only package files first
 COPY package.json package-lock.json ./
 
-# Install ALL dependencies in a clean directory
-RUN npm ci
+# Install ALL dependencies in a clean directory (dev deps needed for builds)
+RUN npm ci --include=dev
 
 # Copy the rest of the application
 COPY tsconfig.json tsconfig.app.json tsconfig.node.json ./
@@ -29,7 +29,7 @@ COPY .env.production .env.production
 # Build the application
 RUN npm run build
 
-FROM --platform=linux/amd64 node:20-alpine AS serve
+FROM node:20-alpine AS serve
 WORKDIR /app
 COPY --from=build /app/dist ./dist
 RUN npm install -g serve

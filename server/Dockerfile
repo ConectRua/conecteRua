@@ -1,5 +1,5 @@
 # Dockerfile para o backend Bun
-FROM --platform=linux/amd64 oven/bun:1.0.25
+FROM oven/bun:1.0.25
 WORKDIR /app
 
 # Copy package files from root

@@ -18,6 +18,9 @@ export interface GeocodeResult {
   error?: string;
 }
 
+
+const VIA_CEP_BASE_URL = (process.env.VIACEP_API_URL ?? 'https://viacep.com.br/ws').replace(/\/$/, '');
+
 /**
  * Serviço de geocodificação que utiliza Nominatim (OpenStreetMap) como fonte principal
  * e ViaCEP como fallback para CEPs brasileiros.
@@ -292,7 +295,7 @@ export class GeocodingService {
         };
       }
       
-      const url = `https://viacep.com.br/ws/${cleanCep}/json/`;
+      const url = `${VIA_CEP_BASE_URL}/${cleanCep}/json/`;
       
       const response = await this.fetchWithTimeout(url, {}, 5000);
       
