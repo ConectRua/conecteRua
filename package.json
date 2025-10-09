@@ -11,8 +11,8 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "db:push": "drizzle-kit push",
-    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push --config=drizzle.config.mjs",
+    "db:generate": "drizzle-kit generate --config=drizzle.config.mjs",
     "db:migrate": "tsx server/migrate.ts"
   },
   "dependencies": {
@@ -68,6 +68,7 @@
     "connect-pg-simple": "^10.0.0",
     "cors": "^2.8.5",
     "date-fns": "^3.6.0",
+    "dotenv": "^17.2.3",
     "drizzle-kit": "^0.31.4",
     "drizzle-orm": "^0.44.5",
     "drizzle-zod": "^0.8.3",
