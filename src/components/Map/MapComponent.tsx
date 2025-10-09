@@ -14,6 +14,8 @@ interface MapComponentProps {
   zoom?: number;
   editMode?: boolean;
   onPositionUpdate?: (id: string, type: 'ubs' | 'ong' | 'paciente' | 'equipamento', lat: number, lng: number) => void;
+  onRadiusActivated?: (patient: Paciente, entities: {ubs: Array<UBS & {distance: number}>, ongs: Array<ONG & {distance: number}>, equipamentos: Array<EquipamentoSocial & {distance: number}>}) => void;
+  onRadiusCleared?: () => void;
 }
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
@@ -29,6 +31,19 @@ const escapeHtml = (unsafe: string | null | undefined): string => {
     .replace(/'/g, "&#039;");
 };
 
+// Haversine formula to calculate distance between two points in meters
+const haversineDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+  const R = 6371000; // Earth's radius in meters
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
 export const MapComponent = ({
   height = '400px',
   showUBS = true,
@@ -39,17 +54,33 @@ export const MapComponent = ({
   centerLng = -48.0958,
   zoom = 12,
   editMode = false,
-  onPositionUpdate
+  onPositionUpdate,
+  onRadiusActivated,
+  onRadiusCleared
 }: MapComponentProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
+  const radiusCircleRef = useRef<google.maps.Circle | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [activePacienteId, setActivePacienteId] = useState<number | null>(null);
   const { ubsList, ongsList, pacientesList, equipamentosSociais } = useApiData();
 
   // Criar referências estáveis dos dados usando useRef para evitar re-renders
   const dataRef = useRef({ ubsList, ongsList, pacientesList, equipamentosSociais });
   
+  // Function to clear radius circle
+  const clearRadius = () => {
+    if (radiusCircleRef.current) {
+      radiusCircleRef.current.setMap(null);
+      radiusCircleRef.current = null;
+    }
+    setActivePacienteId(null);
+    if (onRadiusCleared) {
+      onRadiusCleared();
+    }
+  };
+
   // Atualizar referências quando os dados realmente mudarem
   useEffect(() => {
     console.log('Dados atualizados no MapComponent:', { 
@@ -250,6 +281,21 @@ export const MapComponent = ({
           return;
         }
         
+        // Determinar cor do marcador baseado na precisão da geocodificação
+        // Alta precisão (roxo escuro): ROOFTOP, PLACE, RANGE_INTERPOLATED
+        // Baixa precisão (roxo claro): APPROXIMATE, GEOMETRIC_CENTER, null
+        const precisao = (paciente as any).precisaoGeocode;
+        const isLowPrecision = !precisao || precisao === 'APPROXIMATE' || precisao === 'GEOMETRIC_CENTER';
+        
+        let markerColor;
+        if (editMode) {
+          markerColor = '#a855f7'; // Roxo claro em modo edição
+        } else if (isLowPrecision) {
+          markerColor = '#a855f7'; // Roxo claro para baixa precisão (precisa validação)
+        } else {
+          markerColor = '#9333ea'; // Roxo escuro para alta precisão
+        }
+        
         const marker = new google.maps.Marker({
           position: { lat: lat, lng: lng },
           map: map,
@@ -258,7 +304,7 @@ export const MapComponent = ({
           icon: {
             url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
               <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="12" cy="12" r="10" fill="${editMode ? '#fbbf24' : '#8b5cf6'}" stroke="white" stroke-width="2"/>
+                <circle cx="12" cy="12" r="10" fill="${markerColor}" stroke="white" stroke-width="2"/>
                 <text x="12" y="16" font-family="Arial" font-size="10" fill="white" text-anchor="middle">👤</text>
               </svg>
             `),
@@ -266,15 +312,27 @@ export const MapComponent = ({
           }
         });
 
+        // Texto amigável para precisão
+        const precisaoTexto = precisao 
+          ? precisao === 'ROOFTOP' ? 'Alta (endereço exato)' 
+          : precisao === 'PLACE' ? 'Alta (local conhecido)' 
+          : precisao === 'RANGE_INTERPOLATED' ? 'Boa (interpolado)' 
+          : precisao === 'GEOMETRIC_CENTER' ? 'Média (centro geométrico)' 
+          : 'Baixa (aproximado)' 
+          : 'Desconhecida';
+        
+        const isRadiusActive = activePacienteId === paciente.id;
+        
         const infoWindow = new google.maps.InfoWindow({
           content: `
             <div class="p-3" style="min-width: 250px;">
-              <h3 class="font-bold text-lg mb-2" style="color: #8b5cf6;">${escapeHtml(paciente.nome)}</h3>
+              <h3 class="font-bold text-lg mb-2" style="color: ${markerColor};">${escapeHtml(paciente.nome)}</h3>
               <div class="space-y-1 text-sm">
                 <p><strong>Idade:</strong> ${escapeHtml(paciente.idade?.toString())} anos</p>
                 <p><strong>Endereço:</strong> ${escapeHtml(paciente.endereco)}</p>
                 <p><strong>CEP:</strong> ${escapeHtml(paciente.cep)}</p>
                 <p><strong>Telefone:</strong> ${escapeHtml(paciente.telefone)}</p>
+                ${precisao ? `<p><strong>Precisão:</strong> <span style="color: ${isLowPrecision ? '#f59e0b' : '#10b981'};">${escapeHtml(precisaoTexto)}</span>${isLowPrecision ? ' ⚠️' : ' ✓'}</p>` : ''}
                 ${paciente.distanciaUbs ? `<p><strong>Distância UBS:</strong> ${escapeHtml(paciente.distanciaUbs.toFixed(1))} km</p>` : ''}
                 <div class="mt-2">
                   <strong>Condições de Saúde:</strong>
@@ -284,6 +342,27 @@ export const MapComponent = ({
                     ).join('')}
                   </div>
                 </div>
+                ${!editMode ? `
+                  <div class="mt-3 pt-2 border-t">
+                    ${isRadiusActive ? `
+                      <button 
+                        data-testid="button-clear-radius"
+                        class="radius-clear-btn w-full px-3 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm font-medium transition-colors"
+                        style="cursor: pointer;"
+                      >
+                        ❌ Limpar Raio
+                      </button>
+                    ` : `
+                      <button 
+                        data-testid="button-show-radius"
+                        class="radius-btn w-full px-3 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 text-sm font-medium transition-colors"
+                        style="cursor: pointer;"
+                      >
+                        🎯 Ver Raio de Apoio (1km)
+                      </button>
+                    `}
+                  </div>
+                ` : ''}
               </div>
             </div>
           `
@@ -292,6 +371,87 @@ export const MapComponent = ({
         marker.addListener('click', () => {
           if (!editMode) {
             infoWindow.open(map, marker);
+            
+            // Add event listeners to radius buttons after InfoWindow opens
+            google.maps.event.addListenerOnce(infoWindow, 'domready', () => {
+              const showRadiusBtn = document.querySelector('.radius-btn');
+              const clearRadiusBtn = document.querySelector('.radius-clear-btn');
+              
+              if (showRadiusBtn) {
+                showRadiusBtn.addEventListener('click', () => {
+                  // Clear any existing radius first
+                  if (radiusCircleRef.current) {
+                    radiusCircleRef.current.setMap(null);
+                  }
+                  
+                  // Draw new radius circle
+                  const circle = new google.maps.Circle({
+                    strokeColor: '#a855f7',
+                    strokeOpacity: 0.8,
+                    strokeWeight: 2,
+                    fillColor: '#a855f7',
+                    fillOpacity: 0.2,
+                    map: map,
+                    center: { lat, lng },
+                    radius: 1000
+                  });
+                  
+                  radiusCircleRef.current = circle;
+                  setActivePacienteId(paciente.id);
+                  
+                  // Calculate entities within radius with distance
+                  const ubsWithinRadius = dataRef.current.ubsList
+                    .map((ubs: UBS) => {
+                      const ubsLat = typeof ubs.latitude === 'string' ? parseFloat(ubs.latitude) : ubs.latitude;
+                      const ubsLng = typeof ubs.longitude === 'string' ? parseFloat(ubs.longitude) : ubs.longitude;
+                      if (ubsLat == null || ubsLng == null) return null;
+                      const distance = haversineDistance(lat, lng, ubsLat, ubsLng);
+                      return distance <= 1000 ? { ...ubs, distance } : null;
+                    })
+                    .filter((ubs): ubs is UBS & { distance: number } => ubs !== null);
+                  
+                  const ongsWithinRadius = dataRef.current.ongsList
+                    .map((ong: ONG) => {
+                      const ongLat = typeof ong.latitude === 'string' ? parseFloat(ong.latitude) : ong.latitude;
+                      const ongLng = typeof ong.longitude === 'string' ? parseFloat(ong.longitude) : ong.longitude;
+                      if (ongLat == null || ongLng == null) return null;
+                      const distance = haversineDistance(lat, lng, ongLat, ongLng);
+                      return distance <= 1000 ? { ...ong, distance } : null;
+                    })
+                    .filter((ong): ong is ONG & { distance: number } => ong !== null);
+                  
+                  const equipamentosWithinRadius = dataRef.current.equipamentosSociais
+                    .map((eq: EquipamentoSocial) => {
+                      if (eq.latitude == null || eq.longitude == null) return null;
+                      const distance = haversineDistance(lat, lng, eq.latitude, eq.longitude);
+                      return distance <= 1000 ? { ...eq, distance } : null;
+                    })
+                    .filter((eq): eq is EquipamentoSocial & { distance: number } => eq !== null);
+                  
+                  // Call callback with filtered data including distances
+                  if (onRadiusActivated) {
+                    onRadiusActivated(paciente, {
+                      ubs: ubsWithinRadius,
+                      ongs: ongsWithinRadius,
+                      equipamentos: equipamentosWithinRadius
+                    });
+                  }
+                  
+                  // Update InfoWindow to show clear button
+                  infoWindow.close();
+                  updateMarkers();
+                  infoWindow.open(map, marker);
+                });
+              }
+              
+              if (clearRadiusBtn) {
+                clearRadiusBtn.addEventListener('click', () => {
+                  clearRadius();
+                  infoWindow.close();
+                  updateMarkers();
+                });
+              }
+            });
           }
         });
 
@@ -401,7 +561,7 @@ export const MapComponent = ({
         const loader = new Loader({
           apiKey: GOOGLE_MAPS_API_KEY,
           version: 'weekly',
-          libraries: ['marker']
+          libraries: ['marker', 'places']
         });
 
         await loader.load();

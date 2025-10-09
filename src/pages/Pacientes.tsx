@@ -3,12 +3,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Users, Search, Plus, UserCheck, MapPin, Phone, Calendar, CreditCard, Trash2, Edit, ClipboardList, Clock } from 'lucide-react';
 import { PatientForm } from '@/components/Forms/PatientForm';
 import { EditPatientModal } from '@/components/Forms/EditPatientModal';
 import { OrientacoesModal } from '@/components/Modals/OrientacoesModal';
 import { useApiData } from '@/hooks/useApiData';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 import type { Paciente } from '../../shared/schema';
 
 const Pacientes = () => {
@@ -16,11 +20,58 @@ const Pacientes = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isOrientacoesModalOpen, setIsOrientacoesModalOpen] = useState(false);
   const [selectedPaciente, setSelectedPaciente] = useState<Paciente | null>(null);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { pacientesList, getEstatisticas, deletePaciente, updatePaciente } = useApiData();
   const stats = getEstatisticas();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const deleteBatchMutation = useMutation({
+    mutationFn: async (ids: number[]) => {
+      return await apiRequest('POST', '/api/pacientes/excluir-lote', { ids }) as { deleted: number; failed: number; total: number; success: boolean };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/pacientes'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/estatisticas'] });
+      toast({
+        title: "Exclusão em lote concluída",
+        description: `${data.deleted} pacientes excluídos com sucesso. ${data.failed > 0 ? `${data.failed} falharam.` : ''}`,
+      });
+      setSelectedIds([]);
+      setShowDeleteDialog(false);
+    },
+    onError: () => {
+      toast({
+        title: "Erro ao excluir pacientes",
+        description: "Ocorreu um erro ao tentar excluir os pacientes selecionados.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleDeletePaciente = (id: number) => {
     deletePaciente(id);
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedIds.length > 0) {
+      deleteBatchMutation.mutate(selectedIds);
+    }
+  };
+
+  const toggleSelectPaciente = (id: number) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === pacientesList.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(pacientesList.map(p => p.id));
+    }
   };
 
   const handleEditPaciente = (paciente: Paciente) => {
@@ -54,10 +105,22 @@ const Pacientes = () => {
             Cadastro e pareamento de pacientes com unidades de saúde
           </p>
         </div>
-        <Button onClick={() => setIsFormOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Paciente
-        </Button>
+        <div className="flex gap-2">
+          {selectedIds.length > 0 && (
+            <Button 
+              variant="destructive" 
+              onClick={() => setShowDeleteDialog(true)}
+              data-testid="button-delete-selected"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Excluir {selectedIds.length} selecionado{selectedIds.length > 1 ? 's' : ''}
+            </Button>
+          )}
+          <Button onClick={() => setIsFormOpen(true)} data-testid="button-add-patient">
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Paciente
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-4">
@@ -131,11 +194,33 @@ const Pacientes = () => {
       </Card>
 
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Lista de Pacientes</h2>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Checkbox 
+              checked={selectedIds.length === pacientesList.length && pacientesList.length > 0}
+              onCheckedChange={toggleSelectAll}
+              data-testid="checkbox-select-all"
+            />
+            <h2 className="text-xl font-semibold">Lista de Pacientes</h2>
+          </div>
+          {selectedIds.length > 0 && (
+            <span className="text-sm text-muted-foreground">
+              {selectedIds.length} de {pacientesList.length} selecionados
+            </span>
+          )}
+        </div>
         
         {pacientesList.map((paciente) => (
-          <Card key={paciente.id}>
+          <Card key={paciente.id} className={selectedIds.includes(paciente.id) ? 'ring-2 ring-primary' : ''}>
             <CardContent className="p-6">
+              <div className="flex items-start gap-3">
+                <Checkbox 
+                  checked={selectedIds.includes(paciente.id)}
+                  onCheckedChange={() => toggleSelectPaciente(paciente.id)}
+                  className="mt-1"
+                  data-testid={`checkbox-paciente-${paciente.id}`}
+                />
+                <div className="flex-1">
               {/* Campos de Atendimento */}
               <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border-l-4 border-blue-500">
                 <div className="grid gap-2 md:grid-cols-2">
@@ -235,10 +320,35 @@ const Pacientes = () => {
                   {(paciente.condicoesSaude || []).join(', ') || 'Nenhuma condição registrada'}
                 </div>
               </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent data-testid="dialog-delete-batch">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão em Lote</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir {selectedIds.length} paciente{selectedIds.length > 1 ? 's' : ''}? 
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-batch-delete">Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteSelected}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteBatchMutation.isPending}
+              data-testid="button-confirm-batch-delete"
+            >
+              {deleteBatchMutation.isPending ? 'Excluindo...' : 'Excluir'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <PatientForm open={isFormOpen} onOpenChange={setIsFormOpen} />
       <EditPatientModal 

@@ -6,10 +6,14 @@ import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
 import { storage } from "./storage";
 import { createGeocodingService } from "./services/geocoding";
-import { insertUBSSchema, insertONGSchema, insertPacienteSchema, insertEquipamentoSocialSchema, insertOrientacaoEncaminhamentoSchema } from "../shared/schema";
+import { createGooglePlacesService } from "./services/googlePlacesService";
+import { createGoogleDirectionsService } from "./services/googleDirectionsService";
+import { insertUBSSchema, insertONGSchema, insertPacienteSchema, insertEquipamentoSocialSchema, insertOrientacaoEncaminhamentoSchema, insertAtividadeTerritorialSchema, ubs, ongs, equipamentosSociais } from "../shared/schema";
 import { z } from "zod";
 import multer from "multer";
 import * as XLSX from "xlsx";
+import { db } from "./db";
+import { eq, and, sql } from "drizzle-orm";
 
 // Função para detectar automaticamente o tipo de entidade baseado nos dados
 function detectEntityType(row: any): 'ubs' | 'ongs' | 'equipamentos' | null {
@@ -37,13 +41,45 @@ function detectEntityType(row: any): 'ubs' | 'ongs' | 'equipamentos' | null {
     return 'ubs';
   }
   
-  // Detectar Equipamentos Sociais (CAPS, CRAS, etc.)
+  // Detectar Equipamentos Sociais (CAPS, CRAS, CREAS, etc.)
   if (textoCombinado.includes('CAPS') ||
       textoCombinado.includes('CRAS') ||
+      textoCombinado.includes('CREAS') ||
       textoCombinado.includes('CENTRO DE ATENÇÃO PSICOSSOCIAL') ||
+      textoCombinado.includes('CENTRO DE ATENCAO PSICOSSOCIAL') ||
       textoCombinado.includes('CENTRO DE REFERÊNCIA') ||
+      textoCombinado.includes('CENTRO DE REFERENCIA') ||
+      textoCombinado.includes('CENTRO DE ASSISTÊNCIA SOCIAL') ||
+      textoCombinado.includes('CENTRO DE ASSISTENCIA SOCIAL') ||
       textoCombinado.includes('EQUIPAMENTO SOCIAL') ||
-      textoCombinado.includes('CENTRO SOCIAL')) {
+      textoCombinado.includes('CENTRO SOCIAL') ||
+      textoCombinado.includes('CENTRO DIA') ||
+      textoCombinado.includes('CENTRO-DIA') ||
+      textoCombinado.includes('CASA DE ACOLHIMENTO') ||
+      textoCombinado.includes('CASA DE ACOLHIDA') ||
+      textoCombinado.includes('ABRIGO') ||
+      textoCombinado.includes('CENTRO DE CONVIVÊNCIA') ||
+      textoCombinado.includes('CENTRO DE CONVIVENCIA') ||
+      textoCombinado.includes('CENTRO POP') ||
+      textoCombinado.includes('CENTRO-POP') ||
+      textoCombinado.includes('CENTRO POPULAÇÃO') ||
+      textoCombinado.includes('CENTRO POPULACAO') ||
+      textoCombinado.includes('CONSELHO TUTELAR') ||
+      textoCombinado.includes('COSE') ||
+      textoCombinado.includes('CENTRO DE ORIENTAÇÃO') ||
+      textoCombinado.includes('CENTRO DE ORIENTACAO') ||
+      textoCombinado.includes('NÚCLEO') ||
+      textoCombinado.includes('NUCLEO') ||
+      textoCombinado.includes('UNIDADE DE ACOLHIMENTO') ||
+      textoCombinado.includes('CASA-LAR') ||
+      textoCombinado.includes('CASA LAR') ||
+      textoCombinado.includes('RESIDÊNCIA INCLUSIVA') ||
+      textoCombinado.includes('RESIDENCIA INCLUSIVA') ||
+      textoCombinado.includes('CENTRO ESPECIALIZADO') ||
+      textoCombinado.includes('SERVIÇO DE ACOLHIMENTO') ||
+      textoCombinado.includes('SERVICO DE ACOLHIMENTO') ||
+      textoCombinado.includes('SERVIÇO DE CONVIVÊNCIA') ||
+      textoCombinado.includes('SERVICO DE CONVIVENCIA')) {
     return 'equipamentos';
   }
   
@@ -119,12 +155,113 @@ const auditMiddleware = (action: string, tableName: string) => {
   };
 };
 
+// ============ FUNÇÕES DE VERIFICAÇÃO DE DUPLICATAS ============
+
+// Verificar duplicata UBS (por place_id ou nome+endereço)
+async function checkUBSDuplicate(nome: string, endereco: string, placeId?: string): Promise<boolean> {
+  try {
+    // Verificar por place_id se fornecido
+    if (placeId) {
+      const byPlaceId = await db.select({ id: ubs.id })
+        .from(ubs)
+        .where(and(
+          eq(ubs.placeId, placeId),
+          eq(ubs.ativo, true)
+        ))
+        .limit(1);
+      if (byPlaceId.length > 0) return true;
+    }
+    
+    // Verificar por nome + endereço (normalizado usando SQL LOWER e TRIM)
+    const byNameAddress = await db.select({ id: ubs.id })
+      .from(ubs)
+      .where(and(
+        sql`LOWER(TRIM(${ubs.nome})) = LOWER(TRIM(${nome}))`,
+        sql`LOWER(TRIM(${ubs.endereco})) = LOWER(TRIM(${endereco}))`,
+        eq(ubs.ativo, true)
+      ))
+      .limit(1);
+    
+    return byNameAddress.length > 0;
+  } catch (error) {
+    console.error('Erro ao verificar duplicata UBS:', error);
+    return false;
+  }
+}
+
+// Verificar duplicata ONG (por place_id ou nome+endereço)
+async function checkONGDuplicate(nome: string, endereco: string, placeId?: string): Promise<boolean> {
+  try {
+    // Verificar por place_id se fornecido
+    if (placeId) {
+      const byPlaceId = await db.select({ id: ongs.id })
+        .from(ongs)
+        .where(and(
+          eq(ongs.placeId, placeId),
+          eq(ongs.ativo, true)
+        ))
+        .limit(1);
+      if (byPlaceId.length > 0) return true;
+    }
+    
+    // Verificar por nome + endereço (normalizado usando SQL LOWER e TRIM)
+    const byNameAddress = await db.select({ id: ongs.id })
+      .from(ongs)
+      .where(and(
+        sql`LOWER(TRIM(${ongs.nome})) = LOWER(TRIM(${nome}))`,
+        sql`LOWER(TRIM(${ongs.endereco})) = LOWER(TRIM(${endereco}))`,
+        eq(ongs.ativo, true)
+      ))
+      .limit(1);
+    
+    return byNameAddress.length > 0;
+  } catch (error) {
+    console.error('Erro ao verificar duplicata ONG:', error);
+    return false;
+  }
+}
+
+// Verificar duplicata Equipamento Social (por place_id ou nome+endereço)
+async function checkEquipamentoSocialDuplicate(nome: string, endereco: string, placeId?: string): Promise<boolean> {
+  try {
+    // Verificar por place_id se fornecido
+    if (placeId) {
+      const byPlaceId = await db.select({ id: equipamentosSociais.id })
+        .from(equipamentosSociais)
+        .where(and(
+          eq(equipamentosSociais.placeId, placeId),
+          eq(equipamentosSociais.ativo, true)
+        ))
+        .limit(1);
+      if (byPlaceId.length > 0) return true;
+    }
+    
+    // Verificar por nome + endereço (normalizado usando SQL LOWER e TRIM)
+    const byNameAddress = await db.select({ id: equipamentosSociais.id })
+      .from(equipamentosSociais)
+      .where(and(
+        sql`LOWER(TRIM(${equipamentosSociais.nome})) = LOWER(TRIM(${nome}))`,
+        sql`LOWER(TRIM(${equipamentosSociais.endereco})) = LOWER(TRIM(${endereco}))`,
+        eq(equipamentosSociais.ativo, true)
+      ))
+      .limit(1);
+    
+    return byNameAddress.length > 0;
+  } catch (error) {
+    console.error('Erro ao verificar duplicata Equipamento Social:', error);
+    return false;
+  }
+}
+
 export function registerRoutes(app: Express): Server {
   // Setup authentication routes: /api/register, /api/login, /api/logout, /api/user
   setupAuth(app);
 
   // Criar instância do serviço de geocodificação
   const geocodingService = createGeocodingService(storage);
+  
+  // Criar instância do serviço de busca inteligente do Google Places
+  const googlePlacesService = createGooglePlacesService();
 
   // ============ ENDPOINTS GEOGRÁFICOS (FASE 4) ============
   
@@ -205,6 +342,66 @@ export function registerRoutes(app: Express): Server {
       });
     } catch (error) {
       console.error("Erro no reverse geocoding:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  // Otimizar rota entre múltiplos pontos
+  app.post("/api/routes/optimize", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+
+      const optimizeRouteSchema = z.object({
+        origin: z.object({
+          latitude: z.number(),
+          longitude: z.number(),
+          id: z.number().optional(),
+          nome: z.string().optional()
+        }),
+        destinations: z.array(z.object({
+          latitude: z.number(),
+          longitude: z.number(),
+          id: z.number().optional(),
+          nome: z.string().optional()
+        })).min(1, "Pelo menos um destino é necessário")
+      });
+
+      const validation = optimizeRouteSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ error: "Dados inválidos", details: validation.error.issues });
+      }
+
+      const { origin, destinations } = validation.data;
+      const directionsService = createGoogleDirectionsService();
+
+      if (!directionsService) {
+        return res.status(500).json({ error: "Serviço de rotas não disponível" });
+      }
+
+      const result = await directionsService.optimizeRoute(origin, destinations);
+
+      if (result.status === 'error') {
+        return res.status(400).json({ 
+          error: result.errorMessage || "Erro ao calcular rota otimizada" 
+        });
+      }
+
+      res.json({
+        success: true,
+        optimizedOrder: result.optimizedOrder,
+        totalDistance: result.totalDistance,
+        totalDuration: result.totalDuration,
+        totalDistanceText: `${(result.totalDistance / 1000).toFixed(1)} km`,
+        totalDurationText: `${Math.round(result.totalDuration / 60)} min`,
+        legs: result.legs,
+        errorMessage: result.errorMessage,
+        userLocation: origin // Incluir localização do usuário para uso no Google Maps
+      });
+
+    } catch (error) {
+      console.error("Erro ao otimizar rota:", error);
       res.status(500).json({ error: "Erro interno do servidor" });
     }
   });
@@ -480,8 +677,8 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ success: false, message: 'Nenhum arquivo enviado' });
       }
 
-      const tipo = req.body.tipo as 'ubs' | 'ongs' | 'pacientes' | 'equipamentos' | 'auto' | undefined;
-      const permitirDetecaoAutomatica = tipo === 'auto' || tipo === undefined || !['ubs', 'ongs', 'pacientes', 'equipamentos'].includes(tipo);
+      const tipo = req.body.tipo as 'ubs' | 'ongs' | 'pacientes' | 'equipamentos' | 'lista-alfabetica' | 'auto' | undefined;
+      const permitirDetecaoAutomatica = tipo === 'auto' || tipo === undefined || !['ubs', 'ongs', 'pacientes', 'equipamentos', 'lista-alfabetica'].includes(tipo);
 
       const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
       const sheetName = workbook.SheetNames[0];
@@ -536,6 +733,101 @@ export function registerRoutes(app: Express): Server {
               horarioFuncionamento: row['horario'] || row['horario_funcionamento'] || row['horarioFuncionamento'] || 
                                    row['Horario'] || row['funcionamento'] || row['Horário de Funcionamento'] || row['Horário'] || ''
             };
+            
+            // Verificar duplicata no banco
+            const isDuplicate = await checkUBSDuplicate(dadosExtraidos.nome, dadosExtraidos.endereco);
+            dadosExtraidos.existeNoBanco = isDuplicate;
+            
+            // Tentar buscar no Google Places para enriquecer dados
+            if (googlePlacesService && dadosExtraidos.nome && (dadosExtraidos.endereco || dadosExtraidos.cep)) {
+              try {
+                const searchData = {
+                  nome: dadosExtraidos.nome,
+                  tipo: 'UBS',
+                  endereco: dadosExtraidos.endereco,
+                  cep: dadosExtraidos.cep,
+                  telefone: dadosExtraidos.telefone
+                };
+                
+                const placeResult = await googlePlacesService.findAndMatchPlace(searchData);
+                
+                // Adicionar informações do Google Places ao registro
+                dadosExtraidos.googleMatch = {
+                  found: placeResult.found,
+                  confidence: placeResult.confidence,
+                  source: placeResult.source,
+                  googlePlaceId: placeResult.googlePlaceId,
+                  rating: placeResult.rating,
+                  photoUrl: placeResult.photoUrl
+                };
+                
+                // Definir status de validação
+                if (isDuplicate) {
+                  dadosExtraidos.status = 'DUPLICADO_BANCO';
+                  dadosExtraidos.avisoValidacao = 'Este estabelecimento já existe no banco de dados';
+                } else if (placeResult.found && placeResult.confidence >= 70) {
+                  dadosExtraidos.status = 'VALIDADO_GOOGLE';
+                  dadosExtraidos.avisoValidacao = `Validado pelo Google Places (${placeResult.confidence}% de confiança)`;
+                } else if (placeResult.found && placeResult.confidence >= 50) {
+                  dadosExtraidos.status = 'VALIDADO_GOOGLE';
+                  dadosExtraidos.avisoValidacao = `Encontrado no Google com ${placeResult.confidence}% de confiança - revisar`;
+                  dadosExtraidos.needsReview = true;
+                } else {
+                  dadosExtraidos.status = 'NAO_ENCONTRADO_GOOGLE';
+                  dadosExtraidos.avisoValidacao = 'Não encontrado no Google Places - verificar dados';
+                }
+                
+                dadosExtraidos.existeNoGooglePlaces = placeResult.found;
+                dadosExtraidos.placeId = placeResult.googlePlaceId;
+                dadosExtraidos.avaliacaoGoogle = placeResult.rating;
+                dadosExtraidos.fotoGoogle = placeResult.photoUrl;
+                
+                // Se encontrou com boa confiança, enriquecer os dados
+                if (placeResult.found && placeResult.confidence >= 70) {
+                  dadosExtraidos.latitude = placeResult.latitude;
+                  dadosExtraidos.longitude = placeResult.longitude;
+                  
+                  // Enriquecer com dados do Google se disponíveis
+                  if (!dadosExtraidos.telefone && placeResult.telefone) {
+                    dadosExtraidos.telefone = placeResult.telefone;
+                    dadosExtraidos.telefoneSource = 'google';
+                  }
+                  
+                  if (!dadosExtraidos.horarioFuncionamento && placeResult.horarioFuncionamento) {
+                    dadosExtraidos.horarioFuncionamento = placeResult.horarioFuncionamento;
+                    dadosExtraidos.horarioSource = 'google';
+                  }
+                  
+                  if (placeResult.endereco && placeResult.confidence > 80) {
+                    dadosExtraidos.enderecoGoogle = placeResult.endereco;
+                  }
+                  
+                  if (placeResult.cep && !dadosExtraidos.cep) {
+                    dadosExtraidos.cep = placeResult.cep;
+                  }
+                } else if (placeResult.found && placeResult.confidence >= 50) {
+                  // Confiança média - adicionar coordenadas mas marcar para revisão
+                  dadosExtraidos.latitude = placeResult.latitude;
+                  dadosExtraidos.longitude = placeResult.longitude;
+                  dadosExtraidos.reviewReason = `Match de ${placeResult.confidence}% - verificar localização`;
+                }
+              } catch (error) {
+                console.warn(`Erro ao buscar no Google Places para UBS ${dadosExtraidos.nome}:`, error);
+                dadosExtraidos.googleMatch = {
+                  found: false,
+                  confidence: 0,
+                  source: 'error'
+                };
+                dadosExtraidos.existeNoGooglePlaces = false;
+                dadosExtraidos.status = isDuplicate ? 'DUPLICADO_BANCO' : 'NAO_ENCONTRADO_GOOGLE';
+                dadosExtraidos.avisoValidacao = isDuplicate ? 'Já existe no banco' : 'Erro ao buscar no Google Places';
+              }
+            } else {
+              // Sem Google Places disponível
+              dadosExtraidos.existeNoGooglePlaces = false;
+              dadosExtraidos.status = isDuplicate ? 'DUPLICADO_BANCO' : 'NAO_ENCONTRADO_GOOGLE';
+              dadosExtraidos.avisoValidacao = isDuplicate ? 'Já existe no banco' : 'Dados insuficientes para validação';
+            }
             break;
             
           case 'ongs':
@@ -551,6 +843,101 @@ export function registerRoutes(app: Express): Server {
               site: row['site'] || row['Site'] || row['website'] || row['url'] || row['pagina'] || '',
               responsavel: row['responsavel'] || row['Responsavel'] || row['coordenador'] || row['diretor'] || row['presidente'] || ''
             };
+            
+            // Verificar duplicata no banco
+            const isDuplicateONG = await checkONGDuplicate(dadosExtraidos.nome, dadosExtraidos.endereco);
+            dadosExtraidos.existeNoBanco = isDuplicateONG;
+            
+            // Tentar buscar no Google Places para enriquecer dados
+            if (googlePlacesService && dadosExtraidos.nome && (dadosExtraidos.endereco || dadosExtraidos.cep)) {
+              try {
+                const searchData = {
+                  nome: dadosExtraidos.nome,
+                  tipo: 'ONG',
+                  endereco: dadosExtraidos.endereco,
+                  cep: dadosExtraidos.cep,
+                  telefone: dadosExtraidos.telefone
+                };
+                
+                const placeResult = await googlePlacesService.findAndMatchPlace(searchData);
+                
+                // Adicionar informações do Google Places ao registro
+                dadosExtraidos.googleMatch = {
+                  found: placeResult.found,
+                  confidence: placeResult.confidence,
+                  source: placeResult.source,
+                  googlePlaceId: placeResult.googlePlaceId,
+                  rating: placeResult.rating,
+                  photoUrl: placeResult.photoUrl
+                };
+                
+                // Definir status de validação
+                if (isDuplicateONG) {
+                  dadosExtraidos.status = 'DUPLICADO_BANCO';
+                  dadosExtraidos.avisoValidacao = 'Esta ONG já existe no banco de dados';
+                } else if (placeResult.found && placeResult.confidence >= 70) {
+                  dadosExtraidos.status = 'VALIDADO_GOOGLE';
+                  dadosExtraidos.avisoValidacao = `Validado pelo Google Places (${placeResult.confidence}% de confiança)`;
+                } else if (placeResult.found && placeResult.confidence >= 50) {
+                  dadosExtraidos.status = 'VALIDADO_GOOGLE';
+                  dadosExtraidos.avisoValidacao = `Encontrado no Google com ${placeResult.confidence}% de confiança - revisar`;
+                  dadosExtraidos.needsReview = true;
+                } else {
+                  dadosExtraidos.status = 'NAO_ENCONTRADO_GOOGLE';
+                  dadosExtraidos.avisoValidacao = 'Não encontrado no Google Places - verificar dados';
+                }
+                
+                dadosExtraidos.existeNoGooglePlaces = placeResult.found;
+                dadosExtraidos.placeId = placeResult.googlePlaceId;
+                dadosExtraidos.avaliacaoGoogle = placeResult.rating;
+                dadosExtraidos.fotoGoogle = placeResult.photoUrl;
+                
+                // Se encontrou com boa confiança, enriquecer os dados
+                if (placeResult.found && placeResult.confidence >= 70) {
+                  dadosExtraidos.latitude = placeResult.latitude;
+                  dadosExtraidos.longitude = placeResult.longitude;
+                  
+                  // Enriquecer com dados do Google se disponíveis
+                  if (!dadosExtraidos.telefone && placeResult.telefone) {
+                    dadosExtraidos.telefone = placeResult.telefone;
+                    dadosExtraidos.telefoneSource = 'google';
+                  }
+                  
+                  if (!dadosExtraidos.site && placeResult.website) {
+                    dadosExtraidos.site = placeResult.website;
+                    dadosExtraidos.siteSource = 'google';
+                  }
+                  
+                  if (placeResult.endereco && placeResult.confidence > 80) {
+                    dadosExtraidos.enderecoGoogle = placeResult.endereco;
+                  }
+                  
+                  if (placeResult.cep && !dadosExtraidos.cep) {
+                    dadosExtraidos.cep = placeResult.cep;
+                  }
+                } else if (placeResult.found && placeResult.confidence >= 50) {
+                  // Confiança média - adicionar coordenadas mas marcar para revisão
+                  dadosExtraidos.latitude = placeResult.latitude;
+                  dadosExtraidos.longitude = placeResult.longitude;
+                  dadosExtraidos.reviewReason = `Match de ${placeResult.confidence}% - verificar localização`;
+                }
+              } catch (error) {
+                console.warn(`Erro ao buscar no Google Places para ONG ${dadosExtraidos.nome}:`, error);
+                dadosExtraidos.googleMatch = {
+                  found: false,
+                  confidence: 0,
+                  source: 'error'
+                };
+                dadosExtraidos.existeNoGooglePlaces = false;
+                dadosExtraidos.status = isDuplicateONG ? 'DUPLICADO_BANCO' : 'NAO_ENCONTRADO_GOOGLE';
+                dadosExtraidos.avisoValidacao = isDuplicateONG ? 'Já existe no banco' : 'Erro ao buscar no Google Places';
+              }
+            } else {
+              // Sem Google Places disponível
+              dadosExtraidos.existeNoGooglePlaces = false;
+              dadosExtraidos.status = isDuplicateONG ? 'DUPLICADO_BANCO' : 'NAO_ENCONTRADO_GOOGLE';
+              dadosExtraidos.avisoValidacao = isDuplicateONG ? 'Já existe no banco' : 'Dados insuficientes para validação';
+            }
             break;
             
           case 'equipamentos':
@@ -566,8 +953,105 @@ export function registerRoutes(app: Express): Server {
                        row['contato'] || row['Contato'] || row['Tel'] || row['Fone'] || '',
               email: row['email'] || row['Email'] || row['e-mail'] || row['E-mail'] || row['contato_email'] || row['E-Mail'] || '',
               horarioFuncionamento: row['horario'] || row['horario_funcionamento'] || row['Horário'] || 
-                                   row['Horário de Funcionamento'] || row['funcionamento'] || ''
+                                   row['Horário de Funcionamento'] || row['funcionamento'] || '',
+              responsavel: row['responsavel'] || row['Responsavel'] || row['coordenador'] || 
+                          row['Responsável'] || row['Coordenador'] || ''
             };
+            
+            // Verificar duplicata no banco
+            const isDuplicateEquip = await checkEquipamentoSocialDuplicate(dadosExtraidos.nome, dadosExtraidos.endereco);
+            dadosExtraidos.existeNoBanco = isDuplicateEquip;
+            
+            // Tentar buscar no Google Places se o serviço estiver disponível
+            if (googlePlacesService && dadosExtraidos.nome && (dadosExtraidos.endereco || dadosExtraidos.cep)) {
+              try {
+                const searchData = {
+                  nome: dadosExtraidos.nome,
+                  tipo: dadosExtraidos.tipoEquipamento,
+                  endereco: dadosExtraidos.endereco,
+                  cep: dadosExtraidos.cep,
+                  telefone: dadosExtraidos.telefone
+                };
+                
+                const placeResult = await googlePlacesService.findAndMatchPlace(searchData);
+                
+                // Adicionar informações do Google Places ao registro
+                dadosExtraidos.googleMatch = {
+                  found: placeResult.found,
+                  confidence: placeResult.confidence,
+                  source: placeResult.source,
+                  googlePlaceId: placeResult.googlePlaceId,
+                  rating: placeResult.rating,
+                  photoUrl: placeResult.photoUrl
+                };
+                
+                // Definir status de validação
+                if (isDuplicateEquip) {
+                  dadosExtraidos.status = 'DUPLICADO_BANCO';
+                  dadosExtraidos.avisoValidacao = 'Este equipamento já existe no banco de dados';
+                } else if (placeResult.found && placeResult.confidence >= 70) {
+                  dadosExtraidos.status = 'VALIDADO_GOOGLE';
+                  dadosExtraidos.avisoValidacao = `Validado pelo Google Places (${placeResult.confidence}% de confiança)`;
+                } else if (placeResult.found && placeResult.confidence >= 50) {
+                  dadosExtraidos.status = 'VALIDADO_GOOGLE';
+                  dadosExtraidos.avisoValidacao = `Encontrado no Google com ${placeResult.confidence}% de confiança - revisar`;
+                  dadosExtraidos.needsReview = true;
+                } else {
+                  dadosExtraidos.status = 'NAO_ENCONTRADO_GOOGLE';
+                  dadosExtraidos.avisoValidacao = 'Não encontrado no Google Places - verificar dados';
+                }
+                
+                dadosExtraidos.existeNoGooglePlaces = placeResult.found;
+                dadosExtraidos.placeId = placeResult.googlePlaceId;
+                dadosExtraidos.avaliacaoGoogle = placeResult.rating;
+                dadosExtraidos.fotoGoogle = placeResult.photoUrl;
+                
+                // Se encontrou com boa confiança, enriquecer os dados
+                if (placeResult.found && placeResult.confidence >= 70) {
+                  dadosExtraidos.latitude = placeResult.latitude;
+                  dadosExtraidos.longitude = placeResult.longitude;
+                  
+                  // Enriquecer com dados do Google se disponíveis
+                  if (!dadosExtraidos.telefone && placeResult.telefone) {
+                    dadosExtraidos.telefone = placeResult.telefone;
+                    dadosExtraidos.telefoneSource = 'google';
+                  }
+                  
+                  if (!dadosExtraidos.horarioFuncionamento && placeResult.horarioFuncionamento) {
+                    dadosExtraidos.horarioFuncionamento = placeResult.horarioFuncionamento;
+                    dadosExtraidos.horarioSource = 'google';
+                  }
+                  
+                  if (placeResult.endereco && placeResult.confidence > 80) {
+                    dadosExtraidos.enderecoGoogle = placeResult.endereco;
+                  }
+                  
+                  if (placeResult.cep && !dadosExtraidos.cep) {
+                    dadosExtraidos.cep = placeResult.cep;
+                  }
+                } else if (placeResult.found && placeResult.confidence >= 50) {
+                  // Confiança média - adicionar coordenadas mas marcar para revisão
+                  dadosExtraidos.latitude = placeResult.latitude;
+                  dadosExtraidos.longitude = placeResult.longitude;
+                  dadosExtraidos.reviewReason = `Match de ${placeResult.confidence}% - verificar localização`;
+                }
+              } catch (error) {
+                console.warn(`Erro ao buscar no Google Places para equipamento ${dadosExtraidos.nome}:`, error);
+                dadosExtraidos.googleMatch = {
+                  found: false,
+                  confidence: 0,
+                  source: 'error'
+                };
+                dadosExtraidos.existeNoGooglePlaces = false;
+                dadosExtraidos.status = isDuplicateEquip ? 'DUPLICADO_BANCO' : 'NAO_ENCONTRADO_GOOGLE';
+                dadosExtraidos.avisoValidacao = isDuplicateEquip ? 'Já existe no banco' : 'Erro ao buscar no Google Places';
+              }
+            } else {
+              // Sem Google Places disponível
+              dadosExtraidos.existeNoGooglePlaces = false;
+              dadosExtraidos.status = isDuplicateEquip ? 'DUPLICADO_BANCO' : 'NAO_ENCONTRADO_GOOGLE';
+              dadosExtraidos.avisoValidacao = isDuplicateEquip ? 'Já existe no banco' : 'Dados insuficientes para validação';
+            }
             break;
             
           case 'pacientes':
@@ -578,6 +1062,121 @@ export function registerRoutes(app: Express): Server {
               cep: row['cep'] || row['CEP'] || row['codigo_postal'] || row['postal_code'] || '',
               telefone: row['telefone'] || row['Telefone'] || row['fone'] || row['phone'] || row['celular'] || row['contato'] || '',
               idade: parseInt(row['idade'] || row['Idade'] || row['age'] || '0') || null
+            };
+            break;
+          
+          case 'lista-alfabetica':
+            // Formato personalizado: NOME (A), QR (B), LOCAL (C), DN (D), CPF (E), ATUALIZAÇÃO (F)
+            
+            // Função auxiliar para normalizar nomes de colunas (remove espaços, converte para uppercase)
+            const normalizeKey = (key: string): string => {
+              return key.trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            };
+            
+            // Criar mapa normalizado de colunas para busca flexível
+            const normalizedRow: Record<string, any> = {};
+            Object.keys(row).forEach(key => {
+              const normalizedKey = normalizeKey(key);
+              normalizedRow[normalizedKey] = row[key];
+            });
+            
+            // Log das colunas detectadas (apenas primeira linha)
+            if (index === 0) {
+              console.log('[LISTA-ALFABETICA] Colunas detectadas:', Object.keys(row));
+              console.log('[LISTA-ALFABETICA] Colunas normalizadas:', Object.keys(normalizedRow));
+            }
+            
+            // Converter row para array para fallback por índice
+            const rowValues = Object.values(row);
+            
+            // Buscar valores com múltiplas variações e fallback por índice
+            const getNome = () => {
+              return normalizedRow['NOME'] || 
+                     normalizedRow['NAME'] || 
+                     rowValues[0] || ''; // Coluna A (índice 0)
+            };
+            
+            const getQR = () => {
+              return normalizedRow['QR'] || 
+                     normalizedRow['QUADRA'] || 
+                     rowValues[1] || ''; // Coluna B (índice 1)
+            };
+            
+            const getLocal = () => {
+              return normalizedRow['LOCAL'] || 
+                     normalizedRow['ENDERECO'] || 
+                     normalizedRow['END'] || 
+                     rowValues[2] || ''; // Coluna C (índice 2)
+            };
+            
+            const getDN = () => {
+              return normalizedRow['DN'] || 
+                     normalizedRow['DATA_NASCIMENTO'] || 
+                     normalizedRow['DATANASCIMENTO'] || 
+                     normalizedRow['NASCIMENTO'] || 
+                     rowValues[3] || null; // Coluna D (índice 3)
+            };
+            
+            const getCPF = () => {
+              return normalizedRow['CPF'] || 
+                     normalizedRow['CNS'] || 
+                     rowValues[4] || ''; // Coluna E (índice 4)
+            };
+            
+            const getAtualizacao = () => {
+              return normalizedRow['ATUALIZACAO'] || 
+                     normalizedRow['OBS'] || 
+                     normalizedRow['OBSERVACOES'] || 
+                     normalizedRow['OBSERVACAO'] || 
+                     rowValues[5] || ''; // Coluna F (índice 5)
+            };
+            
+            const nome = getNome();
+            const qr = getQR();
+            const local = getLocal();
+            const dn = getDN();
+            const cpf = getCPF();
+            const atualizacao = getAtualizacao();
+            
+            // Montar endereço completo combinando QR + LOCAL
+            let enderecoCompleto = '';
+            if (qr && local) {
+              enderecoCompleto = `${qr} ${local}`.trim();
+            } else {
+              enderecoCompleto = local || qr || '';
+            }
+            
+            // Extrair bairro/região do LOCAL para ajudar na geocodificação
+            let bairroExtraido = '';
+            const localUpper = String(local).toUpperCase();
+            if (localUpper.includes('SAMAMBAIA')) {
+              bairroExtraido = 'Samambaia';
+            } else if (localUpper.includes('RECANTO')) {
+              bairroExtraido = 'Recanto das Emas';
+            } else if (localUpper.includes('ÁGUA QUENTE') || localUpper.includes('AGUA QUENTE')) {
+              bairroExtraido = 'Água Quente';
+            }
+            
+            // Adicionar bairro ao endereço se identificado
+            if (bairroExtraido && !enderecoCompleto.includes(bairroExtraido)) {
+              enderecoCompleto += `, ${bairroExtraido}`;
+            }
+            
+            // Adicionar DF ao final se não tiver
+            if (!enderecoCompleto.toUpperCase().includes(' DF') && !enderecoCompleto.toUpperCase().includes('BRASÍLIA')) {
+              enderecoCompleto += ' - DF';
+            }
+            
+            dadosExtraidos = {
+              ...dadosExtraidos,
+              tipo: 'pacientes', // Lista Alfabética sempre importa como pacientes
+              nome: String(nome || '').trim(),
+              endereco: enderecoCompleto,
+              cep: '', // CEP geralmente não vem nessa planilha, será geocodificado
+              telefone: '',
+              cpf: String(cpf || '').trim(),
+              observacoes: String(atualizacao || '').trim(),
+              dataNascimento: dn || null
             };
             break;
         }
@@ -645,8 +1244,13 @@ export function registerRoutes(app: Express): Server {
                 gestor: registro.gestor
               };
               
-              // Geocodificar se endereço e CEP estão presentes
-              if (ubsData.endereco && ubsData.cep) {
+              // Usar coordenadas do Google Places se disponíveis, caso contrário geocodificar
+              if (registro.latitude && registro.longitude) {
+                // Usar coordenadas já obtidas do Google Places
+                (ubsData as any).latitude = registro.latitude;
+                (ubsData as any).longitude = registro.longitude;
+              } else if (ubsData.endereco && ubsData.cep) {
+                // Geocodificar se não há coordenadas do Google Places
                 try {
                   const geocodeResult = await geocodingService.geocodeAddress(ubsData.endereco, ubsData.cep);
                   if (geocodeResult.coordinates) {
@@ -679,8 +1283,13 @@ export function registerRoutes(app: Express): Server {
                 responsavel: registro.responsavel
               };
               
-              // Geocodificar
-              if (ongData.endereco && ongData.cep) {
+              // Usar coordenadas do Google Places se disponíveis, caso contrário geocodificar
+              if (registro.latitude && registro.longitude) {
+                // Usar coordenadas já obtidas do Google Places
+                (ongData as any).latitude = registro.latitude;
+                (ongData as any).longitude = registro.longitude;
+              } else if (ongData.endereco && ongData.cep) {
+                // Geocodificar se não há coordenadas do Google Places
                 try {
                   const geocodeResult = await geocodingService.geocodeAddress(ongData.endereco, ongData.cep);
                   if (geocodeResult.coordinates) {
@@ -706,15 +1315,21 @@ export function registerRoutes(app: Express): Server {
                 nome: registro.nome,
                 tipo: registro.tipoEquipamento || 'Equipamento Social',
                 endereco: registro.endereco,
-                cep: registro.cep,
+                cep: registro.cep ? registro.cep.replace(/[^\d-]/g, '') : registro.cep, // Limpa CEP
                 telefone: registro.telefone,
-                email: registro.email,
+                email: registro.email || null, // Converte string vazia para null
+                horarioFuncionamento: registro.horarioFuncionamento,
                 servicos: registro.servicos || [],
-                capacidade: registro.capacidade
+                responsavel: registro.responsavel
               };
               
-              // Geocodificar
-              if (equipamentoData.endereco && equipamentoData.cep) {
+              // Usar coordenadas do Google Places se disponíveis, caso contrário geocodificar
+              if (registro.latitude && registro.longitude) {
+                // Usar coordenadas já obtidas do Google Places
+                (equipamentoData as any).latitude = registro.latitude;
+                (equipamentoData as any).longitude = registro.longitude;
+              } else if (equipamentoData.endereco && equipamentoData.cep) {
+                // Geocodificar se não há coordenadas do Google Places
                 try {
                   const geocodeResult = await geocodingService.geocodeAddress(equipamentoData.endereco, equipamentoData.cep);
                   if (geocodeResult.coordinates) {
@@ -736,22 +1351,38 @@ export function registerRoutes(app: Express): Server {
               break;
               
             case 'pacientes':
+            case 'lista-alfabetica': // Lista alfabética também importa como pacientes
               const pacienteData = {
                 nome: registro.nome,
                 endereco: registro.endereco,
-                cep: registro.cep,
-                telefone: registro.telefone,
+                cep: registro.cep || '', // CEP pode estar vazio na lista alfabética
+                telefone: registro.telefone || '',
                 idade: registro.idade,
-                condicoesSaude: registro.condicoesSaude || []
+                condicoesSaude: registro.condicoesSaude || [],
+                cnsOuCpf: registro.cpf || undefined,
+                observacoes: registro.observacoes || undefined
               };
               
-              // Geocodificar
-              if (pacienteData.endereco && pacienteData.cep) {
+              // Geocodificar (para lista alfabética, o endereço já foi montado no preview)
+              if (pacienteData.endereco) {
                 try {
-                  const geocodeResult = await geocodingService.geocodeAddress(pacienteData.endereco, pacienteData.cep);
+                  // Para lista alfabética sem CEP, geocodificar apenas com endereço
+                  const geocodeResult = await geocodingService.geocodeAddress(
+                    pacienteData.endereco, 
+                    pacienteData.cep || undefined
+                  );
                   if (geocodeResult.coordinates) {
                     (pacienteData as any).latitude = geocodeResult.coordinates.latitude;
                     (pacienteData as any).longitude = geocodeResult.coordinates.longitude;
+                    (pacienteData as any).precisaoGeocode = geocodeResult.precisao || 'APPROXIMATE';
+                    
+                    // Se conseguiu geocodificar e não tinha CEP, tentar extrair do endereço geocodificado
+                    if (!pacienteData.cep && geocodeResult.address && typeof geocodeResult.address === 'string') {
+                      const cepMatch = geocodeResult.address.match(/\d{5}-?\d{3}/);
+                      if (cepMatch) {
+                        pacienteData.cep = cepMatch[0];
+                      }
+                    }
                   }
                 } catch (geoError) {
                   console.warn(`Erro ao geocodificar paciente ${pacienteData.nome}:`, geoError);
@@ -968,12 +1599,13 @@ export function registerRoutes(app: Express): Server {
                   telefone: row['telefone'] || row['Telefone'] || row['fone'] || row['phone'] || row['celular'] || row['contato'] ||
                            row['Contato'] || row['Tel'] || row['Fone'],
                   email: row['email'] || row['Email'] || row['e-mail'] || row['E-mail'] || row['contato_email'] || row['E-Mail'],
+                  horarioFuncionamento: row['horario'] || row['horario_funcionamento'] || row['Horário'] || 
+                                       row['Horário de Funcionamento'] || row['funcionamento'],
                   servicos: row['servicos'] || row['Servicos'] || row['atividades'] || row['programas'] || row['areas_atuacao'] || 
                            row['Tipo de Equipamento'] || row['Serviços Oferecidos'] ? 
                     String(row['servicos'] || row['Servicos'] || row['atividades'] || row['programas'] || row['areas_atuacao'] || 
                            row['Tipo de Equipamento'] || row['Serviços Oferecidos']).split(',').map(s => s.trim()) : [],
-                  capacidade: row['capacidade'] || row['Capacidade'] || row['vagas'] || row['Vagas'] ? 
-                    parseInt(row['capacidade'] || row['Capacidade'] || row['vagas'] || row['Vagas']) : null
+                  responsavel: row['responsavel'] || row['Responsavel'] || row['coordenador'] || row['diretor'] || row['gestor']
                 };
                 
                 // Geocodificar se endereço e CEP estão presentes
@@ -1176,6 +1808,95 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Endpoints de verificação de duplicatas
+  app.get("/api/pacientes/verificar", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      const { cnsOuCpf } = req.query;
+      if (!cnsOuCpf || typeof cnsOuCpf !== 'string') {
+        return res.status(400).json({ error: "cnsOuCpf é obrigatório" });
+      }
+      
+      const existente = await storage.findPacienteByCnsOuCpf(cnsOuCpf);
+      res.json({ 
+        existe: !!existente,
+        paciente: existente || null
+      });
+    } catch (error) {
+      console.error("Error verificando paciente:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.get("/api/ubs/verificar", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      const { nome } = req.query;
+      if (!nome || typeof nome !== 'string') {
+        return res.status(400).json({ error: "nome é obrigatório" });
+      }
+      
+      const existente = await storage.findUBSByNome(nome);
+      res.json({ 
+        existe: !!existente,
+        ubs: existente || null
+      });
+    } catch (error) {
+      console.error("Error verificando UBS:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.get("/api/ongs/verificar", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      const { nome } = req.query;
+      if (!nome || typeof nome !== 'string') {
+        return res.status(400).json({ error: "nome é obrigatório" });
+      }
+      
+      const existente = await storage.findONGByNome(nome);
+      res.json({ 
+        existe: !!existente,
+        ong: existente || null
+      });
+    } catch (error) {
+      console.error("Error verificando ONG:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.get("/api/equipamentos-sociais/verificar", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      const { nome } = req.query;
+      if (!nome || typeof nome !== 'string') {
+        return res.status(400).json({ error: "nome é obrigatório" });
+      }
+      
+      const existente = await storage.findEquipamentoSocialByNome(nome);
+      res.json({ 
+        existe: !!existente,
+        equipamento: existente || null
+      });
+    } catch (error) {
+      console.error("Error verificando equipamento social:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
   // UBS CRUD routes
   app.post("/api/ubs", auditMiddleware('CREATE', 'ubs'), async (req, res) => {
     try {
@@ -1352,6 +2073,199 @@ export function registerRoutes(app: Express): Server {
     }
   });
   
+  // Função auxiliar para retry com backoff exponencial
+  async function retryWithBackoff<T>(
+    fn: () => Promise<T>,
+    maxRetries: number = 3,
+    baseDelay: number = 1000
+  ): Promise<T> {
+    let lastError: any;
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        return await fn();
+      } catch (error) {
+        lastError = error;
+        
+        // Não fazer retry no último attempt
+        if (attempt < maxRetries - 1) {
+          // Backoff exponencial: 1s, 2s, 4s
+          const delay = baseDelay * Math.pow(2, attempt);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+    
+    throw lastError;
+  }
+
+  // Importação em massa de pacientes com geocodificação e retry
+  app.post("/api/pacientes/importar", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      const { pacientes, batchSize: rawBatchSize } = req.body;
+      
+      if (!Array.isArray(pacientes) || pacientes.length === 0) {
+        return res.status(400).json({ error: "Array de pacientes é obrigatório e não pode estar vazio" });
+      }
+      
+      // Validar e sanitizar batchSize (deve ser inteiro positivo entre 1 e 50)
+      let batchSize = 5; // padrão
+      if (rawBatchSize !== undefined) {
+        const parsedBatchSize = parseInt(String(rawBatchSize), 10);
+        if (isNaN(parsedBatchSize) || parsedBatchSize < 1 || parsedBatchSize > 50) {
+          return res.status(400).json({ 
+            error: "batchSize deve ser um número inteiro entre 1 e 50",
+            valorRecebido: rawBatchSize
+          });
+        }
+        batchSize = parsedBatchSize;
+      }
+      
+      const startTime = Date.now();
+      
+      const resultados = {
+        total: pacientes.length,
+        sucesso: [] as any[],
+        erros: [] as any[],
+        avisos: [] as any[],
+        tempoDecorrido: 0,
+        loteProcessados: 0
+      };
+      
+      // Processar em lotes configuráveis (padrão 5) para controlar concorrência
+      const totalBatches = Math.ceil(pacientes.length / batchSize);
+      
+      for (let i = 0; i < pacientes.length; i += batchSize) {
+        const batch = pacientes.slice(i, i + batchSize);
+        resultados.loteProcessados++;
+        
+        const batchPromises = batch.map(async (pacienteRaw, batchIndex) => {
+          const index = i + batchIndex;
+          
+          try {
+            // Geocodificar endereço com retry se CEP for fornecido
+            let coordenadas = {
+              latitude: pacienteRaw.latitude || null,
+              longitude: pacienteRaw.longitude || null
+            };
+            let precisao: string | null = null;
+            let fonteGeocode: string | null = null;
+            
+            if (pacienteRaw.cep && (!pacienteRaw.latitude || !pacienteRaw.longitude)) {
+              try {
+                const geocodeResult = await retryWithBackoff(
+                  () => geocodingService.geocodeAddress(
+                    pacienteRaw.endereco || "",
+                    pacienteRaw.cep
+                  ),
+                  3,
+                  1000
+                );
+                
+                if (geocodeResult.coordinates) {
+                  coordenadas = geocodeResult.coordinates;
+                  precisao = geocodeResult.precisao || null;
+                  fonteGeocode = geocodeResult.source;
+                  resultados.avisos.push({
+                    linha: index + 1,
+                    nome: pacienteRaw.nome,
+                    mensagem: `Coordenadas geocodificadas automaticamente (fonte: ${geocodeResult.source}, precisão: ${geocodeResult.precisao || 'N/A'})`
+                  });
+                } else {
+                  resultados.avisos.push({
+                    linha: index + 1,
+                    nome: pacienteRaw.nome,
+                    mensagem: `Não foi possível geocodificar o endereço após 3 tentativas: ${geocodeResult.error || 'erro desconhecido'}`
+                  });
+                }
+              } catch (geocodeError: any) {
+                resultados.avisos.push({
+                  linha: index + 1,
+                  nome: pacienteRaw.nome,
+                  mensagem: `Erro na geocodificação após 3 tentativas: ${geocodeError.message}`
+                });
+              }
+            }
+            
+            // Preparar dados do paciente (converter undefined para null)
+            const pacienteData = {
+              ...pacienteRaw,
+              latitude: coordenadas.latitude ?? null,
+              longitude: coordenadas.longitude ?? null,
+              precisaoGeocode: precisao,
+              dataAtendimento: pacienteRaw.dataAtendimento ? new Date(pacienteRaw.dataAtendimento) : null,
+              dataNascimento: pacienteRaw.dataNascimento ? new Date(pacienteRaw.dataNascimento) : null,
+              telefone: pacienteRaw.telefone ?? null,
+              email: pacienteRaw.email ?? null,
+              ativo: pacienteRaw.ativo ?? true,
+            };
+            
+            // Validar dados
+            const validation = insertPacienteSchema.safeParse(pacienteData);
+            if (!validation.success) {
+              resultados.erros.push({
+                linha: index + 1,
+                nome: pacienteRaw.nome || 'Não informado',
+                erro: 'Dados inválidos',
+                detalhes: validation.error.issues.map(issue => ({
+                  campo: issue.path.join('.'),
+                  mensagem: issue.message
+                }))
+              });
+              return;
+            }
+            
+            // Salvar no banco de dados com retry
+            const paciente = await retryWithBackoff(
+              () => storage.createPaciente(validation.data),
+              3,
+              500
+            );
+            
+            resultados.sucesso.push({
+              linha: index + 1,
+              id: paciente.id,
+              nome: paciente.nome,
+              geocodificado: coordenadas.latitude !== null,
+              precisao: precisao,
+              fonte: fonteGeocode
+            });
+            
+          } catch (error: any) {
+            resultados.erros.push({
+              linha: index + 1,
+              nome: pacienteRaw.nome || 'Não informado',
+              erro: `Erro após 3 tentativas: ${error.message || 'Erro ao processar paciente'}`
+            });
+          }
+        });
+        
+        // Aguardar processamento do lote
+        await Promise.allSettled(batchPromises);
+        
+        // Pequeno delay entre lotes para evitar sobrecarga
+        if (i + batchSize < pacientes.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+      
+      resultados.tempoDecorrido = Math.round((Date.now() - startTime) / 1000);
+      
+      res.status(200).json({
+        mensagem: `Importação concluída em ${resultados.tempoDecorrido}s: ${resultados.sucesso.length} sucesso, ${resultados.erros.length} erros, ${resultados.avisos.length} avisos`,
+        ...resultados
+      });
+      
+    } catch (error: any) {
+      console.error("Error importing patients:", error);
+      res.status(500).json({ error: "Erro interno do servidor", detalhes: error.message });
+    }
+  });
+  
   app.put("/api/pacientes/:id", auditMiddleware('UPDATE', 'pacientes'), async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
@@ -1389,6 +2303,108 @@ export function registerRoutes(app: Express): Server {
     }
   });
   
+  // Endpoint específico para atualizar coordenadas (usado em drag-and-drop no mapa)
+  app.put("/api/pacientes/:id/coordenadas", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID inválido" });
+      }
+      
+      const { latitude, longitude } = req.body;
+      
+      // Validar coordenadas
+      if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+        return res.status(400).json({ error: "Latitude e longitude devem ser números" });
+      }
+      
+      if (latitude < -90 || latitude > 90) {
+        return res.status(400).json({ error: "Latitude deve estar entre -90 e 90" });
+      }
+      
+      if (longitude < -180 || longitude > 180) {
+        return res.status(400).json({ error: "Longitude deve estar entre -180 e 180" });
+      }
+      
+      // Atualizar apenas as coordenadas
+      const paciente = await storage.updatePaciente(id, {
+        latitude,
+        longitude
+      });
+      
+      if (!paciente) {
+        return res.status(404).json({ error: "Paciente não encontrado" });
+      }
+      
+      res.json({
+        success: true,
+        paciente: {
+          id: paciente.id,
+          nome: paciente.nome,
+          latitude: paciente.latitude,
+          longitude: paciente.longitude
+        }
+      });
+    } catch (error) {
+      console.error("Error updating patient coordinates:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  // Endpoint para atualizar agendamento (próximo atendimento)
+  app.patch("/api/pacientes/:id/agendamento", auditMiddleware('UPDATE', 'pacientes'), async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID inválido" });
+      }
+      
+      const { proximoAtendimento } = req.body;
+      
+      // Validar data (pode ser null para remover)
+      const updateData: any = {};
+      if (proximoAtendimento === null) {
+        updateData.proximoAtendimento = null;
+      } else if (proximoAtendimento) {
+        const date = new Date(proximoAtendimento);
+        if (isNaN(date.getTime())) {
+          return res.status(400).json({ error: "Data inválida" });
+        }
+        updateData.proximoAtendimento = date;
+      }
+      
+      const oldPaciente = await storage.getPaciente(id);
+      const paciente = await storage.updatePaciente(id, updateData);
+      
+      if (!paciente) {
+        return res.status(404).json({ error: "Paciente não encontrado" });
+      }
+
+      res.locals.oldValues = oldPaciente;
+      res.locals.newValues = paciente;
+      
+      res.json({
+        success: true,
+        paciente: {
+          id: paciente.id,
+          nome: paciente.nome,
+          proximoAtendimento: paciente.proximoAtendimento
+        }
+      });
+    } catch (error) {
+      console.error("Error updating patient appointment:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+  
   app.delete("/api/pacientes/:id", auditMiddleware('DELETE', 'pacientes'), async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
@@ -1406,6 +2422,41 @@ export function registerRoutes(app: Express): Server {
       res.json({ success });
     } catch (error) {
       console.error("Error deleting Paciente:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.post("/api/pacientes/excluir-lote", auditMiddleware('DELETE_BATCH', 'pacientes'), async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+      
+      console.log('[DELETE-BATCH] Dados recebidos:', JSON.stringify(req.body));
+      
+      const validation = z.object({
+        ids: z.array(z.number()).min(1).max(500) // Aumentado para 500 para permitir exclusão em massa
+      }).safeParse(req.body);
+      
+      if (!validation.success) {
+        console.error('[DELETE-BATCH] Erro de validação:', validation.error.issues);
+        return res.status(400).json({ 
+          error: "Dados inválidos", 
+          details: validation.error.issues 
+        });
+      }
+      
+      const { ids } = validation.data;
+      const result = await storage.deletePacientes(ids);
+      
+      res.json({ 
+        success: true,
+        deleted: result.success,
+        failed: result.failed,
+        total: ids.length
+      });
+    } catch (error) {
+      console.error("Error batch deleting Pacientes:", error);
       res.status(500).json({ error: "Erro interno do servidor" });
     }
   });
@@ -1482,6 +2533,99 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: "Erro interno do servidor" });
     }
   });
+
+  // ============ ATIVIDADES TERRITORIAIS CRUD ROUTES ============
+  app.get("/api/atividades-territoriais", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+
+      const atividades = await storage.getAtividadesTerritoriais();
+      res.json(atividades);
+    } catch (error) {
+      console.error("Error fetching atividades territoriais:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.post("/api/atividades-territoriais", auditMiddleware('CREATE', 'atividades_territoriais'), async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+
+      const validation = insertAtividadeTerritorialSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ error: "Dados inválidos", details: validation.error.issues });
+      }
+
+      const atividade = await storage.createAtividadeTerritorial({
+        ...validation.data,
+        usuarioId: req.user!.id
+      });
+      
+      res.locals.recordId = atividade.id;
+      res.locals.newValues = atividade;
+      res.status(201).json(atividade);
+    } catch (error) {
+      console.error("Error creating atividade territorial:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.put("/api/atividades-territoriais/:id", auditMiddleware('UPDATE', 'atividades_territoriais'), async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID inválido" });
+      }
+
+      const validation = insertAtividadeTerritorialSchema.partial().safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ error: "Dados inválidos", details: validation.error.issues });
+      }
+
+      const oldAtividade = await storage.getAtividadeTerritorial(id);
+      const atividade = await storage.updateAtividadeTerritorial(id, validation.data);
+      if (!atividade) {
+        return res.status(404).json({ error: "Atividade territorial não encontrada" });
+      }
+
+      res.locals.recordId = id;
+      res.locals.oldValues = oldAtividade;
+      res.locals.newValues = atividade;
+      res.json(atividade);
+    } catch (error) {
+      console.error("Error updating atividade territorial:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
+  app.delete("/api/atividades-territoriais/:id", auditMiddleware('DELETE', 'atividades_territoriais'), async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Não autenticado" });
+      }
+
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "ID inválido" });
+      }
+
+      const oldAtividade = await storage.getAtividadeTerritorial(id);
+      const success = await storage.deleteAtividadeTerritorial(id);
+      res.locals.oldValues = oldAtividade;
+      res.json({ success });
+    } catch (error) {
+      console.error("Error deleting atividade territorial:", error);
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
   
   // Geographic route
   app.get("/api/ubs/nearby", async (req, res) => {
@@ -1537,7 +2681,7 @@ export function registerRoutes(app: Express): Server {
       pacientesList.forEach(paciente => {
         const regiao = paciente.endereco.includes('Samambaia') ? 'Samambaia' : 
                       paciente.endereco.includes('Recanto') ? 'Recanto das Emas' :
-                      paciente.endereco.includes('Águas Claras') ? 'Águas Claras' : 'Outras';
+                      paciente.endereco.includes('Água Quente') ? 'Água Quente' : 'Outras';
         coberturaPorRegiao[regiao] = (coberturaPorRegiao[regiao] || 0) + 1;
       });
       

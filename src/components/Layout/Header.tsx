@@ -1,4 +1,4 @@
-import { Bell, User, Search, Menu } from 'lucide-react';
+import { Bell, User, Search, Menu, Settings, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
@@ -9,6 +9,8 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
+import { useAuth } from '@/hooks/use-auth';
+import { useNavigate } from 'react-router-dom';
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -16,6 +18,13 @@ interface HeaderProps {
 }
 
 export const Header = ({ onMenuClick, showMenuButton = false }: HeaderProps) => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/auth');
+  };
   return (
     <header className="h-16 border-b bg-card/50 backdrop-blur-sm px-4 flex items-center justify-between sticky top-0 z-40">
       <div className="flex items-center space-x-4">
@@ -92,15 +101,21 @@ export const Header = ({ onMenuClick, showMenuButton = false }: HeaderProps) => 
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/perfil')} data-testid="menu-perfil">
               <User className="mr-2 h-4 w-4" />
               Meu Perfil
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/configuracoes')} data-testid="menu-configuracoes">
+              <Settings className="mr-2 h-4 w-4" />
               Configurações
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">
+            <DropdownMenuItem 
+              className="text-destructive" 
+              onClick={handleLogout}
+              data-testid="menu-sair"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
               Sair
             </DropdownMenuItem>
           </DropdownMenuContent>

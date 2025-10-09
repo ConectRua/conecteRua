@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, FileSpreadsheet, Download, AlertCircle, X, CheckCircle, CheckCircle2, Plus, PlusCircle, Eye } from 'lucide-react';
+import { Upload, FileSpreadsheet, Download, AlertCircle, X, CheckCircle, CheckCircle2, Plus, PlusCircle, Eye, Star, FileText } from 'lucide-react';
 import { useState, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useUploadPlanilha } from '@/hooks/useApiData';
@@ -17,6 +17,12 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface PreviewRecord {
   id: string;
@@ -34,12 +40,29 @@ interface PreviewRecord {
   site?: string;
   responsavel?: string;
   idade?: number;
+  existeNoGooglePlaces?: boolean;
+  existeNoBanco?: boolean;
+  status?: 'VALIDADO_GOOGLE' | 'DUPLICADO_BANCO' | 'NAO_ENCONTRADO_GOOGLE';
+  placeId?: string;
+  avaliacaoGoogle?: number;
+  fotoGoogle?: string;
+  avisoValidacao?: string;
+  googleMatch?: {
+    found: boolean;
+    confidence: number;
+    source: string;
+    googlePlaceId?: string;
+    rating?: number;
+    photoUrl?: string;
+  };
+  latitude?: number;
+  longitude?: number;
 }
 
 const ImportacaoPlanilhas = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [selectedType, setSelectedType] = useState<'ubs' | 'ongs' | 'pacientes' | 'equipamentos' | 'auto' | null>('auto');
+  const [selectedType, setSelectedType] = useState<'ubs' | 'ongs' | 'pacientes' | 'equipamentos' | 'lista-alfabetica' | null>(null);
   const [previewData, setPreviewData] = useState<PreviewRecord[]>([]);
   const [selectedRecords, setSelectedRecords] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
@@ -48,6 +71,28 @@ const ImportacaoPlanilhas = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const uploadMutation = useUploadPlanilha();
+
+  const handleDownloadTemplate = (tipo: 'ubs' | 'ongs' | 'pacientes' | 'equipamentos', formato: 'xlsx' | 'csv' = 'xlsx') => {
+    const fileNames = {
+      ubs: formato === 'csv' ? 'modelo_ubs_hospitais.csv' : 'modelo_ubs_hospitais.xlsx',
+      ongs: formato === 'csv' ? 'modelo_ongs.csv' : 'modelo_ongs.xlsx',
+      pacientes: formato === 'csv' ? 'modelo_pacientes.csv' : 'modelo_pacientes.xlsx',
+      equipamentos: formato === 'csv' ? 'modelo_equipamentos_sociais.csv' : 'modelo_equipamentos_sociais.xlsx'
+    };
+    
+    const fileName = fileNames[tipo];
+    const link = document.createElement('a');
+    link.href = `/${fileName}`;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Download iniciado",
+      description: `Baixando ${fileName}`,
+    });
+  };
 
   const acceptedTypes = [
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
@@ -137,7 +182,9 @@ const ImportacaoPlanilhas = () => {
     try {
       const formData = new FormData();
       formData.append('arquivo', selectedFiles[0]); // Processar primeiro arquivo
-      formData.append('tipo', selectedType || 'auto');
+      if (selectedType) {
+        formData.append('tipo', selectedType);
+      }
       
       const response = await fetch('/api/upload/preview', {
         method: 'POST',
@@ -152,7 +199,7 @@ const ImportacaoPlanilhas = () => {
         setShowPreview(true);
         
         // Selecionar automaticamente todos os registros válidos
-        const validRecordIds = new Set(
+        const validRecordIds = new Set<string>(
           data.registrosProcessados
             .filter((r: PreviewRecord) => r.valido)
             .map((r: PreviewRecord) => r.id)
@@ -288,6 +335,110 @@ const ImportacaoPlanilhas = () => {
     return badges[tipo] || { label: tipo, variant: 'default' };
   };
 
+  const renderStatusBadge = (record: PreviewRecord) => {
+    if (!record.status) {
+      return <Badge variant="outline" className="text-xs">Sem validação</Badge>;
+    }
+
+    const tooltipContent = (
+      <div className="space-y-2 text-xs">
+        {record.avisoValidacao && (
+          <p className="font-medium">{record.avisoValidacao}</p>
+        )}
+        {record.existeNoGooglePlaces && record.googleMatch && (
+          <div className="space-y-1 pt-2 border-t border-border">
+            <p className="font-medium">Dados do Google Places:</p>
+            {record.avaliacaoGoogle && (
+              <div className="flex items-center gap-1">
+                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                <span>{record.avaliacaoGoogle.toFixed(1)} / 5.0</span>
+              </div>
+            )}
+            {record.telefone && record.telefone !== '-' && (
+              <p>📞 {record.telefone}</p>
+            )}
+            {record.latitude && record.longitude && (
+              <p>📍 {record.latitude.toFixed(6)}, {record.longitude.toFixed(6)}</p>
+            )}
+            {record.googleMatch.confidence && (
+              <p className="text-muted-foreground">
+                Confiança: {record.googleMatch.confidence}%
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    );
+
+    switch (record.status) {
+      case 'VALIDADO_GOOGLE':
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge 
+                  variant="outline" 
+                  className="cursor-help bg-green-50 text-green-700 border-green-300 dark:bg-green-950 dark:text-green-400 dark:border-green-800"
+                  data-testid={`badge-validated-${record.id}`}
+                >
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  Validado Google
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                {tooltipContent}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      
+      case 'DUPLICADO_BANCO':
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge 
+                  variant="outline" 
+                  className="cursor-help bg-red-50 text-red-700 border-red-300 dark:bg-red-950 dark:text-red-400 dark:border-red-800"
+                  data-testid={`badge-duplicate-${record.id}`}
+                >
+                  <AlertCircle className="h-3 w-3 mr-1" />
+                  Duplicado
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                {tooltipContent}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      
+      case 'NAO_ENCONTRADO_GOOGLE':
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge 
+                  variant="outline" 
+                  className="cursor-help bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-950 dark:text-yellow-400 dark:border-yellow-800"
+                  data-testid={`badge-not-found-${record.id}`}
+                >
+                  <AlertCircle className="h-3 w-3 mr-1" />
+                  Não encontrado
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                {tooltipContent}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+      
+      default:
+        return <Badge variant="outline" className="text-xs">-</Badge>;
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -317,11 +468,11 @@ const ImportacaoPlanilhas = () => {
                     <SelectValue placeholder="Selecione o tipo de dados da planilha" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="auto" data-testid="option-auto">🤖 Detecção Automática</SelectItem>
                     <SelectItem value="ubs" data-testid="option-ubs">UBS - Unidades Básicas de Saúde</SelectItem>
                     <SelectItem value="ongs" data-testid="option-ongs">ONGs - Organizações Não Governamentais</SelectItem>
                     <SelectItem value="pacientes" data-testid="option-pacientes">Pacientes</SelectItem>
                     <SelectItem value="equipamentos" data-testid="option-equipamentos">Equipamentos Sociais</SelectItem>
+                    <SelectItem value="lista-alfabetica" data-testid="option-lista-alfabetica">📋 Lista Alfabética (Formato Personalizado)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -404,15 +555,39 @@ const ImportacaoPlanilhas = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button variant="outline" className="w-full justify-start">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start"
+              onClick={() => handleDownloadTemplate('ubs')}
+              data-testid="button-download-ubs"
+            >
               <FileSpreadsheet className="h-4 w-4 mr-2" />
               Modelo - Dados UBS
             </Button>
-            <Button variant="outline" className="w-full justify-start">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start"
+              onClick={() => handleDownloadTemplate('ongs')}
+              data-testid="button-download-ongs"
+            >
               <FileSpreadsheet className="h-4 w-4 mr-2" />
               Modelo - Dados ONGs
             </Button>
-            <Button variant="outline" className="w-full justify-start">
+            <Button 
+              variant="outline" 
+              className="w-full justify-start"
+              onClick={() => handleDownloadTemplate('equipamentos')}
+              data-testid="button-download-equipamentos"
+            >
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Modelo - Equipamentos Sociais
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full justify-start"
+              onClick={() => handleDownloadTemplate('pacientes')}
+              data-testid="button-download-pacientes"
+            >
               <FileSpreadsheet className="h-4 w-4 mr-2" />
               Modelo - Dados Pacientes
             </Button>
@@ -507,6 +682,7 @@ const ImportacaoPlanilhas = () => {
                     <TableHead>Endereço</TableHead>
                     <TableHead>CEP</TableHead>
                     <TableHead>Telefone</TableHead>
+                    <TableHead className="w-40">Status Validação</TableHead>
                     <TableHead className="w-32">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -549,6 +725,9 @@ const ImportacaoPlanilhas = () => {
                         </TableCell>
                         <TableCell className="text-sm">
                           {record.telefone || '-'}
+                        </TableCell>
+                        <TableCell>
+                          {renderStatusBadge(record)}
                         </TableCell>
                         <TableCell>
                           <Button

@@ -3,19 +3,34 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { ReclassificationModal } from '@/components/ReclassificationModal';
 import { AddUBSModal } from '@/components/Forms/AddUBSModal';
 import { EditUBSModal } from '@/components/Forms/EditUBSModal';
 import { useApiData } from '@/hooks/useApiData';
-import { Building2, Search, Plus, Edit, MapPin, Phone, Users, Trash2 } from 'lucide-react';
+import { useMultiSelect } from '@/hooks/useMultiSelect';
+import { useToast } from '@/hooks/use-toast';
+import { Building2, Search, Plus, Edit, MapPin, Phone, Users, Trash2, AlertTriangle } from 'lucide-react';
 import type { InsertUBS, UBS } from '../../shared/schema';
 
 const GestaoUBS = () => {
   const { ubsList, loading, addUBS, updateUBS, deleteUBS } = useApiData();
+  const { toast } = useToast();
+  const { 
+    selectedItems, 
+    selectAll,
+    toggleItem, 
+    toggleAll, 
+    clearSelection, 
+    isSelected, 
+    selectedCount 
+  } = useMultiSelect<UBS>();
+  
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedUBS, setSelectedUBS] = useState<UBS | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const handleAddUBS = (ubs: InsertUBS) => {
     addUBS(ubs);
@@ -30,6 +45,30 @@ const GestaoUBS = () => {
 
   const handleDeleteUBS = (id: number) => {
     deleteUBS(id);
+  };
+
+  const handleDeleteMultiple = async () => {
+    try {
+      const itemsToDelete = Array.from(selectedItems);
+      
+      for (const id of itemsToDelete) {
+        await deleteUBS(id);
+      }
+      
+      toast({
+        title: "Sucesso",
+        description: `${itemsToDelete.length} UBS excluída(s) com sucesso.`,
+      });
+      
+      clearSelection();
+      setIsDeleteDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Erro ao excluir",
+        description: "Ocorreu um erro ao excluir as UBS selecionadas.",
+        variant: "destructive",
+      });
+    }
   };
 
   const openEditModal = (ubs: UBS) => {
@@ -54,11 +93,42 @@ const GestaoUBS = () => {
             Gerencie as Unidades Básicas de Saúde cadastradas
           </p>
         </div>
-        <Button onClick={() => setIsAddModalOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nova UBS
-        </Button>
+        <div className="flex items-center space-x-2">
+          {selectedCount > 0 && (
+            <Button 
+              variant="destructive" 
+              onClick={() => setIsDeleteDialogOpen(true)}
+              data-testid="button-delete-selected"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Excluir {selectedCount} Selecionada{selectedCount > 1 ? 's' : ''}
+            </Button>
+          )}
+          <Button onClick={() => setIsAddModalOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nova UBS
+          </Button>
+        </div>
       </div>
+
+      {/* Barra de Seleção */}
+      {ubsList.length > 0 && (
+        <div className="flex items-center space-x-4 p-4 bg-muted/50 rounded-lg">
+          <Checkbox
+            checked={selectAll}
+            onCheckedChange={() => toggleAll(ubsList)}
+            data-testid="checkbox-select-all"
+          />
+          <label className="text-sm font-medium cursor-pointer" onClick={() => toggleAll(ubsList)}>
+            Selecionar Todas ({ubsList.length} UBS)
+          </label>
+          {selectedCount > 0 && (
+            <span className="text-sm text-muted-foreground">
+              • {selectedCount} selecionada{selectedCount > 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -80,18 +150,29 @@ const GestaoUBS = () => {
 
       <div className="grid gap-4">
         {ubsList.map((ubs) => (
-          <Card key={ubs.id}>
+          <Card 
+            key={ubs.id} 
+            className={`hover:shadow-lg transition-all ${isSelected(ubs.id) ? 'ring-2 ring-primary' : ''}`}
+          >
             <CardContent className="p-6">
               <div className="flex justify-between items-start mb-4">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <Building2 className="h-5 w-5 text-primary" />
-                    <h3 className="text-lg font-semibold">{ubs.nome}</h3>
-                    <Badge variant="default">Ativa</Badge>
-                  </div>
-                  <div className="flex items-center gap-1 text-muted-foreground text-sm mb-2">
-                    <MapPin className="h-4 w-4" />
-                    {ubs.endereco} - CEP: {ubs.cep}
+                <div className="flex items-start space-x-3">
+                  <Checkbox
+                    checked={isSelected(ubs.id)}
+                    onCheckedChange={() => toggleItem(ubs.id)}
+                    className="mt-1"
+                    data-testid={`checkbox-ubs-${ubs.id}`}
+                  />
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Building2 className="h-5 w-5 text-primary" />
+                      <h3 className="text-lg font-semibold">{ubs.nome}</h3>
+                      <Badge variant="default">Ativa</Badge>
+                    </div>
+                    <div className="flex items-center gap-1 text-muted-foreground text-sm mb-2">
+                      <MapPin className="h-4 w-4" />
+                      {ubs.endereco} - CEP: {ubs.cep}
+                    </div>
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -192,6 +273,31 @@ const GestaoUBS = () => {
         onEdit={handleEditUBS}
         ubs={selectedUBS}
       />
+
+      {/* Modal de Confirmação para Exclusão Múltipla */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center space-x-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              <span>Confirmar Exclusão Múltipla</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Você está prestes a excluir {selectedCount} UBS.
+              Esta ação não pode ser desfeita. Tem certeza que deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteMultiple}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir {selectedCount} UBS
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

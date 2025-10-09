@@ -53,6 +53,9 @@ export const ubs = pgTable("ubs", {
   horarioFuncionamento: text("horario_funcionamento"),
   especialidades: text("especialidades").array(),
   gestor: varchar("gestor", { length: 255 }),
+  placeId: varchar("place_id", { length: 255 }),
+  googleRating: doublePrecision("google_rating"),
+  googlePhotoUrl: varchar("google_photo_url", { length: 500 }),
   ativo: boolean("ativo").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -86,8 +89,14 @@ export const ongs = pgTable("ongs", {
   telefone: varchar("telefone", { length: 20 }),
   email: varchar("email", { length: 255 }),
   site: varchar("site", { length: 255 }),
+  tipo: varchar("tipo", { length: 100 }),
+  areasAtuacao: text("areas_atuacao").array(),
+  horarioFuncionamento: varchar("horario_funcionamento", { length: 100 }),
   servicos: text("servicos").array(),
   responsavel: varchar("responsavel", { length: 255 }),
+  placeId: varchar("place_id", { length: 255 }),
+  googleRating: doublePrecision("google_rating"),
+  googlePhotoUrl: varchar("google_photo_url", { length: 500 }),
   ativo: boolean("ativo").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -99,11 +108,14 @@ export const insertONGSchema = z.object({
   cep: z.string().regex(/^\d{5}-?\d{3}$/),
   latitude: z.number().nullable().optional(),
   longitude: z.number().nullable().optional(),
-  telefone: z.string().nullable().optional(),
-  email: z.string().email().nullable().optional(),
-  site: z.string().nullable().optional(),
+  telefone: z.string().transform(val => val === "" ? null : val).nullable().optional(),
+  email: z.string().transform(val => val === "" ? null : val).pipe(z.string().email().nullable().optional()).optional(),
+  site: z.string().transform(val => val === "" ? null : val).nullable().optional(),
+  tipo: z.string().transform(val => val === "" ? null : val).nullable().optional(),
+  areasAtuacao: z.array(z.string()).optional(),
+  horarioFuncionamento: z.string().transform(val => val === "" ? null : val).nullable().optional(),
   servicos: z.array(z.string()).optional(),
-  responsavel: z.string().nullable().optional(),
+  responsavel: z.string().transform(val => val === "" ? null : val).nullable().optional(),
   ativo: z.boolean().optional().default(true),
 });
 
@@ -127,13 +139,14 @@ export const pacientes = pgTable("pacientes", {
   naturalidade: varchar("naturalidade", { length: 255 }),
   dataNascimento: timestamp("data_nascimento"),
   idade: integer("idade"),
-  cnsOuCpf: varchar("cns_ou_cpf", { length: 20 }),
+  cnsOuCpf: varchar("cns_ou_cpf", { length: 20 }).unique(),
   
   // ENDEREÇO E LOCALIZAÇÃO
   endereco: text("endereco").notNull(),
-  cep: varchar("cep", { length: 10 }).notNull(),
+  cep: varchar("cep", { length: 10 }), // Nullable para permitir importação sem CEP (será geocodificado depois)
   latitude: doublePrecision("latitude"),
   longitude: doublePrecision("longitude"),
+  precisaoGeocode: varchar("precisao_geocode", { length: 30 }), // ROOFTOP, RANGE_INTERPOLATED, GEOMETRIC_CENTER, APPROXIMATE, PLACE
   telefone: varchar("telefone", { length: 20 }),
   
   // IDENTIDADE E DEMOGRAFIA
@@ -295,9 +308,12 @@ export const insertPacienteSchema = z.object({
   
   // ENDEREÇO E LOCALIZAÇÃO
   endereco: z.string().min(1),
-  cep: z.string().regex(/^\d{5}-?\d{3}$/),
+  cep: z.string().refine((val) => !val || /^\d{5}-?\d{3}$/.test(val), {
+    message: "CEP deve estar no formato 00000-000"
+  }).optional().or(z.literal('')),
   latitude: z.number().nullable().optional(),
   longitude: z.number().nullable().optional(),
+  precisaoGeocode: z.string().nullable().optional(),
   telefone: z.string().nullable().optional(),
   
   // IDENTIDADE E DEMOGRAFIA
@@ -484,6 +500,10 @@ export const equipamentosSociais = pgTable("equipamentos_sociais", {
   email: varchar("email", { length: 255 }),
   horarioFuncionamento: text("horario_funcionamento"),
   servicos: text("servicos").array(),
+  responsavel: varchar("responsavel", { length: 255 }),
+  placeId: varchar("place_id", { length: 255 }),
+  googleRating: doublePrecision("google_rating"),
+  googlePhotoUrl: varchar("google_photo_url", { length: 500 }),
   ativo: boolean("ativo").default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -497,9 +517,10 @@ export const insertEquipamentoSocialSchema = z.object({
   latitude: z.number().nullable().optional(),
   longitude: z.number().nullable().optional(),
   telefone: z.string().nullable().optional(),
-  email: z.string().email().nullable().optional(),
+  email: z.union([z.string().email(), z.literal(''), z.null()]).nullable().optional(),
   horarioFuncionamento: z.string().nullable().optional(),
   servicos: z.array(z.string()).optional(),
+  responsavel: z.string().nullable().optional(),
   ativo: z.boolean().optional().default(true),
 });
 
@@ -545,6 +566,38 @@ export const insertGeocodingCacheSchema = z.object({
 
 export type GeocodingCache = typeof geocodingCache.$inferSelect;
 export type InsertGeocodingCache = z.infer<typeof insertGeocodingCacheSchema>;
+
+// ============ ATIVIDADES TERRITORIAIS ============
+export const atividadesTerritoriais = pgTable("atividades_territoriais", {
+  id: serial("id").primaryKey(),
+  titulo: varchar("titulo", { length: 255 }).notNull(),
+  latitude: doublePrecision("latitude").notNull(),
+  longitude: doublePrecision("longitude").notNull(),
+  quantidadePessoas: integer("quantidade_pessoas").notNull(),
+  descricaoLocal: text("descricao_local").notNull(),
+  endereco: text("endereco"),
+  cep: varchar("cep", { length: 10 }),
+  regiao: varchar("regiao", { length: 100 }), // Samambaia, Recanto das Emas, Água Quente
+  usuarioId: integer("usuario_id").references(() => users.id),
+  dataAtividade: timestamp("data_atividade").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertAtividadeTerritorialSchema = z.object({
+  titulo: z.string().min(1, "Título é obrigatório"),
+  latitude: z.coerce.number(),
+  longitude: z.coerce.number(),
+  quantidadePessoas: z.coerce.number().min(1, "Quantidade deve ser no mínimo 1"),
+  descricaoLocal: z.string().min(1, "Descrição é obrigatória"),
+  endereco: z.string().optional(),
+  cep: z.string().optional(),
+  regiao: z.string().optional(),
+  dataAtividade: z.coerce.date().optional(),
+});
+
+export type AtividadeTerritorial = typeof atividadesTerritoriais.$inferSelect;
+export type InsertAtividadeTerritorial = z.infer<typeof insertAtividadeTerritorialSchema>;
 
 // ============ RELATIONS ============
 export const usersRelations = relations(users, ({ many }) => ({

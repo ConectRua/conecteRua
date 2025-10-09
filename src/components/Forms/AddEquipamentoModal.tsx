@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Geolocation } from '@capacitor/geolocation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,10 +7,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { GooglePlacesAutocomplete } from '@/components/GooglePlacesAutocomplete';
 import type { InsertEquipamentoSocial } from '../../../shared/schema';
 import { MapPin, Building, Phone, Clock, Users, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { toast } from 'sonner';
+import { getCurrentLocation as getLocation } from '@/lib/geolocation-helper';
 
 interface AddEquipamentoModalProps {
   open: boolean;
@@ -20,6 +21,7 @@ interface AddEquipamentoModalProps {
 }
 
 const tiposEquipamento = [
+  'Equipamentos de Saúde',
   'CAPS - Centro de Atenção Psicossocial',
   'CAPS AD - CAPS Álcool e Drogas',
   'CAPS III - CAPS 24h',
@@ -117,11 +119,18 @@ export const AddEquipamentoModal = ({ open, onOpenChange, onAdd }: AddEquipament
     if (!validateForm()) return;
 
     const newEquipamento: InsertEquipamentoSocial = {
-      ...formData,
+      nome: formData.nome,
+      tipo: formData.tipo,
+      endereco: formData.endereco,
+      cep: formData.cep.replace(/\D/g, '').replace(/(\d{5})(\d{3})/, '$1-$2'),
       latitude: formData.latitude ? parseFloat(formData.latitude) : null,
       longitude: formData.longitude ? parseFloat(formData.longitude) : null,
-      capacidade: formData.capacidade ? parseInt(formData.capacidade) : null,
-      cep: formData.cep.replace(/\D/g, '').replace(/(\d{5})(\d{3})/, '$1-$2')
+      telefone: formData.telefone || null,
+      email: formData.email || null,
+      horarioFuncionamento: formData.horarioFuncionamento || null,
+      servicos: formData.servicos.length > 0 ? formData.servicos : undefined,
+      responsavel: formData.responsavel || null,
+      ativo: true
     };
 
     onAdd(newEquipamento);
@@ -160,63 +169,22 @@ export const AddEquipamentoModal = ({ open, onOpenChange, onAdd }: AddEquipament
 
   const getCurrentLocation = async () => {
     setIsGettingLocation(true);
-    try {
-      // Primeiro tenta a API Capacitor (para mobile)
-      try {
-        const coordinates = await Geolocation.getCurrentPosition({
-          enableHighAccuracy: true,
-          timeout: 10000
-        });
-        
-        const location = {
-          latitude: coordinates.coords.latitude.toString(),
-          longitude: coordinates.coords.longitude.toString()
-        };
-        
+    
+    await getLocation({
+      onSuccess: (location) => {
         setFormData(prev => ({
           ...prev,
           latitude: location.latitude,
           longitude: location.longitude
         }));
-        
-        toast.success('Localização obtida com sucesso!');
-        return;
-      } catch (capacitorError) {
-        // Fallback para API do browser (para web)
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              const location = {
-                latitude: position.coords.latitude.toString(),
-                longitude: position.coords.longitude.toString()
-              };
-              
-              setFormData(prev => ({
-                ...prev,
-                latitude: location.latitude,
-                longitude: location.longitude
-              }));
-              
-              toast.success('Localização obtida com sucesso!');
-              setIsGettingLocation(false);
-            },
-            (error) => {
-              console.error('Erro browser geolocation:', error);
-              throw error;
-            },
-            { enableHighAccuracy: true, timeout: 10000 }
-          );
-          return;
-        } else {
-          throw new Error('Geolocalização não suportada pelo navegador');
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao obter localização:', error);
-      toast.error('Não foi possível obter a localização. Verifique as permissões.');
-    } finally {
-      setIsGettingLocation(false);
-    }
+        setIsGettingLocation(false);
+      },
+      onError: () => {
+        setIsGettingLocation(false);
+      },
+      timeout: 10000,
+      enableHighAccuracy: true
+    });
   };
 
   return (
@@ -230,6 +198,28 @@ export const AddEquipamentoModal = ({ open, onOpenChange, onAdd }: AddEquipament
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Busca no Google Maps */}
+          <div className="border-b pb-4">
+            <GooglePlacesAutocomplete
+              onPlaceSelected={(place) => {
+                // Preencher os campos com os dados do estabelecimento selecionado
+                setFormData(prev => ({
+                  ...prev,
+                  nome: place.nome || prev.nome,
+                  endereco: place.endereco || prev.endereco,
+                  cep: place.cep || prev.cep,
+                  latitude: place.latitude ? place.latitude.toString() : prev.latitude,
+                  longitude: place.longitude ? place.longitude.toString() : prev.longitude,
+                  telefone: place.telefone || prev.telefone,
+                  horarioFuncionamento: place.horarioFuncionamento || prev.horarioFuncionamento,
+                  email: place.email || prev.email
+                }));
+              }}
+              placeholder="Ex: CAPS Samambaia, CRAS Recanto das Emas, Centro POP..."
+              label="Buscar Estabelecimento no Google Maps"
+            />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Informações Básicas */}
             <div className="space-y-4">

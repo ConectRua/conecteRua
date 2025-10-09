@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-import { Geolocation } from '@capacitor/geolocation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,10 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { GooglePlacesAutocomplete } from '@/components/GooglePlacesAutocomplete';
 import type { InsertUBS } from '../../../shared/schema';
 import { MapPin, Building2, Phone, Clock, Stethoscope, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { toast } from 'sonner';
+import { getCurrentLocation as getLocation } from '@/lib/geolocation-helper';
 
 interface AddUBSModalProps {
   open: boolean;
@@ -245,63 +246,22 @@ export const AddUBSModal = ({ open, onOpenChange, onAdd }: AddUBSModalProps) => 
   // Função para obter localização atual
   const getCurrentLocation = async () => {
     setIsGettingLocation(true);
-    try {
-      // Primeiro tenta a API Capacitor (para mobile)
-      try {
-        const coordinates = await Geolocation.getCurrentPosition({
-          enableHighAccuracy: true,
-          timeout: 10000
-        });
-        
-        const location = {
-          latitude: coordinates.coords.latitude.toString(),
-          longitude: coordinates.coords.longitude.toString()
-        };
-        
+    
+    await getLocation({
+      onSuccess: (location) => {
         setFormData(prev => ({
           ...prev,
           latitude: location.latitude,
           longitude: location.longitude
         }));
-        
-        toast.success('Localização obtida com sucesso!');
-        return;
-      } catch (capacitorError) {
-        // Fallback para API do browser (para web)
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              const location = {
-                latitude: position.coords.latitude.toString(),
-                longitude: position.coords.longitude.toString()
-              };
-              
-              setFormData(prev => ({
-                ...prev,
-                latitude: location.latitude,
-                longitude: location.longitude
-              }));
-              
-              toast.success('Localização obtida com sucesso!');
-              setIsGettingLocation(false);
-            },
-            (error) => {
-              console.error('Erro browser geolocation:', error);
-              throw error;
-            },
-            { enableHighAccuracy: true, timeout: 10000 }
-          );
-          return;
-        } else {
-          throw new Error('Geolocalização não suportada pelo navegador');
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao obter localização:', error);
-      toast.error('Não foi possível obter a localização. Verifique as permissões.');
-    } finally {
-      setIsGettingLocation(false);
-    }
+        setIsGettingLocation(false);
+      },
+      onError: () => {
+        setIsGettingLocation(false);
+      },
+      timeout: 10000,
+      enableHighAccuracy: true
+    });
   };
 
   return (
@@ -315,6 +275,27 @@ export const AddUBSModal = ({ open, onOpenChange, onAdd }: AddUBSModalProps) => 
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Busca no Google Maps */}
+          <div className="border-b pb-4">
+            <GooglePlacesAutocomplete
+              onPlaceSelected={(place) => {
+                // Preencher os campos com os dados do estabelecimento selecionado
+                setFormData(prev => ({
+                  ...prev,
+                  nome: place.nome || prev.nome,
+                  endereco: place.endereco || prev.endereco,
+                  cep: place.cep || prev.cep,
+                  latitude: place.latitude ? place.latitude.toString() : prev.latitude,
+                  longitude: place.longitude ? place.longitude.toString() : prev.longitude,
+                  telefone: place.telefone || prev.telefone,
+                  horarioFuncionamento: place.horarioFuncionamento || prev.horarioFuncionamento
+                }));
+              }}
+              placeholder="Ex: UBS 1 Samambaia, Hospital Regional de Samambaia..."
+              label="Buscar Unidade de Saúde no Google Maps"
+            />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Informações Básicas */}
             <div className="space-y-4">

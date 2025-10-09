@@ -67,22 +67,22 @@ Aplicação web completa para mapeamento de unidades de saúde (UBS), ONGs e pac
 - [x] Distância média paciente-UBS
 - [x] Visualização em cards no dashboard
 
-### 📍 **Fase 5: Sistema de Geocodificação (100% Completo)**
+### 📍 **Fase 5: Sistema de Geocodificação (100% Completo - Atualizado para Google Maps API)**
 
 #### **Geocodificação Direta (CEP → Coordenadas)**
 - [x] Integração com API ViaCEP para buscar endereço por CEP
-- [x] Integração com Nominatim (OpenStreetMap) para coordenadas
+- [x] **ATUALIZADO: Integração com Google Geocoding API para maior precisão (substituiu Nominatim)**
 - [x] Cache em memória para otimização
 - [x] Cache persistente no banco de dados
-- [x] Fallback entre APIs para maior confiabilidade
+- [x] Fallback: ViaCEP → Google Geocoding para confiabilidade
 - [x] Rate limiting para respeitar limites das APIs
 - [x] Debounce de 1.5 segundos nas requisições
 
 #### **Geocodificação Reversa (Coordenadas → CEP)**  
 - [x] Endpoint `/api/geocode/reverse` implementado
 - [x] Busca CEP a partir de latitude/longitude
-- [x] Integração com Nominatim para endereço completo
-- [x] ViaCEP como fallback para validação
+- [x] **ATUALIZADO: Integração com Google Reverse Geocoding (substituiu Nominatim)**
+- [x] Extração precisa de componentes do endereço (rua, número, bairro, CEP)
 - [x] Cache duplo (memória + banco)
 - [x] Debounce de 2 segundos
 - [x] Request ID para cancelamento de requisições antigas
@@ -183,6 +183,15 @@ Aplicação web completa para mapeamento de unidades de saúde (UBS), ONGs e pac
 ---
 
 ## 🎯 MELHORIAS E OTIMIZAÇÕES REALIZADAS
+
+### **Geocodificação com Google Maps API (30/09/2025)**
+- ✅ **Migração de Nominatim para Google Geocoding API**
+- ✅ **Precisão melhorada**: Coordenadas exatas para endereços no DF
+- ✅ **Fluxo otimizado**: ViaCEP → Google Geocoding → Google Maps
+- ✅ **Testes validados**: 
+  - Ceilândia (72210-180): -15.8141796, -48.0980437
+  - Samambaia (72302-103): -15.8710784, -48.0775651
+  - Reverse geocoding funcionando com extração completa de componentes
 
 ### Performance
 - ✅ Cache duplo no sistema de geocodificação (memória + banco)

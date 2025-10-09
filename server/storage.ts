@@ -3,7 +3,7 @@
 
 import session from "express-session";
 import createMemoryStore from "memorystore";
-import { User, InsertUser, UBS, ONG, Paciente, EquipamentoSocial, GeocodingCache, InsertGeocodingCache, OrientacaoEncaminhamento, InsertOrientacaoEncaminhamento } from "../shared/schema";
+import { User, InsertUser, UBS, ONG, Paciente, EquipamentoSocial, GeocodingCache, InsertGeocodingCache, OrientacaoEncaminhamento, InsertOrientacaoEncaminhamento, AtividadeTerritorial } from "../shared/schema";
 
 const MemoryStore = createMemoryStore(session);
 
@@ -39,6 +39,7 @@ export interface IStorage {
   createPaciente(paciente: Omit<Paciente, 'id' | 'createdAt' | 'updatedAt'>): Promise<Paciente>;
   updatePaciente(id: number, updates: Partial<Paciente>): Promise<Paciente | null>;
   deletePaciente(id: number): Promise<boolean>;
+  deletePacientes(ids: number[]): Promise<{ success: number; failed: number }>;
   
   // Equipamentos Sociais CRUD methods
   getEquipamentosSociais(): Promise<EquipamentoSocial[]>;
@@ -46,6 +47,13 @@ export interface IStorage {
   createEquipamentoSocial(equipamento: Omit<EquipamentoSocial, 'id' | 'createdAt' | 'updatedAt'>): Promise<EquipamentoSocial>;
   updateEquipamentoSocial(id: number, updates: Partial<EquipamentoSocial>): Promise<EquipamentoSocial | null>;
   deleteEquipamentoSocial(id: number): Promise<boolean>;
+  
+  // Atividades Territoriais CRUD methods
+  getAtividadesTerritoriais(): Promise<AtividadeTerritorial[]>;
+  getAtividadeTerritorial(id: number): Promise<AtividadeTerritorial | null>;
+  createAtividadeTerritorial(data: Partial<AtividadeTerritorial>): Promise<AtividadeTerritorial>;
+  updateAtividadeTerritorial(id: number, updates: Partial<AtividadeTerritorial>): Promise<AtividadeTerritorial | null>;
+  deleteAtividadeTerritorial(id: number): Promise<boolean>;
   
   // Geographic queries
   findNearbyUBS(latitude: number, longitude: number, radiusKm?: number): Promise<UBS[]>;
@@ -62,6 +70,12 @@ export interface IStorage {
   createOrientacao(orientacao: Omit<OrientacaoEncaminhamento, 'id' | 'createdAt' | 'updatedAt'>): Promise<OrientacaoEncaminhamento>;
   updateOrientacao(id: number, updates: Partial<OrientacaoEncaminhamento>): Promise<OrientacaoEncaminhamento | null>;
   deleteOrientacao(id: number): Promise<boolean>;
+  
+  // Métodos de verificação de duplicatas
+  findPacienteByCnsOuCpf(cnsOuCpf: string): Promise<Paciente | null>;
+  findUBSByNome(nome: string): Promise<UBS | null>;
+  findONGByNome(nome: string): Promise<ONG | null>;
+  findEquipamentoSocialByNome(nome: string): Promise<EquipamentoSocial | null>;
 }
 
 export class MemStorage implements IStorage {
@@ -203,8 +217,8 @@ export class MemStorage implements IStorage {
       },
       {
         id: 3,
-        nome: "Centro de Saúde Águas Claras",
-        endereco: "Rua 25 Norte, Lote 2, Águas Claras",
+        nome: "Centro de Saúde Água Quente",
+        endereco: "Rua 25 Norte, Lote 2, Água Quente",
         cep: "71906-050",
         telefone: "(61) 3901-4567",
         especialidades: ["Clínica Geral", "Cardiologia", "Dermatologia", "Ortopedia"],
@@ -324,7 +338,7 @@ export class MemStorage implements IStorage {
       {
         id: 3,
         nome: "Fernanda Lima Souza",
-        endereco: "Rua 25 Norte, Casa 8, Águas Claras",
+        endereco: "Rua 25 Norte, Casa 8, Água Quente",
         cep: "71906-050",
         telefone: "(61) 97654-3210",
         idade: 28,
@@ -375,9 +389,9 @@ export class MemStorage implements IStorage {
       },
       {
         id: 3,
-        nome: "Conselho Tutelar Águas Claras",
+        nome: "Conselho Tutelar Água Quente",
         tipo: "Conselho Tutelar",
-        endereco: "Rua 25 Norte, Lote 5, Águas Claras",
+        endereco: "Rua 25 Norte, Lote 5, Água Quente",
         cep: "71906-050",
         telefone: "(61) 3901-3333",
         email: "ct.aguasclaras@df.gov.br",
@@ -503,6 +517,22 @@ export class MemStorage implements IStorage {
     this.pacientesList.splice(index, 1);
     return true;
   }
+
+  async deletePacientes(ids: number[]): Promise<{ success: number; failed: number }> {
+    let success = 0;
+    let failed = 0;
+    
+    for (const id of ids) {
+      const deleted = await this.deletePaciente(id);
+      if (deleted) {
+        success++;
+      } else {
+        failed++;
+      }
+    }
+    
+    return { success, failed };
+  }
   
   // Equipamentos Sociais CRUD methods
   async getEquipamentoSocial(id: number): Promise<EquipamentoSocial | null> {
@@ -534,6 +564,27 @@ export class MemStorage implements IStorage {
     
     this.equipamentosSociais.splice(index, 1);
     return true;
+  }
+
+  // Atividades Territoriais CRUD methods (stub implementations for memory storage)
+  async getAtividadesTerritoriais(): Promise<AtividadeTerritorial[]> {
+    return [];
+  }
+
+  async getAtividadeTerritorial(id: number): Promise<AtividadeTerritorial | null> {
+    return null;
+  }
+
+  async createAtividadeTerritorial(data: Partial<AtividadeTerritorial>): Promise<AtividadeTerritorial> {
+    throw new Error("Atividades Territoriais require PostgreSQL storage");
+  }
+
+  async updateAtividadeTerritorial(id: number, updates: Partial<AtividadeTerritorial>): Promise<AtividadeTerritorial | null> {
+    return null;
+  }
+
+  async deleteAtividadeTerritorial(id: number): Promise<boolean> {
+    return false;
   }
   
   // Geographic queries
@@ -628,6 +679,23 @@ export class MemStorage implements IStorage {
       updatedAt: new Date(),
     };
     return true;
+  }
+
+  // Métodos de verificação de duplicatas
+  async findPacienteByCnsOuCpf(cnsOuCpf: string): Promise<Paciente | null> {
+    return this.pacientesList.find(p => p.cnsOuCpf === cnsOuCpf) || null;
+  }
+
+  async findUBSByNome(nome: string): Promise<UBS | null> {
+    return this.ubsList.find(u => u.nome.toLowerCase() === nome.toLowerCase()) || null;
+  }
+
+  async findONGByNome(nome: string): Promise<ONG | null> {
+    return this.ongsList.find(o => o.nome.toLowerCase() === nome.toLowerCase()) || null;
+  }
+
+  async findEquipamentoSocialByNome(nome: string): Promise<EquipamentoSocial | null> {
+    return this.equipamentosSociais.find(e => e.nome.toLowerCase() === nome.toLowerCase()) || null;
   }
 }
 

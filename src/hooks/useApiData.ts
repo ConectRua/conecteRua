@@ -359,6 +359,58 @@ export const useCreateEquipamentoSocial = () => {
   });
 };
 
+export const useUpdateEquipamentoSocial = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async ({ id, ...data }: Partial<EquipamentoSocial> & { id: number }) => {
+      return apiRequest('PUT', `/api/equipamentos-sociais/${id}`, data);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipamentos.lists() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipamentos.detail(variables.id) });
+      toast({
+        title: "Sucesso",
+        description: "Equipamento social atualizado com sucesso!",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao atualizar equipamento social",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
+export const useDeleteEquipamentoSocial = () => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest('DELETE', `/api/equipamentos-sociais/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.equipamentos.lists() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.stats.all });
+      toast({
+        title: "Sucesso",
+        description: "Equipamento social removido com sucesso!",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao remover equipamento social",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
 // ============ STATISTICS HOOKS ============
 
 export const useEstatisticas = () => {
@@ -449,13 +501,7 @@ export const useReclassificar = () => {
       tipoOrigem: 'ubs' | 'ongs' | 'equipamentos'; 
       tipoDestino: 'ubs' | 'ongs' | 'equipamentos' 
     }) => {
-      return apiRequest('/api/reclassificar', {
-        method: 'POST',
-        body: JSON.stringify({ id, tipoOrigem, tipoDestino }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      return apiRequest('POST', '/api/reclassificar', { id, tipoOrigem, tipoDestino });
     },
     onSuccess: (data) => {
       // Invalidate all relevant caches
@@ -501,6 +547,9 @@ export const useApiData = () => {
   const createPaciente = useCreatePaciente();
   const updatePaciente = useUpdatePaciente();
   const deletePaciente = useDeletePaciente();
+  const createEquipamentoSocial = useCreateEquipamentoSocial();
+  const updateEquipamentoSocial = useUpdateEquipamentoSocial();
+  const deleteEquipamentoSocial = useDeleteEquipamentoSocial();
 
   return {
     // Data
@@ -536,6 +585,10 @@ export const useApiData = () => {
     addPaciente: (paciente: InsertPaciente) => createPaciente.mutate(paciente),
     updatePaciente: (id: number, updates: Partial<Paciente>) => updatePaciente.mutate({ id, ...updates }),
     deletePaciente: (id: number) => deletePaciente.mutate(id),
+    
+    addEquipamentoSocial: (equipamento: InsertEquipamentoSocial) => createEquipamentoSocial.mutate(equipamento),
+    updateEquipamentoSocial: (id: number, updates: Partial<EquipamentoSocial>) => updateEquipamentoSocial.mutate({ id, ...updates }),
+    deleteEquipamentoSocial: (id: number) => deleteEquipamentoSocial.mutate(id),
 
     // Position update for map editing (backward compatibility)
     updatePosition: (id: string, type: 'ubs' | 'ong' | 'paciente' | 'equipamento', lat: number, lng: number) => {
@@ -553,8 +606,7 @@ export const useApiData = () => {
           updatePaciente.mutate({ id: numId, ...updates });
           break;
         case 'equipamento':
-          // Note: implement updateEquipamento when available
-          console.warn('Equipamento position update not yet implemented');
+          updateEquipamentoSocial.mutate({ id: numId, ...updates });
           break;
       }
     },

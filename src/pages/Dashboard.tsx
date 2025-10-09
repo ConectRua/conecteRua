@@ -18,12 +18,22 @@ import {
   Clock,
   Phone,
   BarChart3,
-  Map as MapIcon
+  Map as MapIcon,
+  Home
 } from 'lucide-react';
+import { useState } from 'react';
+import { AddEquipamentoModal } from '@/components/Forms/AddEquipamentoModal';
+import { AddUBSModal } from '@/components/Forms/AddUBSModal';
+import { AddONGModal } from '@/components/Forms/AddONGModal';
+import { PatientForm } from '@/components/Forms/PatientForm';
+import { EquipamentoSocialIcon } from '@/components/icons/EquipamentoSocialIcon';
 
 const Dashboard = () => {
-  // Use real API data directly
-  const { ubsList, ongsList, pacientesList, equipamentosSociais, getEstatisticas, loading, error } = useApiData();
+  const { ubsList, ongsList, pacientesList, equipamentosSociais, getEstatisticas, loading, error, addEquipamentoSocial, addUBS, addONG, addPaciente } = useApiData();
+  const [showAddEquipamento, setShowAddEquipamento] = useState(false);
+  const [showAddUBS, setShowAddUBS] = useState(false);
+  const [showAddONG, setShowAddONG] = useState(false);
+  const [showAddPaciente, setShowAddPaciente] = useState(false);
   
   const analytics = useAnalytics(ubsList, pacientesList, equipamentosSociais);
   const stats = getEstatisticas();
@@ -44,7 +54,7 @@ const Dashboard = () => {
           Sistema de Georreferenciamento
         </h1>
         <p className="text-white/90 text-lg">
-          Assistência Social e Saúde - Samambaia, Recanto das Emas e Águas Claras
+          Assistência Social e Saúde - Samambaia, Recanto das Emas e Água Quente
         </p>
         <div className="flex items-center mt-4 space-x-4">
           <div className="flex items-center space-x-2">
@@ -216,23 +226,50 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
 
-              {/* Quick Actions */}
+              {/* Ações Rápidas - Mapa Interativo */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Ações Rápidas</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <Button className="w-full" size="sm">
-                    <Building2 className="h-4 w-4 mr-2" />
-                    Cadastrar UBS
-                  </Button>
-                  <Button className="w-full" variant="outline" size="sm">
-                    <Heart className="h-4 w-4 mr-2" />
-                    Adicionar ONG
-                  </Button>
-                  <Button className="w-full" variant="outline" size="sm">
+                  <Button 
+                    className="w-full" 
+                    size="sm"
+                    onClick={() => setShowAddPaciente(true)}
+                    data-testid="button-adicionar-paciente-mapa"
+                  >
                     <Users className="h-4 w-4 mr-2" />
-                    Importar Pacientes
+                    Adicionar Paciente
+                  </Button>
+                  <Button 
+                    className="w-full" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setShowAddUBS(true)}
+                    data-testid="button-nova-ubs-mapa"
+                  >
+                    <Building2 className="h-4 w-4 mr-2" />
+                    Nova UBS
+                  </Button>
+                  <Button 
+                    className="w-full" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setShowAddONG(true)}
+                    data-testid="button-nova-ong-mapa"
+                  >
+                    <Heart className="h-4 w-4 mr-2" />
+                    Nova ONG
+                  </Button>
+                  <Button 
+                    className="w-full" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setShowAddEquipamento(true)}
+                    data-testid="button-novo-equipamento-mapa"
+                  >
+                    <EquipamentoSocialIcon className="h-4 w-4 mr-2" />
+                    Novo Eqp Social
                   </Button>
                 </CardContent>
               </Card>
@@ -260,6 +297,43 @@ const Dashboard = () => {
           />
         </TabsContent>
       </Tabs>
+
+      {/* Modals */}
+      <AddEquipamentoModal
+        open={showAddEquipamento}
+        onOpenChange={setShowAddEquipamento}
+        onAdd={(equipamento) => {
+          addEquipamentoSocial(equipamento);
+          setShowAddEquipamento(false);
+        }}
+      />
+      
+      <AddUBSModal
+        open={showAddUBS}
+        onOpenChange={setShowAddUBS}
+        onAdd={(ubs) => {
+          addUBS(ubs);
+          setShowAddUBS(false);
+        }}
+      />
+      
+      <AddONGModal
+        open={showAddONG}
+        onOpenChange={setShowAddONG}
+        onAdd={(ong) => {
+          addONG(ong);
+          setShowAddONG(false);
+        }}
+      />
+      
+      <PatientForm
+        open={showAddPaciente}
+        onOpenChange={setShowAddPaciente}
+        onAdd={(paciente) => {
+          addPaciente(paciente);
+          setShowAddPaciente(false);
+        }}
+      />
     </div>
   );
 };

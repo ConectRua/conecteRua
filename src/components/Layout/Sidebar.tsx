@@ -9,18 +9,18 @@ import {
   Users, 
   Building2, 
   Heart, 
-  BarChart3, 
+  FileText, 
   Settings, 
   ChevronLeft,
   Home,
-  UserPlus,
   FileSpreadsheet,
-  Search,
   LogOut,
   User,
-  CalendarDays
+  CalendarDays,
+  MapPinned
 } from 'lucide-react';
-import logoConecteRua from '@/assets/logo-conecte-rua-final.png';
+import logoConecteRua from '@/assets/logo-conecte-rua-cortada.png';
+import { EquipamentoSocialIcon } from '@/components/icons/EquipamentoSocialIcon';
 
 interface NavItem {
   title: string;
@@ -55,22 +55,16 @@ const navItems: NavItem[] = [
     description: 'Atendimentos e agendamentos'
   },
   {
-    title: 'Cadastro Manual',
-    href: '/cadastro',
-    icon: UserPlus,
-    description: 'Adicionar UBS e ONGs'
+    title: 'Atividades Territoriais',
+    href: '/atividades-territoriais',
+    icon: MapPinned,
+    description: 'Registro de atividades com GPS'
   },
   {
     title: 'Import Planilhas',
     href: '/importacao',
     icon: FileSpreadsheet,
     description: 'Upload de dados em lote'
-  },
-  {
-    title: 'Busca por CEP',
-    href: '/busca',
-    icon: Search,
-    description: 'Localizar serviços'
   },
   {
     title: 'Gestão UBS',
@@ -85,10 +79,16 @@ const navItems: NavItem[] = [
     description: 'Organizações e Instituições'
   },
   {
+    title: 'Gestão Equipamentos Sociais',
+    href: '/equipamentos',
+    icon: EquipamentoSocialIcon,
+    description: 'Equipamentos e Serviços Sociais'
+  },
+  {
     title: 'Relatórios',
     href: '/relatorios',
-    icon: BarChart3,
-    description: 'Análises e estatísticas'
+    icon: FileText,
+    description: 'Mapas georreferenciados em PDF'
   },
   {
     title: 'Configurações',
@@ -114,16 +114,16 @@ export const Sidebar = ({ className }: SidebarProps) => {
   return (
     <div className={cn(
       "flex flex-col border-r bg-card transition-all duration-300 h-screen",
-      collapsed ? "w-16" : "w-64",
+      collapsed ? "w-16" : "w-80",
       className
     )}>
       {/* Header */}
-      <div className="flex h-20 items-center justify-center px-4 border-b">
+      <div className="relative flex h-24 items-center justify-center px-4 border-b">
         {!collapsed && (
           <img 
             src={logoConecteRua} 
             alt="ConecteRua - Sistema de Georreferenciamento" 
-            className="h-40 w-auto object-contain max-w-full"
+            className="max-w-[213px] h-auto object-contain"
           />
         )}
         
@@ -131,7 +131,10 @@ export const Sidebar = ({ className }: SidebarProps) => {
           variant="ghost"
           size="sm"
           onClick={() => setCollapsed(!collapsed)}
-          className="h-8 w-8 p-0"
+          className={cn(
+            "h-8 w-8 p-0",
+            collapsed ? "mx-auto" : "absolute right-2"
+          )}
         >
           <ChevronLeft className={cn(
             "h-4 w-4 transition-transform",

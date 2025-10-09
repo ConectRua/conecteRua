@@ -13,7 +13,8 @@ import {
   orientacoesEncaminhamento,
   auditLog,
   geocodingCache,
-  type User, 
+  atividadesTerritoriais,
+  type User,
   type InsertUser,
   type UBS,
   type ONG,
@@ -22,7 +23,8 @@ import {
   type OrientacaoEncaminhamento,
   type InsertOrientacaoEncaminhamento,
   type GeocodingCache,
-  type InsertGeocodingCache
+  type InsertGeocodingCache,
+  type AtividadeTerritorial
 } from "../shared/schema";
 import { eq, sql } from "drizzle-orm";
 import { IStorage } from "./storage";
@@ -180,6 +182,26 @@ export class PostgreSQLStorage implements IStorage {
     return result.length > 0;
   }
 
+  async deletePacientes(ids: number[]): Promise<{ success: number; failed: number }> {
+    let success = 0;
+    let failed = 0;
+
+    for (const id of ids) {
+      try {
+        const deleted = await this.deletePaciente(id);
+        if (deleted) {
+          success++;
+        } else {
+          failed++;
+        }
+      } catch (error) {
+        failed++;
+      }
+    }
+
+    return { success, failed };
+  }
+
   // ============ EQUIPAMENTOS SOCIAIS CRUD METHODS ============
   async getEquipamentosSociais(): Promise<EquipamentoSocial[]> {
     return await db.select().from(equipamentosSociais).where(eq(equipamentosSociais.ativo, true));
@@ -208,6 +230,40 @@ export class PostgreSQLStorage implements IStorage {
     const result = await db.update(equipamentosSociais)
       .set({ ativo: false, updatedAt: new Date() })
       .where(eq(equipamentosSociais.id, id))
+      .returning();
+    return result.length > 0;
+  }
+
+  // ============ ATIVIDADES TERRITORIAIS CRUD METHODS ============
+  async getAtividadesTerritoriais(): Promise<AtividadeTerritorial[]> {
+    return await db.select().from(atividadesTerritoriais);
+  }
+
+  async getAtividadeTerritorial(id: number): Promise<AtividadeTerritorial | null> {
+    const result = await db.select().from(atividadesTerritoriais)
+      .where(eq(atividadesTerritoriais.id, id))
+      .limit(1);
+    return result[0] || null;
+  }
+
+  async createAtividadeTerritorial(data: Partial<AtividadeTerritorial>): Promise<AtividadeTerritorial> {
+    const result = await db.insert(atividadesTerritoriais)
+      .values(data as any)
+      .returning();
+    return result[0];
+  }
+
+  async updateAtividadeTerritorial(id: number, updates: Partial<AtividadeTerritorial>): Promise<AtividadeTerritorial | null> {
+    const result = await db.update(atividadesTerritoriais)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(atividadesTerritoriais.id, id))
+      .returning();
+    return result[0] || null;
+  }
+
+  async deleteAtividadeTerritorial(id: number): Promise<boolean> {
+    const result = await db.delete(atividadesTerritoriais)
+      .where(eq(atividadesTerritoriais.id, id))
       .returning();
     return result.length > 0;
   }
@@ -295,7 +351,7 @@ export class PostgreSQLStorage implements IStorage {
     const result = await db.update(orientacoesEncaminhamento)
       .set({ ativo: false, updatedAt: new Date() })
       .where(eq(orientacoesEncaminhamento.id, id));
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   async logAudit(userId: number, action: string, tableName: string, recordId: number, oldValues?: any, newValues?: any) {
@@ -311,5 +367,34 @@ export class PostgreSQLStorage implements IStorage {
 
   async close() {
     await pool.end();
+  }
+
+  // ============ MÉTODOS DE VERIFICAÇÃO DE DUPLICATAS ============
+  async findPacienteByCnsOuCpf(cnsOuCpf: string): Promise<Paciente | null> {
+    const result = await db.select().from(pacientes)
+      .where(eq(pacientes.cnsOuCpf, cnsOuCpf))
+      .limit(1);
+    return result[0] || null;
+  }
+
+  async findUBSByNome(nome: string): Promise<UBS | null> {
+    const result = await db.select().from(ubs)
+      .where(sql`LOWER(${ubs.nome}) = LOWER(${nome})`)
+      .limit(1);
+    return result[0] || null;
+  }
+
+  async findONGByNome(nome: string): Promise<ONG | null> {
+    const result = await db.select().from(ongs)
+      .where(sql`LOWER(${ongs.nome}) = LOWER(${nome})`)
+      .limit(1);
+    return result[0] || null;
+  }
+
+  async findEquipamentoSocialByNome(nome: string): Promise<EquipamentoSocial | null> {
+    const result = await db.select().from(equipamentosSociais)
+      .where(sql`LOWER(${equipamentosSociais.nome}) = LOWER(${nome})`)
+      .limit(1);
+    return result[0] || null;
   }
 }

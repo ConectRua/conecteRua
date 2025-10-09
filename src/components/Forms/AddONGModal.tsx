@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Geolocation } from '@capacitor/geolocation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,10 +7,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import type { InsertONG } from '@shared/schema';
+import { GooglePlacesAutocomplete } from '@/components/GooglePlacesAutocomplete';
+import type { InsertONG } from '../../../shared/schema';
 import { MapPin, Heart, Phone, Clock, Users, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { toast } from 'sonner';
+import { getCurrentLocation as getLocation } from '@/lib/geolocation-helper';
 
 interface AddONGModalProps {
   open: boolean;
@@ -61,9 +62,8 @@ export const AddONGModal = ({ open, onOpenChange, onAdd }: AddONGModalProps) => 
     tipo: 'Assistência Social',
     areasAtuacao: [] as string[],
     responsavel: '',
-    capacidade: '',
     horarioFuncionamento: '08:00 - 17:00',
-    status: 'ativo' as 'ativo' | 'inativo'
+    ativo: true
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -108,7 +108,6 @@ export const AddONGModal = ({ open, onOpenChange, onAdd }: AddONGModalProps) => 
       ...formData,
       latitude: parseFloat(formData.latitude),
       longitude: parseFloat(formData.longitude),
-      capacidade: formData.capacidade ? parseInt(formData.capacidade) : null,
       cep: formData.cep.replace(/\D/g, '').replace(/(\d{5})(\d{3})/, '$1-$2')
     };
 
@@ -128,9 +127,8 @@ export const AddONGModal = ({ open, onOpenChange, onAdd }: AddONGModalProps) => 
       tipo: 'Assistência Social',
       areasAtuacao: [],
       responsavel: '',
-      capacidade: '',
       horarioFuncionamento: '08:00 - 17:00',
-      status: 'ativo'
+      ativo: true
     });
     
     onOpenChange(false);
@@ -147,63 +145,22 @@ export const AddONGModal = ({ open, onOpenChange, onAdd }: AddONGModalProps) => 
 
   const getCurrentLocation = async () => {
     setIsGettingLocation(true);
-    try {
-      // Primeiro tenta a API Capacitor (para mobile)
-      try {
-        const coordinates = await Geolocation.getCurrentPosition({
-          enableHighAccuracy: true,
-          timeout: 10000
-        });
-        
-        const location = {
-          latitude: coordinates.coords.latitude.toString(),
-          longitude: coordinates.coords.longitude.toString()
-        };
-        
+    
+    await getLocation({
+      onSuccess: (location) => {
         setFormData(prev => ({
           ...prev,
           latitude: location.latitude,
           longitude: location.longitude
         }));
-        
-        toast.success('Localização obtida com sucesso!');
-        return;
-      } catch (capacitorError) {
-        // Fallback para API do browser (para web)
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              const location = {
-                latitude: position.coords.latitude.toString(),
-                longitude: position.coords.longitude.toString()
-              };
-              
-              setFormData(prev => ({
-                ...prev,
-                latitude: location.latitude,
-                longitude: location.longitude
-              }));
-              
-              toast.success('Localização obtida com sucesso!');
-              setIsGettingLocation(false);
-            },
-            (error) => {
-              console.error('Erro browser geolocation:', error);
-              throw error;
-            },
-            { enableHighAccuracy: true, timeout: 10000 }
-          );
-          return;
-        } else {
-          throw new Error('Geolocalização não suportada pelo navegador');
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao obter localização:', error);
-      toast.error('Não foi possível obter a localização. Verifique as permissões.');
-    } finally {
-      setIsGettingLocation(false);
-    }
+        setIsGettingLocation(false);
+      },
+      onError: () => {
+        setIsGettingLocation(false);
+      },
+      timeout: 10000,
+      enableHighAccuracy: true
+    });
   };
 
   return (
@@ -217,6 +174,28 @@ export const AddONGModal = ({ open, onOpenChange, onAdd }: AddONGModalProps) => 
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Busca no Google Maps */}
+          <div className="border-b pb-4">
+            <GooglePlacesAutocomplete
+              onPlaceSelected={(place) => {
+                // Preencher os campos com os dados do estabelecimento selecionado
+                setFormData(prev => ({
+                  ...prev,
+                  nome: place.nome || prev.nome,
+                  endereco: place.endereco || prev.endereco,
+                  cep: place.cep || prev.cep,
+                  latitude: place.latitude ? place.latitude.toString() : prev.latitude,
+                  longitude: place.longitude ? place.longitude.toString() : prev.longitude,
+                  telefone: place.telefone || prev.telefone,
+                  horarioFuncionamento: place.horarioFuncionamento || prev.horarioFuncionamento,
+                  email: place.email || prev.email
+                }));
+              }}
+              placeholder="Ex: Instituto Ação Social, Casa de Apoio..."
+              label="Buscar ONG no Google Maps"
+            />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Informações Básicas */}
             <div className="space-y-4">
@@ -311,30 +290,17 @@ export const AddONGModal = ({ open, onOpenChange, onAdd }: AddONGModalProps) => 
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label htmlFor="capacidade">Capacidade de Atendimento</Label>
-                  <Input
-                    id="capacidade"
-                    type="number"
-                    value={formData.capacidade}
-                    onChange={(e) => setFormData(prev => ({ ...prev, capacidade: e.target.value }))}
-                    placeholder="100"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="horario">
-                    <Clock className="h-4 w-4 inline mr-1" />
-                    Horário de Funcionamento
-                  </Label>
-                  <Input
-                    id="horario"
-                    value={formData.horarioFuncionamento}
-                    onChange={(e) => setFormData(prev => ({ ...prev, horarioFuncionamento: e.target.value }))}
-                    placeholder="08:00 - 17:00"
-                  />
-                </div>
+              <div>
+                <Label htmlFor="horario">
+                  <Clock className="h-4 w-4 inline mr-1" />
+                  Horário de Funcionamento
+                </Label>
+                <Input
+                  id="horario"
+                  value={formData.horarioFuncionamento}
+                  onChange={(e) => setFormData(prev => ({ ...prev, horarioFuncionamento: e.target.value }))}
+                  placeholder="08:00 - 17:00"
+                />
               </div>
             </div>
 

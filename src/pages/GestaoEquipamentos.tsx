@@ -2,10 +2,15 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { ReclassificationModal } from '@/components/ReclassificationModal';
 import { AddEquipamentoModal } from '@/components/Forms/AddEquipamentoModal';
+import { EditEquipamentoModal } from '@/components/Forms/EditEquipamentoModal';
 import { useApiData } from '@/hooks/useApiData';
-import type { InsertEquipamentoSocial } from '../../shared/schema';
+import { useMultiSelect } from '@/hooks/useMultiSelect';
+import { useToast } from '@/hooks/use-toast';
+import type { InsertEquipamentoSocial, EquipamentoSocial } from '../../shared/schema';
 import { 
   Building, 
   Phone, 
@@ -14,16 +19,84 @@ import {
   Plus,
   Edit,
   Trash2,
-  Users
+  Users,
+  AlertTriangle
 } from 'lucide-react';
 
 const GestaoEquipamentos = () => {
-  const { equipamentosSociais, loading, addEquipamentoSocial } = useApiData();
+  const { equipamentosSociais, loading, addEquipamentoSocial, updateEquipamentoSocial, deleteEquipamentoSocial } = useApiData();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedEquipamento, setSelectedEquipamento] = useState<EquipamentoSocial | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const { toast } = useToast();
+  
+  const {
+    selectedItems,
+    selectAll,
+    toggleItem,
+    toggleAll,
+    clearSelection,
+    isSelected,
+    selectedCount
+  } = useMultiSelect<EquipamentoSocial>();
 
   const handleAddEquipamento = (equipamento: InsertEquipamentoSocial) => {
     addEquipamentoSocial(equipamento);
     setIsAddModalOpen(false);
+  };
+
+  const handleEditClick = (equipamento: EquipamentoSocial) => {
+    setSelectedEquipamento(equipamento);
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateEquipamento = (id: number, data: Partial<EquipamentoSocial>) => {
+    updateEquipamentoSocial(id, data);
+    setIsEditModalOpen(false);
+  };
+
+  const handleDeleteMultiple = async () => {
+    try {
+      // Converter Set para Array e deletar cada item
+      const itemsToDelete = Array.from(selectedItems);
+      
+      // Deletar cada item selecionado
+      for (const id of itemsToDelete) {
+        await deleteEquipamentoSocial(id);
+      }
+      
+      toast({
+        title: "Sucesso",
+        description: `${itemsToDelete.length} equipamento(s) excluído(s) com sucesso.`,
+      });
+      
+      // Limpar seleção e fechar modal
+      clearSelection();
+      setIsDeleteDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Erro ao excluir",
+        description: "Ocorreu um erro ao excluir os equipamentos selecionados.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteSingle = async (id: number) => {
+    try {
+      await deleteEquipamentoSocial(id);
+      toast({
+        title: "Sucesso",
+        description: "Equipamento excluído com sucesso.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao excluir",
+        description: "Ocorreu um erro ao excluir o equipamento.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -48,11 +121,42 @@ const GestaoEquipamentos = () => {
           </p>
         </div>
         
-        <Button className="bg-purple-600 hover:bg-purple-700" onClick={() => setIsAddModalOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Equipamento
-        </Button>
+        <div className="flex items-center space-x-2">
+          {selectedCount > 0 && (
+            <Button 
+              variant="destructive" 
+              onClick={() => setIsDeleteDialogOpen(true)}
+              data-testid="button-delete-selected"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Excluir {selectedCount} Selecionado{selectedCount > 1 ? 's' : ''}
+            </Button>
+          )}
+          <Button className="bg-purple-600 hover:bg-purple-700" onClick={() => setIsAddModalOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Equipamento
+          </Button>
+        </div>
       </div>
+
+      {/* Barra de Seleção */}
+      {equipamentosSociais.length > 0 && (
+        <div className="flex items-center space-x-4 p-4 bg-muted/50 rounded-lg">
+          <Checkbox
+            checked={selectAll}
+            onCheckedChange={() => toggleAll(equipamentosSociais)}
+            data-testid="checkbox-select-all"
+          />
+          <label className="text-sm font-medium cursor-pointer" onClick={() => toggleAll(equipamentosSociais)}>
+            Selecionar Todos ({equipamentosSociais.length} equipamentos)
+          </label>
+          {selectedCount > 0 && (
+            <span className="text-sm text-muted-foreground">
+              • {selectedCount} selecionado{selectedCount > 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -114,36 +218,79 @@ const GestaoEquipamentos = () => {
       {/* Lista de Equipamentos */}
       <div className="grid gap-4">
         {equipamentosSociais.map((equipamento) => (
-          <Card key={equipamento.id} className="hover:shadow-lg transition-shadow">
+          <Card 
+            key={equipamento.id} 
+            className={`hover:shadow-lg transition-all ${isSelected(equipamento.id) ? 'ring-2 ring-purple-600' : ''}`}
+          >
             <CardHeader>
               <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <CardTitle className="flex items-center space-x-2">
-                    <Building className="h-5 w-5 text-purple-600" />
-                    <span>{equipamento.nome}</span>
-                  </CardTitle>
-                  <div className="flex items-center space-x-2 mt-2">
-                    <Badge 
-                      variant="default"
-                      className="bg-purple-600"
-                    >
-                      Ativo
-                    </Badge>
-                    <Badge variant="outline">{equipamento.tipo}</Badge>
+                <div className="flex items-start space-x-3">
+                  <Checkbox
+                    checked={isSelected(equipamento.id)}
+                    onCheckedChange={() => toggleItem(equipamento.id)}
+                    className="mt-1"
+                    data-testid={`checkbox-equipamento-${equipamento.id}`}
+                  />
+                  <div className="flex-1">
+                    <CardTitle className="flex items-center space-x-2">
+                      <Building className="h-5 w-5 text-purple-600" />
+                      <span>{equipamento.nome}</span>
+                    </CardTitle>
+                    <div className="flex items-center space-x-2 mt-2">
+                      <Badge 
+                        variant="default"
+                        className="bg-purple-600"
+                      >
+                        Ativo
+                      </Badge>
+                      <Badge variant="outline">{equipamento.tipo}</Badge>
+                    </div>
                   </div>
                 </div>
                 
                 <div className="flex space-x-2">
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleEditClick(equipamento)}
+                    data-testid={`button-edit-equipamento-${equipamento.id}`}
+                  >
                     <Edit className="h-4 w-4" />
                   </Button>
                   <ReclassificationModal 
                     registro={{ id: equipamento.id, nome: equipamento.nome }}
                     tipoAtual="equipamentos"
                   />
-                  <Button variant="outline" size="sm" className="text-destructive">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-destructive"
+                        data-testid={`button-delete-equipamento-${equipamento.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Tem certeza que deseja excluir o equipamento "{equipamento.nome}"? 
+                          Esta ação não pode ser desfeita.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={() => handleDeleteSingle(equipamento.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </div>
             </CardHeader>
@@ -240,6 +387,40 @@ const GestaoEquipamentos = () => {
         onOpenChange={setIsAddModalOpen}
         onAdd={handleAddEquipamento}
       />
+      
+      {selectedEquipamento && (
+        <EditEquipamentoModal
+          open={isEditModalOpen}
+          onOpenChange={setIsEditModalOpen}
+          equipamento={selectedEquipamento}
+          onUpdate={handleUpdateEquipamento}
+        />
+      )}
+
+      {/* Modal de Confirmação para Exclusão Múltipla */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center space-x-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              <span>Confirmar Exclusão Múltipla</span>
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Você está prestes a excluir {selectedCount} equipamento{selectedCount > 1 ? 's' : ''} social{selectedCount > 1 ? 'is' : ''}.
+              Esta ação não pode ser desfeita. Tem certeza que deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteMultiple}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir {selectedCount} Equipamento{selectedCount > 1 ? 's' : ''}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

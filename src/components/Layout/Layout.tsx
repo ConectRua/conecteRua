@@ -28,7 +28,7 @@ export const Layout = () => {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 lg:ml-64">
+      <div className="flex-1 lg:ml-80">
         {/* Mobile Header */}
         <div className="lg:hidden">
           <Header 

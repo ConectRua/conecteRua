@@ -2,8 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Geolocation } from '@capacitor/geolocation';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { getCurrentLocation as getLocation } from '@/lib/geolocation-helper';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,6 +32,7 @@ import { useApiData } from '@/hooks/useApiData';
 import type { InsertPaciente } from '../../../shared/schema';
 import { insertPacienteSchema } from '../../../shared/schema';
 import { toast } from 'sonner';
+import { GooglePlacesAutocomplete } from '@/components/GooglePlacesAutocomplete';
 
 // Schema para validação do formulário completo
 const pacienteCompletoSchema = insertPacienteSchema.extend({
@@ -418,78 +419,34 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
   // Obter localização atual
   const getCurrentLocation = async () => {
     setIsGettingLocation(true);
-    try {
-      let lat: number, lng: number;
-      
-      try {
-        const coordinates = await Geolocation.getCurrentPosition({
-          enableHighAccuracy: true,
-          timeout: 10000
-        });
-        
-        lat = coordinates.coords.latitude;
-        lng = coordinates.coords.longitude;
+    
+    await getLocation({
+      onSuccess: (location) => {
+        const lat = parseFloat(location.latitude);
+        const lng = parseFloat(location.longitude);
         
         setFormData(prev => ({
           ...prev,
-          latitude: lat.toString(),
-          longitude: lng.toString()
+          latitude: location.latitude,
+          longitude: location.longitude
         }));
         
         form.setValue('latitude', lat);
         form.setValue('longitude', lng);
-        
-        toast.success('📍 Localização atual obtida com sucesso!');
         
         // Acionar reverse geocoding para buscar o CEP
         geocodingRequestIdRef.current += 1;
         const currentRequestId = geocodingRequestIdRef.current;
         reverseGeocodeCoordinates(lat, lng, currentRequestId);
         
-        return;
-      } catch (capacitorError) {
-        console.log('Capacitor failed, trying browser API:', capacitorError);
-        
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              lat = position.coords.latitude;
-              lng = position.coords.longitude;
-              
-              setFormData(prev => ({
-                ...prev,
-                latitude: lat.toString(),
-                longitude: lng.toString()
-              }));
-              
-              form.setValue('latitude', lat);
-              form.setValue('longitude', lng);
-              
-              toast.success('📍 Localização atual obtida com sucesso!');
-              setIsGettingLocation(false);
-              
-              // Acionar reverse geocoding para buscar o CEP
-              geocodingRequestIdRef.current += 1;
-              const currentRequestId = geocodingRequestIdRef.current;
-              reverseGeocodeCoordinates(lat, lng, currentRequestId);
-            },
-            (error) => {
-              console.error('Erro browser geolocation:', error);
-              throw error;
-            },
-            { enableHighAccuracy: true, timeout: 10000 }
-          );
-          return;
-        } else {
-          throw new Error('Geolocalização não suportada pelo navegador');
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao obter localização:', error);
-      toast.error('Não foi possível obter a localização. Verifique as permissões.');
-    } finally {
-      setIsGettingLocation(false);
-    }
+        setIsGettingLocation(false);
+      },
+      onError: () => {
+        setIsGettingLocation(false);
+      },
+      timeout: 10000,
+      enableHighAccuracy: true
+    });
   };
 
   const onSubmit = async (data: PacienteFormData) => {
@@ -742,6 +699,33 @@ export const PatientForm = ({ open, onOpenChange, onAdd }: PatientFormProps) => 
                   <span>Endereço e Localização</span>
                 </AccordionTrigger>
                 <AccordionContent className="space-y-4 pt-4">
+                  {/* Busca de Endereço no Google Maps */}
+                  <div className="border-b pb-4">
+                    <GooglePlacesAutocomplete
+                      onPlaceSelected={(place) => {
+                        // Atualizar react-hook-form state (para watchers e validação)
+                        form.setValue('endereco', place.endereco || '');
+                        form.setValue('cep', place.cep || '');
+                        
+                        if (place.latitude && place.longitude) {
+                          form.setValue('latitude', place.latitude);
+                          form.setValue('longitude', place.longitude);
+                        }
+                        
+                        // Atualizar formData local (para inputs de coordenadas não controlados por form)
+                        setFormData(prev => ({
+                          ...prev,
+                          endereco: place.endereco || '',
+                          cep: place.cep || '',
+                          latitude: place.latitude ? place.latitude.toString() : '',
+                          longitude: place.longitude ? place.longitude.toString() : ''
+                        }));
+                      }}
+                      placeholder="Digite um endereço para buscar..."
+                      label="Buscar Endereço no Google Maps"
+                    />
+                  </div>
+
                   <FormField
                     control={form.control}
                     name="endereco"
