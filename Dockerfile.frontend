@@ -4,6 +4,8 @@ WORKDIR /app
 
 # Accept build args
 ARG NODE_ENV=production
+ARG VITE_API_URL # <-- MUDANÇA AQUI (Adicionado)
+ARG VITE_GOOGLE_MAPS_API_KEY # <-- MUDANÇA AQUI (Adicionado)
 ENV NODE_ENV=$NODE_ENV
 
 # Copy only package files first
@@ -23,12 +25,14 @@ COPY src ./src
 COPY public ./public
 COPY shared ./shared
 
-# Copy production environment file
-COPY .env.production .env.production
+# Create production environment file from build arguments # <-- MUDANÇA AQUI (Bloco inteiro alterado)
+RUN echo "VITE_API_URL=${VITE_API_URL}" > .env.production
+RUN echo "VITE_GOOGLE_MAPS_API_KEY=${VITE_GOOGLE_MAPS_API_KEY}" >> .env.production
 
 # Build the application
 RUN npm run build
 
+# --- Estágio final para servir os arquivos ---
 FROM node:20-alpine AS serve
 WORKDIR /app
 COPY --from=build /app/dist ./dist
