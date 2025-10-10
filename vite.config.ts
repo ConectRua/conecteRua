@@ -1,4 +1,4 @@
-iimport { defineConfig, loadEnv } from "vite"; // <-- A ÚNICA MUDANÇA É AQUI
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
