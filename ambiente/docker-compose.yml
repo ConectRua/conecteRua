@@ -9,15 +9,15 @@ services:
     container_name: geo-map-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-geomap}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - geo-map-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-geomap}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -29,14 +29,14 @@ services:
     container_name: geo-map-backend
     restart: unless-stopped
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:postgres@postgres:5432/geomap}
+      DATABASE_URL: ${DATABASE_URL}
       NODE_ENV: production
       PORT: 3000
-      SESSION_SECRET: ${SESSION_SECRET:-74f64982ae90e10407a13d7e146205a03ae608127a442ee9eb292f7a734953ca}
-      LOCAL_CLIENT_PORT: ${LOCAL_CLIENT_PORT:-5173}
-      CORS_ORIGIN: ${CORS_ORIGIN:-}
-      CORS_ORIGIN_2: ${CORS_ORIGIN_2:-}
-      VIACEP_API_URL: ${VIACEP_API_URL:-https://viacep.com.br/ws}
+      SESSION_SECRET: ${SESSION_SECRET}
+      LOCAL_CLIENT_PORT: ${LOCAL_CLIENT_PORT}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      CORS_ORIGIN_2: ${CORS_ORIGIN_2}
+      VIACEP_API_URL: ${VIACEP_API_URL}
     depends_on:
       postgres:
         condition: service_healthy
@@ -55,9 +55,9 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      VITE_API_URL: ${VITE_API_URL:-http://backend:3000}
-      VITE_API_PROXY_TARGET: ${VITE_API_PROXY_TARGET:-http://backend:3000}
-      VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY:-your-google-maps-api-key}
+      VITE_API_URL: ${VITE_API_URL}
+      VITE_API_PROXY_TARGET: ${VITE_API_PROXY_TARGET}
+      VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY}
     depends_on:
       - backend
     networks:
