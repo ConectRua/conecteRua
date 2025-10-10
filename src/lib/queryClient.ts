@@ -3,6 +3,9 @@
 
 import { QueryClient, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
+// Get API base URL from environment variables
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -15,11 +18,21 @@ export const queryClient = new QueryClient({
   },
 });
 
+// Helper function to build full URL
+const buildUrl = (path: string) => {
+  // In development, use proxy (relative path)
+  if (import.meta.env.DEV) {
+    return path;
+  }
+  // In production, use full API URL
+  return `${API_BASE_URL}${path}`;
+};
+
 // Default query function with auth handling
 export const getQueryFn = (options?: { on401?: "returnNull" | "throw" }) => {
   return async ({ queryKey }: { queryKey: readonly unknown[] }) => {
-    const url = queryKey[0] as string;
-    
+    const url = buildUrl(queryKey[0] as string);
+
     const response = await fetch(url, {
       credentials: "include",
     });
@@ -45,6 +58,8 @@ export async function apiRequest(
   url: string,
   data?: unknown
 ) {
+  const fullUrl = buildUrl(url);
+
   const config: RequestInit = {
     method,
     credentials: "include",
@@ -57,7 +72,7 @@ export async function apiRequest(
     config.body = JSON.stringify(data);
   }
 
-  const response = await fetch(url, config);
+  const response = await fetch(fullUrl, config);
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));

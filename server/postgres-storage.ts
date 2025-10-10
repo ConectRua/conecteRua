@@ -1,10 +1,9 @@
 // PostgreSQL Storage implementation
 // Implements IStorage interface with real database operations
 
-import { Pool } from '@neondatabase/serverless';
 import session from "express-session";
 import ConnectPgSession from "connect-pg-simple";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { 
   users, 
   ubs, 
@@ -15,7 +14,7 @@ import {
   auditLog,
   geocodingCache,
   atividadesTerritoriais,
-  type User, 
+  type User,
   type InsertUser,
   type UBS,
   type ONG,
@@ -33,16 +32,11 @@ import { IStorage } from "./storage";
 const PgSession = ConnectPgSession(session);
 
 export class PostgreSQLStorage implements IStorage {
-  private pool: Pool;
   public sessionStore: session.Store;
 
   constructor() {
-    this.pool = new Pool({
-      connectionString: process.env.DATABASE_URL
-    });
-
     this.sessionStore = new PgSession({
-      pool: this.pool,
+      pool,
       createTableIfMissing: true,
     });
   }
@@ -191,7 +185,7 @@ export class PostgreSQLStorage implements IStorage {
   async deletePacientes(ids: number[]): Promise<{ success: number; failed: number }> {
     let success = 0;
     let failed = 0;
-    
+
     for (const id of ids) {
       try {
         const deleted = await this.deletePaciente(id);
@@ -204,7 +198,7 @@ export class PostgreSQLStorage implements IStorage {
         failed++;
       }
     }
-    
+
     return { success, failed };
   }
 
@@ -372,7 +366,7 @@ export class PostgreSQLStorage implements IStorage {
   }
 
   async close() {
-    await this.pool.end();
+    await pool.end();
   }
 
   // ============ MÉTODOS DE VERIFICAÇÃO DE DUPLICATAS ============

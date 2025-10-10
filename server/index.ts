@@ -47,16 +47,45 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 // Middleware
-app.use(cors({
-  origin: process.env.NODE_ENV === "production" 
-    ? ["https://your-domain.com"] 
+const isProduction = process.env.NODE_ENV === "production";
+const localClientPort = process.env.LOCAL_CLIENT_PORT || "5173";
+const sharedOrigins = [
+  process.env.CORS_ORIGIN,
+  process.env.CORS_ORIGIN_2,
+].filter(Boolean) as string[];
+const localOrigins = [
+  `http://localhost:${localClientPort}`,
+  `http://127.0.0.1:${localClientPort}`,
+  "http://localhost:5000",
+  "http://127.0.0.1:5000",
+];
+const allowedOrigins = new Set<string>(
+  isProduction
+    ? [
+        "https://conectrua.com.br",
+        "https://www.conectrua.com.br",
+        ...localOrigins,
+        ...sharedOrigins,
+      ]
     : [
-        "http://localhost:5000", 
-        "http://localhost:5173",
-        `https://${process.env.REPLIT_DOMAINS || 'localhost'}`
+        ...localOrigins,
+        `https://${process.env.REPLIT_DOMAINS || "localhost"}`,
+        ...sharedOrigins,
       ],
-  credentials: true,
-}));
+);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.has(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`Origin ${origin} not allowed by CORS`));
+    },
+    credentials: true,
+  }),
+);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
