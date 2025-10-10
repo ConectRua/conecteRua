@@ -1,22 +1,22 @@
-# ARQUIVO: server/Dockerfile (Versão Corrigida)
+# ARQUIVO: server/Dockerfile (Versão final correta)
 
-# Dockerfile para back-end Bun
+# Dockerfile para o backend Bun
 FROM oven/bun:1.0.25
 WORKDIR /app
 
-# Copie os arquivos do pacote da raiz do projeto (um nível acima) # <-- MUDANÇA
-COPY ../package.json ../bun.lock ./
+# Copia os arquivos da raiz, pois o contexto AGORA é a raiz
+COPY package.json bun.lock ./
 
 # Instalar dependências
 RUN bun install
 
-# Copiar esquema compartilhado (um nível acima) # <-- MUDANÇA
-COPY ../shared ./shared
+# Copia a pasta shared da raiz
+COPY shared ./shared
 
-# Copiar código do servidor (o conteúdo do diretório atual 'server') # <-- MUDANÇA
-COPY . .
+# Copia apenas o código do servidor para dentro de uma pasta 'server'
+COPY server ./server
 
 EXPOSE 3000
 
-# Execute o servidor a partir da raiz do WORKDIR # <-- MUDANÇA
-CMD ["bun", "run", "index.ts"]
+# Executa o servidor a partir do caminho correto dentro do container
+CMD ["bun", "run", "server/index.ts"]

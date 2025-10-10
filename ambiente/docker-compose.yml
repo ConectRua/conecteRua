@@ -24,8 +24,8 @@ services:
 
   backend:
     build:
-      context: ./server
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: server/Dockerfile
     container_name: geo-map-backend
     restart: unless-stopped
     environment:
