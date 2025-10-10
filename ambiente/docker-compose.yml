@@ -29,7 +29,7 @@ services:
     container_name: geo-map-backend
     restart: unless-stopped
     environment:
-      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:postgres@postgres:5432/${POSTGRES_DB:-geomap}}
+      DATABASE_URL: ${DATABASE_URL:-postgres://postgres:postgres@postgres:5432/geomap}
       NODE_ENV: production
       PORT: 3000
       SESSION_SECRET: ${SESSION_SECRET:-74f64982ae90e10407a13d7e146205a03ae608127a442ee9eb292f7a734953ca}
