@@ -24,7 +24,7 @@ services:
 
   backend:
     build:
-      context: ../.
+      context: ../server
       dockerfile: server/Dockerfile
     container_name: geo-map-backend
     restart: unless-stopped
@@ -47,7 +47,7 @@ services:
 
   frontend:
     build:
-      context: ../.
+      context: ../
       dockerfile: Dockerfile.frontend
       args:
         NODE_ENV: production
