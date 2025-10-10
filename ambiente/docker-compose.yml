@@ -47,7 +47,7 @@ services:
 
   frontend:
     build:
-      context: ../
+      context: ./
       dockerfile: Dockerfile.frontend
       args:
         NODE_ENV: production
