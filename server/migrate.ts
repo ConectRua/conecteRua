@@ -2,18 +2,23 @@
 // Runs the initial setup and seeds data
 
 import { db, pool } from "./db";
-import { 
-  users, 
-  ubs, 
-  ongs, 
-  pacientes, 
+import {
+  users,
+  ubs,
+  ongs,
+  pacientes,
   equipamentosSociais,
-  auditLog 
+  auditLog
 } from "../shared/schema";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
+import { migrate as runMigrations } from "drizzle-orm/node-postgres/migrator";
+import { dirname, resolve } from "path";
+import { fileURLToPath } from "url";
 
 const scryptAsync = promisify(scrypt);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16).toString("hex");
@@ -28,6 +33,11 @@ async function migrate() {
     // Test database connection
     await pool.query("SELECT 1");
     console.log("✅ Database connected successfully");
+
+    // Ensure schema migrations are applied before seeding data
+    console.log("🏗️ Applying schema migrations...");
+    await runMigrations(db, { migrationsFolder: resolve(__dirname, "./migrations") });
+    console.log("✅ Schema migrations applied");
     
     // Create test users
     const hashedAdminPassword = await hashPassword("123456");
@@ -48,10 +58,12 @@ async function migrate() {
         password: hashedUserPassword,
         emailVerified: true,
       }
-    ]).returning();
+    ]).onConflictDoNothing().returning();
     
     console.log(`✅ Created ${testUsers.length} test users`);
-    
+    if (testUsers.length === 0) {
+      console.log("ℹ️  Test users already existed, skipped seeding users");
+    }
     // Create initial UBS data
     console.log("🏥 Creating UBS data...");
     
