@@ -3,6 +3,7 @@
 
 import session from "express-session";
 import createMemoryStore from "memorystore";
+import { randomBytes, scryptSync } from "crypto";
 import { User, InsertUser, UBS, ONG, Paciente, EquipamentoSocial, GeocodingCache, InsertGeocodingCache, OrientacaoEncaminhamento, InsertOrientacaoEncaminhamento, AtividadeTerritorial } from "../shared/schema";
 
 const MemoryStore = createMemoryStore(session);
@@ -103,9 +104,35 @@ export class MemStorage implements IStorage {
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000, // prune expired entries every 24h
     });
-    
+
+    this.initializeMockUsers();
     // Initialize with mock data
     this.initializeMockData();
+  }
+
+  private hashPasswordSync(password: string): string {
+    const salt = randomBytes(16).toString("hex");
+    const buf = scryptSync(password, salt, 64);
+    return `${buf.toString("hex")}.${salt}`;
+  }
+
+  private initializeMockUsers() {
+    const now = new Date();
+
+    const adminUser: User = {
+      id: this.nextUserId++,
+      username: "admin",
+      email: "admin@conecterua.org",
+      password: this.hashPasswordSync("123456"),
+      emailVerified: true,
+      verificationToken: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    this.users.set(adminUser.id, adminUser);
+    this.usersByUsername.set(adminUser.username, adminUser);
+    this.usersByEmail.set(adminUser.email, adminUser);
   }
 
   // User authentication methods
@@ -704,7 +731,7 @@ import { PostgreSQLStorage } from "./postgres-storage";
 
 // Configure storage based on environment
 // Use PostgreSQL in production, MemStorage in development for testing
-export const storage: IStorage = process.env.NODE_ENV === 'production' 
+export const storage: IStorage = process.env.NODE_ENV === 'production'
   ? new PostgreSQLStorage()
   : new PostgreSQLStorage(); // Using PostgreSQL in all environments now
 

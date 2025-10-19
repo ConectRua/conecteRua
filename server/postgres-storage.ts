@@ -3,6 +3,8 @@
 
 import session from "express-session";
 import ConnectPgSession from "connect-pg-simple";
+import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { promisify } from "util";
 import { db, pool } from "./db";
 import { 
   users, 
@@ -28,8 +30,10 @@ import {
 } from "../shared/schema";
 import { eq, sql } from "drizzle-orm";
 import { IStorage } from "./storage";
+import { logger } from "./services/logger";
 
 const PgSession = ConnectPgSession(session);
+const scryptAsync = promisify(scrypt);
 
 export class PostgreSQLStorage implements IStorage {
   public sessionStore: session.Store;
@@ -39,6 +43,86 @@ export class PostgreSQLStorage implements IStorage {
       pool,
       createTableIfMissing: true,
     });
+
+    // Ensure a default admin user exists for development and support access
+    void this.ensureDefaultAdmin();
+  }
+
+  private async hashPassword(password: string): Promise<string> {
+    const salt = randomBytes(16).toString("hex");
+    const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+    return `${buf.toString("hex")}.${salt}`;
+  }
+
+  private async isPasswordValid(password: string, stored?: string | null): Promise<boolean> {
+    if (!stored) {
+      return false;
+    }
+
+    const [hashed, salt] = stored.split(".");
+    if (!hashed || !salt) {
+      return false;
+    }
+
+    const hashedBuf = Buffer.from(hashed, "hex");
+    const suppliedBuf = (await scryptAsync(password, salt, 64)) as Buffer;
+    return timingSafeEqual(hashedBuf, suppliedBuf);
+  }
+
+  private async ensureDefaultAdmin(): Promise<void> {
+    try {
+      const adminUser = await this.getUserByUsername("admin");
+      const defaultPassword = "123456";
+
+      if (!adminUser) {
+        const hashedPassword = await this.hashPassword(defaultPassword);
+        await db
+          .insert(users)
+          .values({
+            username: "admin",
+            email: "admin@conecterua.org",
+            password: hashedPassword,
+            emailVerified: true,
+            verificationToken: null,
+          })
+          .onConflictDoNothing();
+        logger.auth("Default admin user created", {
+          username: "admin",
+          metadata: { source: "ensure_default_admin" },
+        });
+        return;
+      }
+
+      const updates: Partial<User> = {};
+
+      const hasValidPassword = await this.isPasswordValid(defaultPassword, adminUser.password);
+      if (!hasValidPassword) {
+        updates.password = await this.hashPassword(defaultPassword);
+      }
+
+      if (!adminUser.emailVerified) {
+        updates.emailVerified = true;
+        updates.verificationToken = null;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await this.updateUser(adminUser.id, updates);
+        logger.auth("Default admin user updated", {
+          userId: adminUser.id,
+          username: adminUser.username,
+          metadata: {
+            source: "ensure_default_admin",
+            passwordReset: Boolean(updates.password),
+            emailVerified: updates.emailVerified ?? adminUser.emailVerified,
+          },
+        });
+      }
+    } catch (error) {
+      logger.error("Failed to ensure default admin user", {
+        error: error as Error,
+        metadata: { source: "ensure_default_admin" },
+      });
+    }
   }
 
   // ============ USER AUTHENTICATION METHODS ============
