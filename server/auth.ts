@@ -10,6 +10,7 @@ import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser, insertUserSchema } from "../shared/schema";
 import { logger, extractRequestContext, createDurationTracker } from "./services/logger";
+import { z } from "zod";
 
 declare global {
   namespace Express {
@@ -18,6 +19,11 @@ declare global {
 }
 
 const scryptAsync = promisify(scrypt);
+
+const publicRegisterSchema = insertUserSchema.omit({ isAdmin: true });
+const adminCreateUserSchema = insertUserSchema.extend({
+  isAdmin: z.boolean().optional().default(false),
+});
 
 async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16).toString("hex");
@@ -133,7 +139,7 @@ export function setupAuth(app: Express) {
     const context = extractRequestContext(req);
     
     try {
-      const validatedData = insertUserSchema.parse(req.body);
+      const validatedData = publicRegisterSchema.parse(req.body);
       
       logger.auth("User registration attempt", {
         ...context,
@@ -244,6 +250,128 @@ export function setupAuth(app: Express) {
         duration: getDuration()
       });
       res.status(400).json({ error: "Dados inválidos" });
+    }
+  });
+
+  // Admin create user endpoint
+  app.post("/api/admin/users", async (req, res) => {
+    const getDuration = createDurationTracker();
+    const context = extractRequestContext(req);
+
+    if (!req.isAuthenticated()) {
+      logger.security("Unauthorized admin user creation attempt", {
+        ...context,
+        action: "admin_create_user_unauthenticated",
+      });
+      return res.status(401).json({ error: "Não autenticado" });
+    }
+
+    if (!req.user?.isAdmin) {
+      logger.security("Forbidden admin user creation attempt", {
+        ...context,
+        userId: req.user?.id,
+        username: req.user?.username,
+        action: "admin_create_user_forbidden",
+      });
+      return res.status(403).json({ error: "Acesso permitido apenas para administradores" });
+    }
+
+    try {
+      const validatedData = adminCreateUserSchema.parse(req.body);
+
+      logger.auth("Admin attempting to create user", {
+        ...context,
+        userId: req.user.id,
+        username: req.user.username,
+        action: "admin_create_user_attempt",
+        metadata: {
+          newUsername: validatedData.username,
+          newEmail: validatedData.email,
+          newIsAdmin: validatedData.isAdmin ?? false,
+        },
+      });
+
+      const existingUserByUsername = await storage.getUserByUsername(validatedData.username);
+      if (existingUserByUsername) {
+        logger.security("Admin user creation failed - duplicate username", {
+          ...context,
+          userId: req.user.id,
+          username: req.user.username,
+          action: "admin_create_user_duplicate_username",
+          metadata: { attemptedUsername: validatedData.username },
+        });
+        return res.status(400).json({ error: "Nome de usuário já existe" });
+      }
+
+      const existingUserByEmail = await storage.getUserByEmail(validatedData.email);
+      if (existingUserByEmail) {
+        logger.security("Admin user creation failed - duplicate email", {
+          ...context,
+          userId: req.user.id,
+          username: req.user.username,
+          action: "admin_create_user_duplicate_email",
+          metadata: { attemptedEmail: validatedData.email },
+        });
+        return res.status(400).json({ error: "Email já cadastrado" });
+      }
+
+      const hashedPassword = await hashPassword(validatedData.password);
+      const createdUser = await storage.createUser({
+        username: validatedData.username,
+        email: validatedData.email,
+        password: hashedPassword,
+        isAdmin: validatedData.isAdmin ?? false,
+        verificationToken: null,
+      });
+
+      const activatedUser =
+        (await storage.updateUser(createdUser.id, {
+          emailVerified: true,
+          verificationToken: null,
+        })) ?? createdUser;
+
+      const { password, verificationToken, ...userResponse } = activatedUser;
+
+      logger.auth("Admin created user successfully", {
+        ...context,
+        userId: req.user.id,
+        username: req.user.username,
+        action: "admin_create_user_success",
+        duration: getDuration(),
+        metadata: {
+          newUserId: userResponse.id,
+          newUsername: userResponse.username,
+          newEmail: userResponse.email,
+          newIsAdmin: userResponse.isAdmin,
+        },
+      });
+
+      res.status(201).json({
+        user: userResponse,
+        message: "Usuário criado com sucesso!",
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        logger.error("Admin user creation validation error", {
+          ...context,
+          userId: req.user.id,
+          username: req.user.username,
+          action: "admin_create_user_validation_error",
+          duration: getDuration(),
+          error,
+        });
+        return res.status(400).json({ error: "Dados inválidos" });
+      }
+
+      logger.error("Admin user creation error", {
+        ...context,
+        userId: req.user.id,
+        username: req.user.username,
+        action: "admin_create_user_error",
+        duration: getDuration(),
+        error: error as Error,
+      });
+      res.status(500).json({ error: "Erro interno do servidor" });
     }
   });
 

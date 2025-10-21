@@ -3,31 +3,30 @@
 
 import session from "express-session";
 import ConnectPgSession from "connect-pg-simple";
-import { db, pool } from "./db";
-import { 
-  users, 
-  ubs, 
-  ongs, 
-  pacientes, 
-  equipamentosSociais,
-  orientacoesEncaminhamento,
-  auditLog,
-  geocodingCache,
+import {db, pool} from "./db";
+import {
   atividadesTerritoriais,
-  type User,
-  type InsertUser,
-  type UBS,
-  type ONG,
-  type Paciente,
+  type AtividadeTerritorial,
+  auditLog,
   type EquipamentoSocial,
-  type OrientacaoEncaminhamento,
-  type InsertOrientacaoEncaminhamento,
+  equipamentosSociais,
+  geocodingCache,
   type GeocodingCache,
   type InsertGeocodingCache,
-  type AtividadeTerritorial
+  type InsertUser,
+  type ONG,
+  ongs,
+  type OrientacaoEncaminhamento,
+  orientacoesEncaminhamento,
+  type Paciente,
+  pacientes,
+  ubs,
+  type UBS,
+  type User,
+  users
 } from "../shared/schema";
-import { eq, sql } from "drizzle-orm";
-import { IStorage } from "./storage";
+import {eq, sql} from "drizzle-orm";
+import {IStorage} from "./storage";
 
 const PgSession = ConnectPgSession(session);
 
@@ -60,6 +59,7 @@ export class PostgreSQLStorage implements IStorage {
   async createUser(userData: InsertUser & { verificationToken?: string }): Promise<User> {
     const result = await db.insert(users).values({
       ...userData,
+      isAdmin: userData.isAdmin ?? false,
       emailVerified: false,
       verificationToken: userData.verificationToken || null,
     }).returning();

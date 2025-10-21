@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "./components/Layout/Layout";
 import { AuthProvider } from "./hooks/use-auth";
 import { ProtectedRoute } from "./lib/protected-route";
+import { AdminRoute } from "./lib/admin-route";
 import { queryClient } from "./lib/queryClient";
 import Dashboard from "./pages/Dashboard";
 import MapaInterativo from "./pages/MapaInterativo";
@@ -23,6 +24,7 @@ import Configuracoes from "./pages/Configuracoes";
 import Perfil from "./pages/Perfil";
 import NotFound from "./pages/NotFound";
 import AuthPage from "./pages/AuthPage";
+import AdminUsuarios from "./pages/AdminUsuarios";
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -51,6 +53,14 @@ const App = () => (
               <Route path="relatorios" element={<Relatorios />} />
               <Route path="perfil" element={<Perfil />} />
               <Route path="configuracoes" element={<Configuracoes />} />
+              <Route
+                path="admin/usuarios"
+                element={
+                  <AdminRoute>
+                    <AdminUsuarios />
+                  </AdminRoute>
+                }
+              />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             </Route>
             <Route path="*" element={<NotFound />} />

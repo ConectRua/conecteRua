@@ -1,20 +1,13 @@
 // Migration script to initialize the PostgreSQL database
 // Runs the initial setup and seeds data
 
-import { db, pool } from "./db";
-import {
-  users,
-  ubs,
-  ongs,
-  pacientes,
-  equipamentosSociais,
-  auditLog
-} from "../shared/schema";
-import { scrypt, randomBytes } from "crypto";
-import { promisify } from "util";
-import { migrate as runMigrations } from "drizzle-orm/node-postgres/migrator";
-import { dirname, resolve } from "path";
-import { fileURLToPath } from "url";
+import {db, pool} from "./db";
+import {equipamentosSociais, ongs, pacientes, ubs, users} from "../shared/schema";
+import {randomBytes, scrypt} from "crypto";
+import {promisify} from "util";
+import {migrate as runMigrations} from "drizzle-orm/node-postgres/migrator";
+import {dirname, resolve} from "path";
+import {fileURLToPath} from "url";
 
 const scryptAsync = promisify(scrypt);
 const __filename = fileURLToPath(import.meta.url);
@@ -50,12 +43,14 @@ async function migrate() {
         username: "admin",
         email: "admin@conecterua.org",
         password: hashedAdminPassword,
+        isAdmin: true,
         emailVerified: true,
       },
       {
         username: "usuario",
         email: "usuario@conecterua.org",
         password: hashedUserPassword,
+        isAdmin: false,
         emailVerified: true,
       }
     ]).onConflictDoNothing().returning();

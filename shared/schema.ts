@@ -1,10 +1,9 @@
 // Database schema for the georeferencing system
 // Using Drizzle ORM for PostgreSQL with PostGIS support
 
-import { pgTable, serial, varchar, text, boolean, timestamp, integer, decimal, jsonb, uuid, doublePrecision } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
-import { z } from "zod";
+import {boolean, doublePrecision, integer, jsonb, pgTable, serial, text, timestamp, varchar} from "drizzle-orm/pg-core";
+import {relations} from "drizzle-orm";
+import {z} from "zod";
 
 // ============ USER AUTHENTICATION ============
 export const users = pgTable("users", {
@@ -12,6 +11,7 @@ export const users = pgTable("users", {
   username: varchar("username", { length: 50 }).unique().notNull(),
   email: varchar("email", { length: 255 }).unique().notNull(),
   password: text("password").notNull(),
+  isAdmin: boolean("is_admin").notNull().default(false),
   emailVerified: boolean("email_verified").default(false),
   verificationToken: text("verification_token"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -23,6 +23,7 @@ export const insertUserSchema = z.object({
   username: z.string().min(3).max(50),
   email: z.string().email().max(255),
   password: z.string().min(6),
+  isAdmin: z.boolean().optional().default(false),
 });
 
 export const selectUserSchema = z.object({
@@ -30,6 +31,7 @@ export const selectUserSchema = z.object({
   username: z.string(),
   email: z.string(),
   password: z.string(),
+  isAdmin: z.boolean(),
   emailVerified: z.boolean(),
   verificationToken: z.string().nullable(),
   createdAt: z.date(),

@@ -17,16 +17,19 @@ import {
   LogOut,
   User,
   CalendarDays,
-  MapPinned
+  MapPinned,
+  ShieldCheck
 } from 'lucide-react';
 import logoConecteRua from '@/assets/logo-conecte-rua-cortada.png';
 import { EquipamentoSocialIcon } from '@/components/icons/EquipamentoSocialIcon';
+import { Badge } from '@/components/ui/badge';
 
 interface NavItem {
   title: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   description?: string;
+  requiresAdmin?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -95,6 +98,13 @@ const navItems: NavItem[] = [
     href: '/configuracoes',
     icon: Settings,
     description: 'Preferências do sistema'
+  },
+  {
+    title: 'Gestão de Usuários',
+    href: '/admin/usuarios',
+    icon: ShieldCheck,
+    description: 'Gerencie contas e permissões',
+    requiresAdmin: true,
   }
 ];
 
@@ -147,6 +157,10 @@ export const Sidebar = ({ className }: SidebarProps) => {
       <ScrollArea className="flex-1 px-2 py-4">
         <nav className="space-y-1">
           {navItems.map((item) => {
+            if (item.requiresAdmin && !user?.isAdmin) {
+              return null;
+            }
+
             const isActive = location.pathname === item.href;
             const Icon = item.icon;
             
@@ -197,6 +211,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
                 <p className="text-sm font-medium truncate">{user.username}</p>
                 <p className="text-xs text-muted-foreground truncate">{user.email}</p>
               </div>
+              {user.isAdmin && <Badge variant="secondary">Admin</Badge>}
             </div>
           </div>
         )}

@@ -9,6 +9,7 @@ type User = {
   id: number;
   username: string;
   email: string;
+  isAdmin: boolean;
   emailVerified: boolean;
   createdAt: string;
   updatedAt: string;
@@ -54,7 +55,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (response.ok) {
         const userData = await response.json();
-        setUser(userData);
+        setUser({
+          ...userData,
+          isAdmin: Boolean(userData.isAdmin),
+        });
       } else {
         setUser(null);
       }
@@ -73,7 +77,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await apiRequest('POST', '/api/login', credentials);
       
       if (response.user) {
-        setUser(response.user);
+        setUser({
+          ...response.user,
+          isAdmin: Boolean(response.user.isAdmin),
+        });
         toast({
           title: "Sucesso!",
           description: response.message || "Login realizado com sucesso!",
@@ -101,7 +108,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (response.user) {
         // In development, auto-login after registration
         if (process.env.NODE_ENV === 'development') {
-          setUser(response.user);
+          setUser({
+            ...response.user,
+            isAdmin: Boolean(response.user.isAdmin),
+          });
         }
         
         toast({

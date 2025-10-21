@@ -3,7 +3,20 @@
 
 import session from "express-session";
 import createMemoryStore from "memorystore";
-import { User, InsertUser, UBS, ONG, Paciente, EquipamentoSocial, GeocodingCache, InsertGeocodingCache, OrientacaoEncaminhamento, InsertOrientacaoEncaminhamento, AtividadeTerritorial } from "../shared/schema";
+import {
+  AtividadeTerritorial,
+  EquipamentoSocial,
+  GeocodingCache,
+  InsertGeocodingCache,
+  InsertUser,
+  ONG,
+  OrientacaoEncaminhamento,
+  Paciente,
+  UBS,
+  User
+} from "../shared/schema";
+// Import PostgreSQLStorage
+import {PostgreSQLStorage} from "./postgres-storage";
 
 const MemoryStore = createMemoryStore(session);
 
@@ -125,6 +138,7 @@ export class MemStorage implements IStorage {
     const user: User = {
       id: this.nextUserId++,
       ...userData,
+      isAdmin: userData.isAdmin ?? false,
       emailVerified: false,
       verificationToken: userData.verificationToken || null,
       createdAt: new Date(),
@@ -698,9 +712,6 @@ export class MemStorage implements IStorage {
     return this.equipamentosSociais.find(e => e.nome.toLowerCase() === nome.toLowerCase()) || null;
   }
 }
-
-// Import PostgreSQLStorage
-import { PostgreSQLStorage } from "./postgres-storage";
 
 // Configure storage based on environment
 // Use PostgreSQL in production, MemStorage in development for testing

@@ -1,0 +1,1612 @@
+{
+  "id": "45454acb-4a83-4b7a-b0e3-dda9d81090ab",
+  "prevId": "a4d788d7-1cf5-4e95-84f6-78b56f0667a6",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.atividades_territoriais": {
+      "name": "atividades_territoriais",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "titulo": {
+          "name": "titulo",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "latitude": {
+          "name": "latitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "longitude": {
+          "name": "longitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "quantidade_pessoas": {
+          "name": "quantidade_pessoas",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "descricao_local": {
+          "name": "descricao_local",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "endereco": {
+          "name": "endereco",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cep": {
+          "name": "cep",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "regiao": {
+          "name": "regiao",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "usuario_id": {
+          "name": "usuario_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "data_atividade": {
+          "name": "data_atividade",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "atividades_territoriais_usuario_id_users_id_fk": {
+          "name": "atividades_territoriais_usuario_id_users_id_fk",
+          "tableFrom": "atividades_territoriais",
+          "tableTo": "users",
+          "columnsFrom": [
+            "usuario_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.audit_log": {
+      "name": "audit_log",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "action": {
+          "name": "action",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "table_name": {
+          "name": "table_name",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "record_id": {
+          "name": "record_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "old_values": {
+          "name": "old_values",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "new_values": {
+          "name": "new_values",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ip_address": {
+          "name": "ip_address",
+          "type": "varchar(45)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_agent": {
+          "name": "user_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "audit_log_user_id_users_id_fk": {
+          "name": "audit_log_user_id_users_id_fk",
+          "tableFrom": "audit_log",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.equipamentos_sociais": {
+      "name": "equipamentos_sociais",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nome": {
+          "name": "nome",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "endereco": {
+          "name": "endereco",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cep": {
+          "name": "cep",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "latitude": {
+          "name": "latitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "longitude": {
+          "name": "longitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "telefone": {
+          "name": "telefone",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "horario_funcionamento": {
+          "name": "horario_funcionamento",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "servicos": {
+          "name": "servicos",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "responsavel": {
+          "name": "responsavel",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "place_id": {
+          "name": "place_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "google_rating": {
+          "name": "google_rating",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "google_photo_url": {
+          "name": "google_photo_url",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ativo": {
+          "name": "ativo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.geocoding_cache": {
+      "name": "geocoding_cache",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "address_hash": {
+          "name": "address_hash",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cep": {
+          "name": "cep",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "latitude": {
+          "name": "latitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "longitude": {
+          "name": "longitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source": {
+          "name": "source",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "error_message": {
+          "name": "error_message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "geocoding_cache_address_hash_unique": {
+          "name": "geocoding_cache_address_hash_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "address_hash"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ongs": {
+      "name": "ongs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nome": {
+          "name": "nome",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "endereco": {
+          "name": "endereco",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cep": {
+          "name": "cep",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "latitude": {
+          "name": "latitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "longitude": {
+          "name": "longitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "telefone": {
+          "name": "telefone",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "site": {
+          "name": "site",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "areas_atuacao": {
+          "name": "areas_atuacao",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "horario_funcionamento": {
+          "name": "horario_funcionamento",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "servicos": {
+          "name": "servicos",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "responsavel": {
+          "name": "responsavel",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "place_id": {
+          "name": "place_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "google_rating": {
+          "name": "google_rating",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "google_photo_url": {
+          "name": "google_photo_url",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ativo": {
+          "name": "ativo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.orientacoes_encaminhamento": {
+      "name": "orientacoes_encaminhamento",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "paciente_id": {
+          "name": "paciente_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "orientacao_anterior": {
+          "name": "orientacao_anterior",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proxima_orientacao": {
+          "name": "proxima_orientacao",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "observacoes_seguimento": {
+          "name": "observacoes_seguimento",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "seguiu_orientacao": {
+          "name": "seguiu_orientacao",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "data_orientacao": {
+          "name": "data_orientacao",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "usuario_id": {
+          "name": "usuario_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ativo": {
+          "name": "ativo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "orientacoes_encaminhamento_paciente_id_pacientes_id_fk": {
+          "name": "orientacoes_encaminhamento_paciente_id_pacientes_id_fk",
+          "tableFrom": "orientacoes_encaminhamento",
+          "tableTo": "pacientes",
+          "columnsFrom": [
+            "paciente_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "orientacoes_encaminhamento_usuario_id_users_id_fk": {
+          "name": "orientacoes_encaminhamento_usuario_id_users_id_fk",
+          "tableFrom": "orientacoes_encaminhamento",
+          "tableTo": "users",
+          "columnsFrom": [
+            "usuario_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.pacientes": {
+      "name": "pacientes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "local_atendimento": {
+          "name": "local_atendimento",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "data_atendimento": {
+          "name": "data_atendimento",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "equipe": {
+          "name": "equipe",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'Samambaia - DF'"
+        },
+        "nome": {
+          "name": "nome",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nome_social": {
+          "name": "nome_social",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nome_mae": {
+          "name": "nome_mae",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nome_pai": {
+          "name": "nome_pai",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "naturalidade": {
+          "name": "naturalidade",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "data_nascimento": {
+          "name": "data_nascimento",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "idade": {
+          "name": "idade",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cns_ou_cpf": {
+          "name": "cns_ou_cpf",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "endereco": {
+          "name": "endereco",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cep": {
+          "name": "cep",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "latitude": {
+          "name": "latitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "longitude": {
+          "name": "longitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "precisao_geocode": {
+          "name": "precisao_geocode",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "telefone": {
+          "name": "telefone",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "identidade_genero": {
+          "name": "identidade_genero",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cor_raca": {
+          "name": "cor_raca",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "orientacao_sexual": {
+          "name": "orientacao_sexual",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "internacao": {
+          "name": "internacao",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ideacao_suicida": {
+          "name": "ideacao_suicida",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tentativa_suicidio": {
+          "name": "tentativa_suicidio",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pressao_arterial": {
+          "name": "pressao_arterial",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "frequencia_cardiaca": {
+          "name": "frequencia_cardiaca",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fc_classificacao": {
+          "name": "fc_classificacao",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "frequencia_respiratoria": {
+          "name": "frequencia_respiratoria",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fr_classificacao": {
+          "name": "fr_classificacao",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "temperatura": {
+          "name": "temperatura",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "peso": {
+          "name": "peso",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "glicemia_capilar": {
+          "name": "glicemia_capilar",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "teste_gravidez": {
+          "name": "teste_gravidez",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "teste_sifilis": {
+          "name": "teste_sifilis",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "teste_hep_b": {
+          "name": "teste_hep_b",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "teste_hep_c": {
+          "name": "teste_hep_c",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "teste_hiv": {
+          "name": "teste_hiv",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "uso_alcool": {
+          "name": "uso_alcool",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "uso_maconha": {
+          "name": "uso_maconha",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "uso_cocaina": {
+          "name": "uso_cocaina",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "uso_crack": {
+          "name": "uso_crack",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "uso_sinteticos": {
+          "name": "uso_sinteticos",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "uso_volateis": {
+          "name": "uso_volateis",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dm_familiar": {
+          "name": "dm_familiar",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ha_familiar": {
+          "name": "ha_familiar",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "avc_familiar": {
+          "name": "avc_familiar",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "iam_familiar": {
+          "name": "iam_familiar",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ca_familiar": {
+          "name": "ca_familiar",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "depressao_familiar": {
+          "name": "depressao_familiar",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ansiedade_familiar": {
+          "name": "ansiedade_familiar",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "esquizo_familiar": {
+          "name": "esquizo_familiar",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bipolar_familiar": {
+          "name": "bipolar_familiar",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "alcool_familiar": {
+          "name": "alcool_familiar",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "drogas_familiar": {
+          "name": "drogas_familiar",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dm": {
+          "name": "dm",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ha": {
+          "name": "ha",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "avc": {
+          "name": "avc",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "iam": {
+          "name": "iam",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ca": {
+          "name": "ca",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "depressao": {
+          "name": "depressao",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ansiedade": {
+          "name": "ansiedade",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "esquizo": {
+          "name": "esquizo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bipolar": {
+          "name": "bipolar",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "alcoolismo": {
+          "name": "alcoolismo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "asma": {
+          "name": "asma",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "medicacao_em_uso": {
+          "name": "medicacao_em_uso",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "kit_odonto": {
+          "name": "kit_odonto",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "kit_higiene": {
+          "name": "kit_higiene",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "vacina": {
+          "name": "vacina",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "coleta_sangue": {
+          "name": "coleta_sangue",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "adm_medicacao": {
+          "name": "adm_medicacao",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "medicacao_administrada": {
+          "name": "medicacao_administrada",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estado_geral": {
+          "name": "estado_geral",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "orientacao": {
+          "name": "orientacao",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "consciencia": {
+          "name": "consciencia",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "hidratacao": {
+          "name": "hidratacao",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nutricao": {
+          "name": "nutricao",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "coloracao": {
+          "name": "coloracao",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "facies": {
+          "name": "facies",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "facies_descricao": {
+          "name": "facies_descricao",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pulsos_presenca": {
+          "name": "pulsos_presenca",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pulsos_simetria": {
+          "name": "pulsos_simetria",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mmii_perfusao": {
+          "name": "mmii_perfusao",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mmii_tvp": {
+          "name": "mmii_tvp",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "linfonodomegalias": {
+          "name": "linfonodomegalias",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "linfonodomegalias_descricao": {
+          "name": "linfonodomegalias_descricao",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tvp_panturrilhas": {
+          "name": "tvp_panturrilhas",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tvp_sinal_homans": {
+          "name": "tvp_sinal_homans",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "edema_facies": {
+          "name": "edema_facies",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "edema_maos": {
+          "name": "edema_maos",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "edema_pes": {
+          "name": "edema_pes",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "edema_generalizado": {
+          "name": "edema_generalizado",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "abdomen_tipo": {
+          "name": "abdomen_tipo",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "abdomen_massas": {
+          "name": "abdomen_massas",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "abdomen_hernia_umbilical": {
+          "name": "abdomen_hernia_umbilical",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "abdomen_hernia_inguinal": {
+          "name": "abdomen_hernia_inguinal",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "abdomen_retracoes": {
+          "name": "abdomen_retracoes",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "abdomen_circulacao_colateral": {
+          "name": "abdomen_circulacao_colateral",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "abdomen_peristalse": {
+          "name": "abdomen_peristalse",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "abdomen_lesoes_cutaneas": {
+          "name": "abdomen_lesoes_cutaneas",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "abdomen_ruidos_hidroaereos": {
+          "name": "abdomen_ruidos_hidroaereos",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "abdomen_sopros": {
+          "name": "abdomen_sopros",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "abdomen_distendido": {
+          "name": "abdomen_distendido",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "abdomen_dor": {
+          "name": "abdomen_dor",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "abdomen_sinal_murphy": {
+          "name": "abdomen_sinal_murphy",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "abdomen_sinal_blumberg": {
+          "name": "abdomen_sinal_blumberg",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "abdomen_sinal_giordano": {
+          "name": "abdomen_sinal_giordano",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "abdomen_visceromegalias": {
+          "name": "abdomen_visceromegalias",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "condicoes_saude": {
+          "name": "condicoes_saude",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ubs_mais_proxima_id": {
+          "name": "ubs_mais_proxima_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "distancia_ubs": {
+          "name": "distancia_ubs",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "evolucao": {
+          "name": "evolucao",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "observacoes": {
+          "name": "observacoes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ultimo_atendimento": {
+          "name": "ultimo_atendimento",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proximo_atendimento": {
+          "name": "proximo_atendimento",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ativo": {
+          "name": "ativo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "pacientes_ubs_mais_proxima_id_ubs_id_fk": {
+          "name": "pacientes_ubs_mais_proxima_id_ubs_id_fk",
+          "tableFrom": "pacientes",
+          "tableTo": "ubs",
+          "columnsFrom": [
+            "ubs_mais_proxima_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "pacientes_cns_ou_cpf_unique": {
+          "name": "pacientes_cns_ou_cpf_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "cns_ou_cpf"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ubs": {
+      "name": "ubs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nome": {
+          "name": "nome",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "endereco": {
+          "name": "endereco",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cep": {
+          "name": "cep",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "latitude": {
+          "name": "latitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "longitude": {
+          "name": "longitude",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "telefone": {
+          "name": "telefone",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "horario_funcionamento": {
+          "name": "horario_funcionamento",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "especialidades": {
+          "name": "especialidades",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gestor": {
+          "name": "gestor",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "place_id": {
+          "name": "place_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "google_rating": {
+          "name": "google_rating",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "google_photo_url": {
+          "name": "google_photo_url",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ativo": {
+          "name": "ativo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "username": {
+          "name": "username",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password": {
+          "name": "password",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_admin": {
+          "name": "is_admin",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "email_verified": {
+          "name": "email_verified",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "verification_token": {
+          "name": "verification_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "users_username_unique": {
+          "name": "users_username_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "username"
+          ]
+        },
+        "users_email_unique": {
+          "name": "users_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
