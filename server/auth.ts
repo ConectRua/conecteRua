@@ -24,6 +24,13 @@ const publicRegisterSchema = insertUserSchema.omit({ isAdmin: true });
 const adminCreateUserSchema = insertUserSchema.extend({
   isAdmin: z.boolean().optional().default(false),
 });
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Senha atual é obrigatória"),
+  newPassword: z.string().min(6, "A nova senha deve ter pelo menos 6 caracteres"),
+});
+const adminResetPasswordSchema = z.object({
+  newPassword: z.string().min(6, "A nova senha deve ter pelo menos 6 caracteres"),
+});
 
 async function hashPassword(password: string): Promise<string> {
   const salt = randomBytes(16).toString("hex");
@@ -253,6 +260,67 @@ export function setupAuth(app: Express) {
     }
   });
 
+  // Admin list users endpoint
+  app.get("/api/admin/users", async (req, res) => {
+    const getDuration = createDurationTracker();
+    const context = extractRequestContext(req);
+
+    if (!req.isAuthenticated()) {
+      logger.security("Unauthorized admin user listing attempt", {
+        ...context,
+        action: "admin_list_users_unauthenticated",
+      });
+      return res.status(401).json({ error: "Não autenticado" });
+    }
+
+    if (!req.user?.isAdmin) {
+      logger.security("Forbidden admin user listing attempt", {
+        ...context,
+        userId: req.user?.id,
+        username: req.user?.username,
+        action: "admin_list_users_forbidden",
+      });
+      return res.status(403).json({ error: "Acesso permitido apenas para administradores" });
+    }
+
+    try {
+      logger.auth("Admin requesting user list", {
+        ...context,
+        userId: req.user.id,
+        username: req.user.username,
+        action: "admin_list_users_attempt",
+      });
+
+      const users = await storage.listUsers();
+      const sanitizedUsers = users.map(({ password, verificationToken, ...user }) => ({
+        ...user,
+        createdAt: user.createdAt ? new Date(user.createdAt).toISOString() : null,
+        updatedAt: user.updatedAt ? new Date(user.updatedAt).toISOString() : null,
+      }));
+
+      logger.auth("Admin retrieved user list successfully", {
+        ...context,
+        userId: req.user.id,
+        username: req.user.username,
+        action: "admin_list_users_success",
+        duration: getDuration(),
+        metadata: { totalUsers: sanitizedUsers.length },
+      });
+
+      res.json({ users: sanitizedUsers });
+    } catch (error) {
+      logger.error("Admin user listing error", {
+        ...context,
+        userId: req.user.id,
+        username: req.user.username,
+        action: "admin_list_users_error",
+        duration: getDuration(),
+        error: error as Error,
+      });
+      res.status(500).json({ error: "Não foi possível carregar a lista de usuários" });
+    }
+  });
+
   // Admin create user endpoint
   app.post("/api/admin/users", async (req, res) => {
     const getDuration = createDurationTracker();
@@ -375,6 +443,98 @@ export function setupAuth(app: Express) {
     }
   });
 
+  // Admin reset user password endpoint
+  app.post("/api/admin/users/:id/reset-password", async (req, res) => {
+    const getDuration = createDurationTracker();
+    const context = extractRequestContext(req);
+
+    if (!req.isAuthenticated()) {
+      logger.security("Unauthorized admin password reset attempt", {
+        ...context,
+        action: "admin_reset_password_unauthenticated",
+        resourceId: req.params.id,
+      });
+      return res.status(401).json({ error: "Não autenticado" });
+    }
+
+    if (!req.user?.isAdmin) {
+      logger.security("Forbidden admin password reset attempt", {
+        ...context,
+        action: "admin_reset_password_forbidden",
+        resourceId: req.params.id,
+      });
+      return res.status(403).json({ error: "Acesso permitido apenas para administradores" });
+    }
+
+    const validation = adminResetPasswordSchema.safeParse(req.body);
+    if (!validation.success) {
+      logger.error("Admin password reset validation error", {
+        ...context,
+        action: "admin_reset_password_validation_error",
+        resourceId: req.params.id,
+        error: validation.error,
+      });
+      return res.status(400).json({ error: "Dados inválidos" });
+    }
+
+    const targetUserId = Number.parseInt(req.params.id, 10);
+    if (Number.isNaN(targetUserId)) {
+      logger.error("Admin password reset invalid user id", {
+        ...context,
+        action: "admin_reset_password_invalid_id",
+        resourceId: req.params.id,
+      });
+      return res.status(400).json({ error: "Usuário inválido" });
+    }
+
+    try {
+      const targetUser = await storage.getUser(targetUserId);
+      if (!targetUser) {
+        logger.security("Admin password reset target not found", {
+          ...context,
+          action: "admin_reset_password_user_not_found",
+          resourceId: targetUserId,
+        });
+        return res.status(404).json({ error: "Usuário não encontrado" });
+      }
+
+      logger.auth("Admin attempting to reset user password", {
+        ...context,
+        action: "admin_reset_password_attempt",
+        resourceId: targetUserId,
+        metadata: { targetUsername: targetUser.username },
+      });
+
+      const hashedPassword = await hashPassword(validation.data.newPassword);
+      const updatedUser = await storage.updateUser(targetUserId, {
+        password: hashedPassword,
+      });
+
+      logger.auth("Admin reset user password successfully", {
+        ...context,
+        action: "admin_reset_password_success",
+        resourceId: targetUserId,
+        duration: getDuration(),
+        metadata: { targetUsername: targetUser.username },
+      });
+
+      const { password, verificationToken, ...sanitizedUser } = updatedUser ?? targetUser;
+      res.json({
+        user: sanitizedUser,
+        message: "Senha redefinida com sucesso.",
+      });
+    } catch (error) {
+      logger.error("Admin password reset error", {
+        ...context,
+        action: "admin_reset_password_error",
+        resourceId: targetUserId,
+        duration: getDuration(),
+        error: error as Error,
+      });
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
+  });
+
   // Login endpoint
   app.post("/api/login", (req, res, next) => {
     const getDuration = createDurationTracker();
@@ -487,6 +647,82 @@ export function setupAuth(app: Express) {
       
       res.json({ message: "Logout realizado com sucesso!" });
     });
+  });
+
+  // Change password endpoint for authenticated users
+  app.post("/api/user/change-password", async (req, res) => {
+    const getDuration = createDurationTracker();
+    const context = extractRequestContext(req);
+
+    if (!req.isAuthenticated() || !req.user) {
+      logger.security("Unauthorized password change attempt", {
+        ...context,
+        action: "user_change_password_unauthenticated",
+      });
+      return res.status(401).json({ error: "Não autenticado" });
+    }
+
+    const validation = changePasswordSchema.safeParse(req.body);
+    if (!validation.success) {
+      logger.error("Password change validation error", {
+        ...context,
+        action: "user_change_password_validation_error",
+        error: validation.error,
+      });
+      return res.status(400).json({ error: "Dados inválidos" });
+    }
+
+    try {
+      const userRecord = await storage.getUser(req.user.id);
+      if (!userRecord) {
+        logger.error("Password change user not found in storage", {
+          ...context,
+          action: "user_change_password_not_found",
+        });
+        return res.status(404).json({ error: "Usuário não encontrado" });
+      }
+
+      const isCurrentValid = await comparePasswords(validation.data.currentPassword, userRecord.password);
+      if (!isCurrentValid) {
+        logger.security("Password change rejected due to invalid current password", {
+          ...context,
+          action: "user_change_password_invalid_current",
+        });
+        return res.status(400).json({ error: "Senha atual incorreta" });
+      }
+
+      if (await comparePasswords(validation.data.newPassword, userRecord.password)) {
+        logger.security("Password change rejected due to reused password", {
+          ...context,
+          action: "user_change_password_same_as_current",
+        });
+        return res.status(400).json({ error: "Escolha uma senha diferente da atual" });
+      }
+
+      const hashedPassword = await hashPassword(validation.data.newPassword);
+      const updatedUser = await storage.updateUser(userRecord.id, { password: hashedPassword });
+
+      if (updatedUser) {
+        req.user.password = hashedPassword;
+        req.user.updatedAt = updatedUser.updatedAt;
+      }
+
+      logger.auth("Password changed successfully", {
+        ...context,
+        action: "user_change_password_success",
+        duration: getDuration(),
+      });
+
+      res.json({ message: "Senha alterada com sucesso." });
+    } catch (error) {
+      logger.error("Password change error", {
+        ...context,
+        action: "user_change_password_error",
+        duration: getDuration(),
+        error: error as Error,
+      });
+      res.status(500).json({ error: "Erro interno do servidor" });
+    }
   });
 
   // Get current user endpoint

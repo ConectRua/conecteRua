@@ -27,6 +27,96 @@ export interface Estatisticas {
   distanciaMedia: number;
 }
 
+export interface AdminUserSummary {
+  id: number;
+  username: string;
+  email: string;
+  isAdmin: boolean;
+  emailVerified: boolean;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface AdminUsersListResponse {
+  users: AdminUserSummary[];
+}
+
+type ChangePasswordPayload = {
+  currentPassword: string;
+  newPassword: string;
+};
+
+type AdminResetPasswordPayload = {
+  userId: number;
+  newPassword: string;
+};
+
+// ============ ADMIN USERS HOOKS ============
+
+export const useAdminUsers = () => {
+  return useQuery<AdminUsersListResponse>({
+    queryKey: queryKeys.admin.users(),
+    queryFn: getQueryFn(),
+  });
+};
+
+export const useChangePassword = () => {
+  const { toast } = useToast();
+
+  return useMutation<
+    { message?: string },
+    Error,
+    ChangePasswordPayload
+  >({
+    mutationFn: async (payload: ChangePasswordPayload) => {
+      return apiRequest('POST', '/api/user/change-password', payload) as Promise<{ message?: string }>;
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Senha atualizada",
+        description: data.message ?? "Senha alterada com sucesso.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Não foi possível alterar a senha",
+        description: error.message || "Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
+export const useAdminResetUserPassword = () => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    { user?: AdminUserSummary; message?: string },
+    Error,
+    AdminResetPasswordPayload
+  >({
+    mutationFn: async ({ userId, newPassword }: AdminResetPasswordPayload) => {
+      return apiRequest('POST', `/api/admin/users/${userId}/reset-password`, { newPassword }) as Promise<{ user?: AdminUserSummary; message?: string }>;
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.users() });
+
+      toast({
+        title: "Senha redefinida",
+        description: data.message ?? "Guarde a nova senha com segurança.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Não foi possível redefinir a senha",
+        description: error.message || "Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+    },
+  });
+};
+
 // ============ UBS HOOKS ============
 
 export const useUBSList = () => {

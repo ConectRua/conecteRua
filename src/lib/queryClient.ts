@@ -121,4 +121,7 @@ export const queryKeys = {
     address: (address: string, cep: string) => [`/api/geocoding?endereco=${encodeURIComponent(address)}&cep=${cep}`] as const,
     nearby: (lat: number, lng: number, radius: number) => [`/api/nearby?lat=${lat}&lng=${lng}&radius=${radius}`] as const,
   },
+  admin: {
+    users: () => ['/api/admin/users'] as const,
+  },
 } as const;

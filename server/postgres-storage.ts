@@ -25,7 +25,7 @@ import {
   type User,
   users
 } from "../shared/schema";
-import {eq, sql} from "drizzle-orm";
+import {eq, sql, asc} from "drizzle-orm";
 import {IStorage} from "./storage";
 
 const PgSession = ConnectPgSession(session);
@@ -54,6 +54,13 @@ export class PostgreSQLStorage implements IStorage {
   async getUser(id: number): Promise<User | null> {
     const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
     return result[0] || null;
+  }
+
+  async listUsers(): Promise<User[]> {
+    return await db
+      .select()
+      .from(users)
+      .orderBy(asc(users.username));
   }
 
   async createUser(userData: InsertUser & { verificationToken?: string }): Promise<User> {

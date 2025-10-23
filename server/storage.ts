@@ -25,6 +25,7 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | null>;
   getUserByEmail(email: string): Promise<User | null>;
   getUser(id: number): Promise<User | null>;
+  listUsers(): Promise<User[]>;
   createUser(user: InsertUser & { verificationToken?: string }): Promise<User>;
   updateUser(id: number, updates: Partial<User>): Promise<User | null>;
   verifyUserEmail(token: string): Promise<User | null>;
@@ -132,6 +133,10 @@ export class MemStorage implements IStorage {
 
   async getUser(id: number): Promise<User | null> {
     return this.users.get(id) || null;
+  }
+
+  async listUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
   }
 
   async createUser(userData: InsertUser & { verificationToken?: string }): Promise<User> {

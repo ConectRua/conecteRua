@@ -3,10 +3,48 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/use-auth';
-import { User, Mail, Calendar, Shield } from 'lucide-react';
+import { useChangePassword } from '@/hooks/useApiData';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { User, Mail, Calendar, Shield, Lock, Loader2 } from 'lucide-react';
+
+const passwordSchema = z.object({
+  currentPassword: z.string().min(1, "Informe a senha atual"),
+  newPassword: z.string().min(6, "A nova senha deve ter pelo menos 6 caracteres"),
+  confirmPassword: z.string().min(6, "Confirme a nova senha"),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "As senhas não conferem",
+  path: ["confirmPassword"],
+});
+
+type PasswordFormValues = z.infer<typeof passwordSchema>;
 
 const Perfil = () => {
   const { user } = useAuth();
+  const { mutateAsync: changePassword, isPending: isChangingPassword } = useChangePassword();
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState,
+  } = useForm<PasswordFormValues>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    },
+  });
+
+  const onSubmit = async (values: PasswordFormValues) => {
+    await changePassword({
+      currentPassword: values.currentPassword,
+      newPassword: values.newPassword,
+    });
+    reset();
+  };
 
   if (!user) {
     return (
@@ -104,20 +142,70 @@ const Perfil = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Ações da Conta</CardTitle>
+          <CardTitle className="flex items-center space-x-2">
+            <Lock className="h-5 w-5" />
+            <span>Alterar Senha</span>
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Para alterar suas informações pessoais ou senha, entre em contato com o administrador do sistema.
-          </p>
-          <div className="flex space-x-2">
-            <Button variant="outline" data-testid="button-editar-perfil">
-              Editar Perfil (Em breve)
+        <CardContent>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="currentPassword">Senha atual</Label>
+              <Input
+                id="currentPassword"
+                type="password"
+                autoComplete="current-password"
+                placeholder="Digite a senha atual"
+                {...register("currentPassword")}
+                data-testid="input-senha-atual"
+              />
+              {formState.errors.currentPassword && (
+                <p className="text-xs text-destructive">
+                  {formState.errors.currentPassword.message}
+                </p>
+              )}
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">Nova senha</Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="Mínimo de 6 caracteres"
+                  {...register("newPassword")}
+                  data-testid="input-nova-senha"
+                />
+                {formState.errors.newPassword && (
+                  <p className="text-xs text-destructive">
+                    {formState.errors.newPassword.message}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirmar nova senha</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder="Repita a nova senha"
+                  {...register("confirmPassword")}
+                  data-testid="input-confirmar-senha"
+                />
+                {formState.errors.confirmPassword && (
+                  <p className="text-xs text-destructive">
+                    {formState.errors.confirmPassword.message}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <Button type="submit" disabled={isChangingPassword}>
+              {isChangingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Atualizar senha
             </Button>
-            <Button variant="outline" data-testid="button-alterar-senha">
-              Alterar Senha (Em breve)
-            </Button>
-          </div>
+          </form>
         </CardContent>
       </Card>
     </div>
