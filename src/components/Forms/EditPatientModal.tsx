@@ -11,6 +11,7 @@ import { MapPin, User, Phone, Calendar, Heart, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { toast } from 'sonner';
 import { getCurrentLocation as getLocation } from '@/lib/geolocation-helper';
+import { GooglePlacesAutocomplete } from '@/components/GooglePlacesAutocomplete';
 
 interface EditPatientModalProps {
   open: boolean;
@@ -43,7 +44,6 @@ export const EditPatientModal = ({ open, onOpenChange, onEdit, paciente }: EditP
   const [isGeocodingAddress, setIsGeocodingAddress] = useState(false);
   const geocodingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const geocodingRequestIdRef = useRef<number>(0);
-  const enderecoInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     nome: '',
@@ -96,47 +96,6 @@ export const EditPatientModal = ({ open, onOpenChange, onEdit, paciente }: EditP
     };
   }, []);
 
-  // Inicializar Google Places Autocomplete
-  useEffect(() => {
-    if (!open || !enderecoInputRef.current) return;
-    
-    if (typeof window === 'undefined' || !window.google || !window.google.maps) return;
-    
-    const autocomplete = new google.maps.places.Autocomplete(enderecoInputRef.current, {
-      types: ['address'],
-      componentRestrictions: { country: 'br' }
-    });
-
-    autocomplete.addListener('place_changed', () => {
-      const place = autocomplete.getPlace();
-      
-      if (!place.geometry || !place.geometry.location) return;
-      
-      const lat = place.geometry.location.lat();
-      const lng = place.geometry.location.lng();
-      
-      let cep = '';
-      let endereco = place.formatted_address || '';
-      
-      // Extrair CEP dos componentes do endereço
-      place.address_components?.forEach((component) => {
-        if (component.types.includes('postal_code')) {
-          cep = component.long_name;
-        }
-      });
-      
-      setFormData(prev => ({
-        ...prev,
-        endereco,
-        cep,
-        latitude: lat.toString(),
-        longitude: lng.toString()
-      }));
-      
-      toast.success('Endereço selecionado com sucesso!');
-    });
-  }, [open]);
-
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validateForm = () => {
@@ -159,6 +118,17 @@ export const EditPatientModal = ({ open, onOpenChange, onEdit, paciente }: EditP
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  // Handler para quando um lugar do Google Places é selecionado
+  const handlePlaceSelected = (place: { endereco: string; cep: string; latitude: number; longitude: number }) => {
+    setFormData(prev => ({
+      ...prev,
+      endereco: place.endereco,
+      cep: place.cep,
+      latitude: place.latitude.toString(),
+      longitude: place.longitude.toString()
+    }));
   };
 
   // Função para geocoding de endereço com melhor tratamento
@@ -261,6 +231,23 @@ export const EditPatientModal = ({ open, onOpenChange, onEdit, paciente }: EditP
     triggerGeocoding(formData.endereco, value);
   };
 
+  const getCurrentLocation = async () => {
+    setIsGettingLocation(true);
+    try {
+      const coords = await getLocation();
+      setFormData(prev => ({
+        ...prev,
+        latitude: coords.latitude.toString(),
+        longitude: coords.longitude.toString()
+      }));
+      toast.success('Localização obtida com sucesso!');
+    } catch (error) {
+      toast.error('Não foi possível obter sua localização.');
+    } finally {
+      setIsGettingLocation(false);
+    }
+  };
+
   const handleCondicaoSaudeChange = (condicao: string, checked: boolean) => {
     setFormData(prev => ({
       ...prev,
@@ -270,85 +257,39 @@ export const EditPatientModal = ({ open, onOpenChange, onEdit, paciente }: EditP
     }));
   };
 
-  const getCurrentLocation = async () => {
-    setIsGettingLocation(true);
-    
-    await getLocation({
-      onSuccess: (location) => {
-        setFormData(prev => ({
-          ...prev,
-          latitude: location.latitude,
-          longitude: location.longitude
-        }));
-        setIsGettingLocation(false);
-      },
-      onError: () => {
-        setIsGettingLocation(false);
-      },
-      timeout: 10000,
-      enableHighAccuracy: true
-    });
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm() || !paciente) return;
+    if (!validateForm()) {
+      toast.error('Por favor, corrija os erros no formulário.');
+      return;
+    }
 
-    const pacienteData: Partial<Paciente> = {
+    if (!paciente?.id) return;
+
+    const updateData: Partial<Paciente> = {
       nome: formData.nome,
       endereco: formData.endereco,
       cep: formData.cep,
-      telefone: formData.telefone || undefined,
-      idade: formData.idade ? parseInt(formData.idade) : undefined,
-      latitude: formData.latitude ? parseFloat(formData.latitude) : undefined,
-      longitude: formData.longitude ? parseFloat(formData.longitude) : undefined,
-      condicoesSaude: formData.condicoesSaude.length > 0 ? formData.condicoesSaude : undefined,
-      ultimoAtendimento: formData.ultimoAtendimento ? new Date(formData.ultimoAtendimento) : undefined,
-      proximoAtendimento: formData.proximoAtendimento ? new Date(formData.proximoAtendimento) : undefined,
+      telefone: formData.telefone,
+      idade: formData.idade ? Number(formData.idade) : undefined,
+      latitude: formData.latitude ? Number(formData.latitude) : undefined,
+      longitude: formData.longitude ? Number(formData.longitude) : undefined,
+      condicoesSaude: formData.condicoesSaude,
+      ultimoAtendimento: formData.ultimoAtendimento || null,
+      proximoAtendimento: formData.proximoAtendimento || null,
       ativo: formData.ativo
     };
 
-    onEdit(paciente.id, pacienteData);
-    onOpenChange(false);
+    onEdit(paciente.id, updateData);
   };
 
-  const resetForm = () => {
-    if (paciente) {
-      const formatDateForInput = (date: string | Date | null) => {
-        if (!date) return '';
-        const d = new Date(date);
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      };
-
-      setFormData({
-        nome: paciente.nome || '',
-        endereco: paciente.endereco || '',
-        cep: paciente.cep || '',
-        telefone: paciente.telefone || '',
-        idade: paciente.idade?.toString() || '',
-        latitude: paciente.latitude?.toString() || '',
-        longitude: paciente.longitude?.toString() || '',
-        condicoesSaude: paciente.condicoesSaude || [],
-        ultimoAtendimento: formatDateForInput(paciente.ultimoAtendimento),
-        proximoAtendimento: formatDateForInput(paciente.proximoAtendimento),
-        ativo: paciente.ativo ?? true
-      });
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      setErrors({});
     }
-    setErrors({});
+    onOpenChange(newOpen);
   };
-
-  const handleOpenChange = (open: boolean) => {
-    if (!open) {
-      resetForm();
-    }
-    onOpenChange(open);
-  };
-
-  if (!paciente) return null;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -366,14 +307,17 @@ export const EditPatientModal = ({ open, onOpenChange, onEdit, paciente }: EditP
               <Label htmlFor="nome" className="text-sm font-medium">
                 Nome Completo *
               </Label>
-              <Input
-                id="nome"
-                data-testid="input-nome"
-                value={formData.nome}
-                onChange={(e) => setFormData(prev => ({ ...prev, nome: e.target.value }))}
-                placeholder="Ex: João Silva"
-                className={errors.nome ? 'border-red-500' : ''}
-              />
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="nome"
+                  data-testid="input-nome"
+                  value={formData.nome}
+                  onChange={(e) => setFormData(prev => ({ ...prev, nome: e.target.value }))}
+                  placeholder="Nome do paciente"
+                  className={`pl-10 ${errors.nome ? 'border-red-500' : ''}`}
+                />
+              </div>
               {errors.nome && <p className="text-sm text-red-500">{errors.nome}</p>}
             </div>
 
@@ -388,28 +332,33 @@ export const EditPatientModal = ({ open, onOpenChange, onEdit, paciente }: EditP
                   data-testid="input-telefone"
                   value={formData.telefone}
                   onChange={(e) => setFormData(prev => ({ ...prev, telefone: e.target.value }))}
-                  placeholder="(61) 9999-9999"
+                  placeholder="(00) 00000-0000"
                   className="pl-10"
                 />
               </div>
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2 md:col-span-2">
+          {/* Google Places Autocomplete */}
+          <GooglePlacesAutocomplete
+            onPlaceSelected={handlePlaceSelected}
+            placeholder="Digite um endereço para buscar..."
+            label="Buscar Endereço no Google Maps"
+          />
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
               <Label htmlFor="endereco" className="text-sm font-medium">
                 Endereço *
               </Label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  ref={enderecoInputRef}
                   id="endereco"
-                  autoComplete="off"
                   data-testid="input-endereco"
                   value={formData.endereco}
                   onChange={(e) => handleEnderecoChange(e.target.value)}
-                  placeholder="Digite um endereço para buscar..."
+                  placeholder="Rua, número, bairro"
                   className={`pl-10 ${errors.endereco ? 'border-red-500' : ''}`}
                 />
               </div>
@@ -616,3 +565,9 @@ export const EditPatientModal = ({ open, onOpenChange, onEdit, paciente }: EditP
     </Dialog>
   );
 };
+
+
+
+
+
+
