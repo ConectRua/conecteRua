@@ -43,6 +43,7 @@ export const EditPatientModal = ({ open, onOpenChange, onEdit, paciente }: EditP
   const [isGeocodingAddress, setIsGeocodingAddress] = useState(false);
   const geocodingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const geocodingRequestIdRef = useRef<number>(0);
+  const enderecoInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     nome: '',
@@ -94,6 +95,47 @@ export const EditPatientModal = ({ open, onOpenChange, onEdit, paciente }: EditP
       }
     };
   }, []);
+
+  // Inicializar Google Places Autocomplete
+  useEffect(() => {
+    if (!open || !enderecoInputRef.current) return;
+    
+    if (typeof window === 'undefined' || !window.google || !window.google.maps) return;
+    
+    const autocomplete = new google.maps.places.Autocomplete(enderecoInputRef.current, {
+      types: ['address'],
+      componentRestrictions: { country: 'br' }
+    });
+
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      
+      if (!place.geometry || !place.geometry.location) return;
+      
+      const lat = place.geometry.location.lat();
+      const lng = place.geometry.location.lng();
+      
+      let cep = '';
+      let endereco = place.formatted_address || '';
+      
+      // Extrair CEP dos componentes do endereço
+      place.address_components?.forEach((component) => {
+        if (component.types.includes('postal_code')) {
+          cep = component.long_name;
+        }
+      });
+      
+      setFormData(prev => ({
+        ...prev,
+        endereco,
+        cep,
+        latitude: lat.toString(),
+        longitude: lng.toString()
+      }));
+      
+      toast.success('Endereço selecionado com sucesso!');
+    });
+  }, [open]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -360,14 +402,15 @@ export const EditPatientModal = ({ open, onOpenChange, onEdit, paciente }: EditP
               </Label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Textarea
+                <Input
+                  ref={enderecoInputRef}
                   id="endereco"
+                  autoComplete="off"
                   data-testid="input-endereco"
                   value={formData.endereco}
                   onChange={(e) => handleEnderecoChange(e.target.value)}
-                  placeholder="Rua, número, bairro"
+                  placeholder="Digite um endereço para buscar..."
                   className={`pl-10 ${errors.endereco ? 'border-red-500' : ''}`}
-                  rows={2}
                 />
               </div>
               {errors.endereco && <p className="text-sm text-red-500">{errors.endereco}</p>}
