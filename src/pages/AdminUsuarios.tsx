@@ -14,7 +14,8 @@ import { useAdminUsers, useAdminResetUserPassword } from "@/hooks/useApiData";
 import { apiRequest, queryKeys } from "@/lib/queryClient";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, RefreshCw, ShieldPlus, UserPlus2, Users, KeyRound } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Loader2, RefreshCw, ShieldPlus, UserPlus2, Users, KeyRound, Trash2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
 const createUserSchema = z.object({
@@ -75,8 +76,13 @@ const AdminUsuarios = () => {
 
   const adminCount = useMemo(() => sortedUsers.filter((user) => user.isAdmin).length, [sortedUsers]);
 
+  // Estados para o dialog de redefinição de senha
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [userToReset, setUserToReset] = useState<AdminUserSummary | null>(null);
+
+  // Estados para o dialog de exclusão
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<AdminUserSummary | null>(null);
 
   const resetPasswordForm = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),
@@ -94,6 +100,28 @@ const AdminUsuarios = () => {
   } = resetPasswordForm;
 
   const { mutateAsync: resetUserPassword, isPending: isResettingPassword } = useAdminResetUserPassword();
+
+  // Hook de exclusão de usuário
+  const { mutateAsync: deleteUser, isPending: isDeletingUser } = useMutation({
+    mutationFn: async (userId: number) => {
+      return await apiRequest("DELETE", `/api/admin/users/${userId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.admin.users() });
+      toast({
+        title: "Usuário excluído com sucesso",
+        description: "A conta foi removida do sistema.",
+      });
+    },
+    onError: (error: unknown) => {
+      const message = error instanceof Error ? error.message : "Tente novamente mais tarde.";
+      toast({
+        title: "Não foi possível excluir o usuário",
+        description: message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const formatDateTime = (value: string | null) => {
     if (!value) {
@@ -121,7 +149,7 @@ const AdminUsuarios = () => {
     },
   });
 
-  const { mutateAsync, isPending } = useMutation<
+  const { mutateAsync, isPending } = useMutation
     { response: AdminCreateUserResponse; welcomeMessage?: string },
     unknown,
     CreateUserFormValues
@@ -174,6 +202,7 @@ const AdminUsuarios = () => {
     await mutateAsync(values);
   };
 
+  // Funções para redefinição de senha
   const openResetDialog = (user: AdminUserSummary) => {
     setUserToReset(user);
     resetResetForm();
@@ -199,10 +228,29 @@ const AdminUsuarios = () => {
     closeResetDialog();
   };
 
+  // Funções para exclusão de usuário
+  const openDeleteDialog = (user: AdminUserSummary) => {
+    setUserToDelete(user);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const closeDeleteDialog = () => {
+    setIsDeleteDialogOpen(false);
+    setUserToDelete(null);
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    
+    await deleteUser(userToDelete.id);
+    closeDeleteDialog();
+  };
+
   const { register, handleSubmit, formState } = form;
 
   return (
     <>
+      {/* Dialog de redefinição de senha */}
       <Dialog
         open={isResetDialogOpen}
         onOpenChange={(open) => {
@@ -267,6 +315,37 @@ const AdminUsuarios = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de confirmação de exclusão */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              {userToDelete && (
+                <>
+                  Tem certeza que deseja excluir o usuário <strong>{userToDelete.username}</strong>?
+                  <br />
+                  Esta ação não pode ser desfeita e todos os dados associados serão permanentemente removidos.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={closeDeleteDialog} disabled={isDeletingUser}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              disabled={isDeletingUser}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeletingUser && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="space-y-6">
         <div className="flex flex-col gap-2">
@@ -353,113 +432,126 @@ const AdminUsuarios = () => {
                 Criar usuário
               </Button>
             </CardFooter>
-        </form>
-      </Card>
+          </form>
+        </Card>
 
-      <Card>
-        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-1">
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
-              Usuários cadastrados
-            </CardTitle>
-            <CardDescription>
-              {sortedUsers.length === 0
-                ? "Acompanhe as contas com acesso ao painel administrativo."
-                : `Total de ${sortedUsers.length} usuário${sortedUsers.length > 1 ? "s" : ""}, incluindo ${adminCount} administrador${
-                    adminCount === 1 ? "" : "es"
-                  }.`}
-            </CardDescription>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => refetchUsers()}
-            disabled={isUsersLoading}
-          >
-            <RefreshCw className={`mr-2 h-4 w-4 ${isUsersLoading ? "animate-spin" : ""}`} />
-            Atualizar
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {isUsersLoading ? (
-            <div className="space-y-2">
-              {[0, 1, 2, 3].map((key) => (
-                <Skeleton key={key} className="h-12 w-full" />
-              ))}
+        <Card>
+          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                Usuários cadastrados
+              </CardTitle>
+              <CardDescription>
+                {sortedUsers.length === 0
+                  ? "Acompanhe as contas com acesso ao painel administrativo."
+                  : `Total de ${sortedUsers.length} usuário${sortedUsers.length > 1 ? "s" : ""}, incluindo ${adminCount} administrador${
+                      adminCount === 1 ? "" : "es"
+                    }.`}
+              </CardDescription>
             </div>
-          ) : isUsersError ? (
-            <div className="space-y-4">
-              <div className="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-                Não foi possível carregar a lista de usuários.
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => refetchUsers()}
+              disabled={isUsersLoading}
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${isUsersLoading ? "animate-spin" : ""}`} />
+              Atualizar
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {isUsersLoading ? (
+              <div className="space-y-2">
+                {[0, 1, 2, 3].map((key) => (
+                  <Skeleton key={key} className="h-12 w-full" />
+                ))}
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => refetchUsers()}
-                className="w-full sm:w-auto"
-              >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Tentar novamente
-              </Button>
-            </div>
-          ) : sortedUsers.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Usuário</TableHead>
-                    <TableHead>E-mail</TableHead>
-                    <TableHead>Perfil</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Criado em</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedUsers.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.username}</TableCell>
-                      <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                      <TableCell>
-                        <Badge variant={user.isAdmin ? "secondary" : "outline"}>
-                          {user.isAdmin ? "Administrador" : "Padrão"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={user.emailVerified ? "secondary" : "outline"}>
-                          {user.emailVerified ? "Verificado" : "Pendente"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-muted-foreground">
-                        {formatDateTime(user.createdAt)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openResetDialog(user)}
-                          disabled={isResettingPassword}
-                        >
-                          <KeyRound className="mr-2 h-4 w-4" />
-                          Redefinir senha
-                        </Button>
-                      </TableCell>
+            ) : isUsersError ? (
+              <div className="space-y-4">
+                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+                  Não foi possível carregar a lista de usuários.
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => refetchUsers()}
+                  className="w-full sm:w-auto"
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Tentar novamente
+                </Button>
+              </div>
+            ) : sortedUsers.length > 0 ? (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Usuário</TableHead>
+                      <TableHead>E-mail</TableHead>
+                      <TableHead>Perfil</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Criado em</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-              Nenhum usuário cadastrado até o momento.
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                  </TableHeader>
+                  <TableBody>
+                    {sortedUsers.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell className="font-medium">{user.username}</TableCell>
+                        <TableCell className="text-muted-foreground">{user.email}</TableCell>
+                        <TableCell>
+                          <Badge variant={user.isAdmin ? "secondary" : "outline"}>
+                            {user.isAdmin ? "Administrador" : "Padrão"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={user.emailVerified ? "secondary" : "outline"}>
+                            {user.emailVerified ? "Verificado" : "Pendente"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-muted-foreground">
+                          {formatDateTime(user.createdAt)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openResetDialog(user)}
+                              disabled={isResettingPassword || isDeletingUser}
+                            >
+                              <KeyRound className="mr-2 h-4 w-4" />
+                              Redefinir senha
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openDeleteDialog(user)}
+                              disabled={isResettingPassword || isDeletingUser}
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Excluir
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+                Nenhum usuário cadastrado até o momento.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </>
   );
 };
