@@ -22,6 +22,7 @@ const Pacientes = () => {
   const [selectedPaciente, setSelectedPaciente] = useState<Paciente | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const { pacientesList, getEstatisticas, deletePaciente, updatePaciente } = useApiData();
   const stats = getEstatisticas();
   const queryClient = useQueryClient();
@@ -175,23 +176,25 @@ const Pacientes = () => {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Search className="h-5 w-5" />
-            Buscar Pacientes
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-4">
-            <Input
-              placeholder="Buscar por nome, CPF ou telefone..."
-              className="flex-1"
-            />
-            <Button variant="outline">Filtrar</Button>
-          </div>
-        </CardContent>
-      </Card>
+  <Card>
+  <CardHeader>
+    <CardTitle className="flex items-center gap-2">
+      <Search className="h-5 w-5" />
+      Buscar Pacientes
+    </CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div className="flex gap-4">
+      <Input
+        placeholder="Buscar por nome, CNS ou telefone..."
+        className="flex-1"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+      <Button variant="outline" onClick={() => setSearchTerm('')}>Limpar</Button>
+    </div>
+  </CardContent>
+</Card>
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -210,7 +213,17 @@ const Pacientes = () => {
           )}
         </div>
         
-        {pacientesList.map((paciente) => (
+        {pacientesList
+  .filter(paciente => {
+    if (!searchTerm) return true;
+    const termo = searchTerm.toLowerCase();
+    return (
+      paciente.nome.toLowerCase().includes(termo) ||
+      paciente.cns.toLowerCase().includes(termo) ||
+      paciente.telefone.toLowerCase().includes(termo)
+    );
+  })
+  .map((paciente) => (
           <Card key={paciente.id} className={selectedIds.includes(paciente.id) ? 'ring-2 ring-primary' : ''}>
             <CardContent className="p-6">
               <div className="flex items-start gap-3">
