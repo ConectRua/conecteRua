@@ -217,10 +217,11 @@ const Pacientes = () => {
   .filter(paciente => {
     if (!searchTerm) return true;
     const termo = searchTerm.toLowerCase();
+    
     return (
-      paciente.nome.toLowerCase().includes(termo) ||
-      paciente.cns.toLowerCase().includes(termo) ||
-      paciente.telefone.toLowerCase().includes(termo)
+      String(paciente.nome || '').toLowerCase().includes(termo) ||
+      String(paciente.cns || '').toLowerCase().includes(termo) ||
+      String(paciente.telefone || '').toLowerCase().includes(termo)
     );
   })
   .map((paciente) => (
