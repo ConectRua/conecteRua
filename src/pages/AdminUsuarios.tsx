@@ -1,559 +1,190 @@
-import { useForm } from "react-hook-form";
-import { useMemo, useState } from "react";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
-import { useAdminUsers, useAdminResetUserPassword } from "@/hooks/useApiData";
-import { apiRequest, queryKeys } from "@/lib/queryClient";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Loader2, RefreshCw, ShieldPlus, UserPlus2, Users, KeyRound, Trash2 } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
+import { Settings, User, Shield, Bell, Database, Save } from 'lucide-react';
 
-const createUserSchema = z.object({
-  username: z.string().min(3, "Nome de usuário deve ter pelo menos 3 caracteres").max(50),
-  email: z.string().email("Informe um email válido").max(255),
-  password: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
-  welcomeMessage: z
-    .string()
-    .max(500, "Mensagem pode ter no máximo 500 caracteres")
-    .optional()
-    .transform((value) => value?.trim() || undefined),
-});
-
-type CreateUserFormValues = z.infer<typeof createUserSchema>;
-
-type AdminCreateUserResponse = {
-  user: {
-    id: number;
-    username: string;
-    email: string;
-    isAdmin: boolean;
-  };
-  message?: string;
-};
-
-const resetPasswordSchema = z.object({
-  newPassword: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
-  confirmPassword: z.string().min(6, "Confirme a nova senha"),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "As senhas não conferem",
-  path: ["confirmPassword"],
-});
-
-type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
-
-const AdminUsuarios = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-  const {
-    data: usersData,
-    isLoading: isUsersLoading,
-    isError: isUsersError,
-    refetch: refetchUsers,
-  } = useAdminUsers();
-
-  const users = usersData?.users ?? [];
-
-  const sortedUsers = useMemo(
-    () =>
-      [...users].sort((a, b) => {
-        if (a.isAdmin !== b.isAdmin) {
-          return a.isAdmin ? -1 : 1;
-        }
-        return a.username.localeCompare(b.username);
-      }),
-    [users],
-  );
-
-  const adminCount = useMemo(() => sortedUsers.filter((user) => user.isAdmin).length, [sortedUsers]);
-
-  // Estados para o dialog de redefinição de senha
-  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
-  const [userToReset, setUserToReset] = useState<AdminUserSummary | null>(null);
-
-  // Estados para o dialog de exclusão
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<AdminUserSummary | null>(null);
-
-  const resetPasswordForm = useForm<ResetPasswordFormValues>({
-    resolver: zodResolver(resetPasswordSchema),
-    defaultValues: {
-      newPassword: "",
-      confirmPassword: "",
-    },
-  });
-
-  const {
-    register: registerReset,
-    handleSubmit: handleSubmitReset,
-    formState: resetFormState,
-    reset: resetResetForm,
-  } = resetPasswordForm;
-
-  const { mutateAsync: resetUserPassword, isPending: isResettingPassword } = useAdminResetUserPassword();
-
-  // Hook de exclusão de usuário
-  const { mutateAsync: deleteUser, isPending: isDeletingUser } = useMutation({
-    mutationFn: async (userId: number) => {
-      return await apiRequest("DELETE", `/api/admin/users/${userId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.users() });
-      toast({
-        title: "Usuário excluído com sucesso",
-        description: "A conta foi removida do sistema.",
-      });
-    },
-    onError: (error: unknown) => {
-      const message = error instanceof Error ? error.message : "Tente novamente mais tarde.";
-      toast({
-        title: "Não foi possível excluir o usuário",
-        description: message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const formatDateTime = (value: string | null) => {
-    if (!value) {
-      return "—";
-    }
-
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return value;
-    }
-
-    return date.toLocaleString("pt-BR", {
-      dateStyle: "short",
-      timeStyle: "short",
-    });
-  };
-
-  const form = useForm<CreateUserFormValues>({
-    resolver: zodResolver(createUserSchema),
-    defaultValues: {
-      username: "",
-      email: "",
-      password: "",
-      welcomeMessage: "",
-    },
-  });
-
-  const { mutateAsync, isPending } = useMutation
-    { response: AdminCreateUserResponse; welcomeMessage?: string },
-    unknown,
-    CreateUserFormValues
-  >({
-    mutationFn: async (values: CreateUserFormValues) => {
-      const { welcomeMessage, ...userPayload } = values;
-      const response = (await apiRequest(
-        "POST",
-        "/api/admin/users",
-        userPayload,
-      )) as AdminCreateUserResponse;
-      return { response, welcomeMessage };
-    },
-    onSuccess: ({ response, welcomeMessage }) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.admin.users() });
-
-      form.reset({
-        username: "",
-        email: "",
-        password: "",
-        welcomeMessage: "",
-      });
-
-      toast({
-        title: "Usuário criado com sucesso",
-        description: `Conta ${response.user.username} configurada${
-          response.user.isAdmin ? " como administradora." : "."
-        }`,
-      });
-
-      if (welcomeMessage) {
-        toast({
-          title: "Mensagem salva",
-          description: "Guarde esta mensagem para compartilhar com o novo usuário.",
-        });
-      }
-    },
-    onError: (error: unknown) => {
-      const message =
-        error instanceof Error ? error.message : "Tente novamente mais tarde.";
-      toast({
-        title: "Não foi possível criar o usuário",
-        description: message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const onSubmit = async (values: CreateUserFormValues) => {
-    await mutateAsync(values);
-  };
-
-  // Funções para redefinição de senha
-  const openResetDialog = (user: AdminUserSummary) => {
-    setUserToReset(user);
-    resetResetForm();
-    setIsResetDialogOpen(true);
-  };
-
-  const closeResetDialog = () => {
-    setIsResetDialogOpen(false);
-    setUserToReset(null);
-    resetResetForm();
-  };
-
-  const onResetSubmit = async (values: ResetPasswordFormValues) => {
-    if (!userToReset) {
-      return;
-    }
-
-    await resetUserPassword({
-      userId: userToReset.id,
-      newPassword: values.newPassword,
-    });
-
-    closeResetDialog();
-  };
-
-  // Funções para exclusão de usuário
-  const openDeleteDialog = (user: AdminUserSummary) => {
-    setUserToDelete(user);
-    setIsDeleteDialogOpen(true);
-  };
-
-  const closeDeleteDialog = () => {
-    setIsDeleteDialogOpen(false);
-    setUserToDelete(null);
-  };
-
-  const handleDeleteUser = async () => {
-    if (!userToDelete) return;
-    
-    await deleteUser(userToDelete.id);
-    closeDeleteDialog();
-  };
-
-  const { register, handleSubmit, formState } = form;
-
+const Configuracoes = () => {
   return (
-    <>
-      {/* Dialog de redefinição de senha */}
-      <Dialog
-        open={isResetDialogOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            closeResetDialog();
-          } else {
-            setIsResetDialogOpen(true);
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Redefinir senha de acesso</DialogTitle>
-            <DialogDescription>
-              {userToReset
-                ? `Informe a nova senha para o usuário ${userToReset.username}. Compartilhe-a com segurança.`
-                : "Selecione um usuário para redefinir a senha."}
-            </DialogDescription>
-          </DialogHeader>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">Configurações</h1>
+        <p className="text-muted-foreground">
+          Gerencie as preferências e configurações do sistema
+        </p>
+      </div>
 
-          <form onSubmit={handleSubmitReset(onResetSubmit)} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="reset-new-password">Nova senha</Label>
-              <Input
-                id="reset-new-password"
-                type="password"
-                autoComplete="new-password"
-                placeholder="Mínimo de 6 caracteres"
-                {...registerReset("newPassword")}
-              />
-              {resetFormState.errors.newPassword && (
-                <p className="text-xs text-destructive">{resetFormState.errors.newPassword.message}</p>
-              )}
+      <div className="grid gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Perfil do Usuário
+            </CardTitle>
+            <CardDescription>
+              Atualize suas informações pessoais
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="nome">Nome Completo</Label>
+                <Input id="nome" placeholder="Seu nome completo" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">E-mail</Label>
+                <Input id="email" type="email" placeholder="seu@email.com" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="telefone">Telefone</Label>
+                <Input id="telefone" placeholder="(11) 99999-9999" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cargo">Cargo</Label>
+                <Input id="cargo" placeholder="Seu cargo" />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="reset-confirm-password">Confirmar nova senha</Label>
-              <Input
-                id="reset-confirm-password"
-                type="password"
-                autoComplete="new-password"
-                placeholder="Repita a nova senha"
-                {...registerReset("confirmPassword")}
-              />
-              {resetFormState.errors.confirmPassword && (
-                <p className="text-xs text-destructive">{resetFormState.errors.confirmPassword.message}</p>
-              )}
-            </div>
-            <DialogFooter className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={closeResetDialog}
-                disabled={isResettingPassword}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isResettingPassword || !userToReset}>
-                {isResettingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Confirmar
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog de confirmação de exclusão */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              {userToDelete && (
-                <>
-                  Tem certeza que deseja excluir o usuário <strong>{userToDelete.username}</strong>?
-                  <br />
-                  Esta ação não pode ser desfeita e todos os dados associados serão permanentemente removidos.
-                </>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={closeDeleteDialog} disabled={isDeletingUser}>
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteUser}
-              disabled={isDeletingUser}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeletingUser && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <div className="space-y-6">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <ShieldPlus className="h-6 w-6 text-primary" />
-            <h1 className="text-3xl font-bold text-foreground">Gestão de Usuários</h1>
-          </div>
-          <p className="text-muted-foreground max-w-2xl">
-            Crie novas contas para a equipe controlando os acessos ao painel administrativo.
-          </p>
-        </div>
+            <Button>
+              <Save className="h-4 w-4 mr-2" />
+              Salvar Alterações
+            </Button>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <UserPlus2 className="h-5 w-5 text-primary" />
-              Novo usuário
+              <Shield className="h-5 w-5" />
+              Segurança
             </CardTitle>
             <CardDescription>
-              Informe as credenciais iniciais. O usuário poderá alterar a senha após o primeiro acesso.
+              Configure suas preferências de segurança
             </CardDescription>
           </CardHeader>
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <CardContent className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="username">Nome de usuário</Label>
-                  <Input
-                    id="username"
-                    placeholder="ex: maria.souza"
-                    {...register("username")}
-                    disabled={isPending}
-                  />
-                  {formState.errors.username && (
-                    <p className="text-xs text-destructive">{formState.errors.username.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">E-mail</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="nome@instituicao.org"
-                    {...register("email")}
-                    disabled={isPending}
-                  />
-                  {formState.errors.email && (
-                    <p className="text-xs text-destructive">{formState.errors.email.message}</p>
-                  )}
-                </div>
-              </div>
-
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="senha-atual">Senha Atual</Label>
+              <Input id="senha-atual" type="password" />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="password">Senha temporária</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Mínimo 6 caracteres"
-                  {...register("password")}
-                  disabled={isPending}
-                />
-                {formState.errors.password && (
-                  <p className="text-xs text-destructive">{formState.errors.password.message}</p>
-                )}
+                <Label htmlFor="nova-senha">Nova Senha</Label>
+                <Input id="nova-senha" type="password" />
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="welcomeMessage">Mensagem opcional</Label>
-                <Textarea
-                  id="welcomeMessage"
-                  placeholder="Anote uma mensagem de boas-vindas ou instruções para compartilhar com o novo usuário."
-                  {...register("welcomeMessage")}
-                  disabled={isPending}
-                  rows={4}
-                />
-                {formState.errors.welcomeMessage && (
-                  <p className="text-xs text-destructive">{formState.errors.welcomeMessage.message}</p>
-                )}
+                <Label htmlFor="confirmar-senha">Confirmar Nova Senha</Label>
+                <Input id="confirmar-senha" type="password" />
               </div>
-            </CardContent>
-            <CardFooter className="flex justify-end">
-              <Button type="submit" disabled={isPending}>
-                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Criar usuário
-              </Button>
-            </CardFooter>
-          </form>
+            </div>
+            <Separator />
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Autenticação de Dois Fatores</Label>
+                <p className="text-sm text-muted-foreground">
+                  Adicione uma camada extra de segurança
+                </p>
+              </div>
+              <Switch />
+            </div>
+            <Button>Atualizar Senha</Button>
+          </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-1">
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-primary" />
-                Usuários cadastrados
-              </CardTitle>
-              <CardDescription>
-                {sortedUsers.length === 0
-                  ? "Acompanhe as contas com acesso ao painel administrativo."
-                  : `Total de ${sortedUsers.length} usuário${sortedUsers.length > 1 ? "s" : ""}, incluindo ${adminCount} administrador${
-                      adminCount === 1 ? "" : "es"
-                    }.`}
-              </CardDescription>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => refetchUsers()}
-              disabled={isUsersLoading}
-            >
-              <RefreshCw className={`mr-2 h-4 w-4 ${isUsersLoading ? "animate-spin" : ""}`} />
-              Atualizar
-            </Button>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Notificações
+            </CardTitle>
+            <CardDescription>
+              Configure como você quer receber notificações
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            {isUsersLoading ? (
-              <div className="space-y-2">
-                {[0, 1, 2, 3].map((key) => (
-                  <Skeleton key={key} className="h-12 w-full" />
-                ))}
-              </div>
-            ) : isUsersError ? (
-              <div className="space-y-4">
-                <div className="rounded-md border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-                  Não foi possível carregar a lista de usuários.
+          <CardContent className="space-y-4">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Notificações por E-mail</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Receba atualizações importantes por e-mail
+                  </p>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => refetchUsers()}
-                  className="w-full sm:w-auto"
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Tentar novamente
-                </Button>
+                <Switch defaultChecked />
               </div>
-            ) : sortedUsers.length > 0 ? (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Usuário</TableHead>
-                      <TableHead>E-mail</TableHead>
-                      <TableHead>Perfil</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Criado em</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sortedUsers.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium">{user.username}</TableCell>
-                        <TableCell className="text-muted-foreground">{user.email}</TableCell>
-                        <TableCell>
-                          <Badge variant={user.isAdmin ? "secondary" : "outline"}>
-                            {user.isAdmin ? "Administrador" : "Padrão"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={user.emailVerified ? "secondary" : "outline"}>
-                            {user.emailVerified ? "Verificado" : "Pendente"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap text-muted-foreground">
-                          {formatDateTime(user.createdAt)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openResetDialog(user)}
-                              disabled={isResettingPassword || isDeletingUser}
-                            >
-                              <KeyRound className="mr-2 h-4 w-4" />
-                              Redefinir senha
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openDeleteDialog(user)}
-                              disabled={isResettingPassword || isDeletingUser}
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Excluir
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Notificações Push</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Receba notificações em tempo real no navegador
+                  </p>
+                </div>
+                <Switch defaultChecked />
               </div>
-            ) : (
-              <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-                Nenhum usuário cadastrado até o momento.
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Relatórios Semanais</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Receba um resumo semanal das atividades
+                  </p>
+                </div>
+                <Switch />
               </div>
-            )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Sistema
+            </CardTitle>
+            <CardDescription>
+              Configurações gerais do sistema
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Backup Automático</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Fazer backup dos dados automaticamente
+                  </p>
+                </div>
+                <Switch defaultChecked />
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Modo Manutenção</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Ativar modo de manutenção do sistema
+                  </p>
+                </div>
+                <Switch />
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Logs Detalhados</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Registrar logs detalhados das operações
+                  </p>
+                </div>
+                <Switch defaultChecked />
+              </div>
+            </div>
+            <Separator />
+            <div className="flex gap-2">
+              <Button variant="outline">Fazer Backup Manual</Button>
+              <Button variant="outline">Exportar Configurações</Button>
+            </div>
           </CardContent>
         </Card>
       </div>
-    </>
+    </div>
   );
 };
 
-export default AdminUsuarios;
+export default Configuracoes;
