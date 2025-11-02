@@ -1,4 +1,3 @@
-```typescript
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,7 +22,6 @@ const Pacientes = () => {
   const [selectedPaciente, setSelectedPaciente] = useState<Paciente | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
   const { pacientesList, getEstatisticas, deletePaciente, updatePaciente } = useApiData();
   const stats = getEstatisticas();
   const queryClient = useQueryClient();
@@ -187,12 +185,10 @@ const Pacientes = () => {
         <CardContent>
           <div className="flex gap-4">
             <Input
-              placeholder="Buscar por nome, CNS ou telefone..."
+              placeholder="Buscar por nome, CPF ou telefone..."
               className="flex-1"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <Button variant="outline" onClick={() => setSearchTerm('')}>Limpar</Button>
+            <Button variant="outline">Filtrar</Button>
           </div>
         </CardContent>
       </Card>
@@ -214,17 +210,7 @@ const Pacientes = () => {
           )}
         </div>
         
-        {pacientesList
-          .filter(paciente => {
-            if (!searchTerm) return true;
-            const termo = searchTerm.toLowerCase();
-            return (
-              paciente.nome.toLowerCase().includes(termo) ||
-              paciente.cns.toLowerCase().includes(termo) ||
-              paciente.telefone.toLowerCase().includes(termo)
-            );
-          })
-          .map((paciente) => (
+        {pacientesList.map((paciente) => (
           <Card key={paciente.id} className={selectedIds.includes(paciente.id) ? 'ring-2 ring-primary' : ''}>
             <CardContent className="p-6">
               <div className="flex items-start gap-3">
@@ -382,4 +368,3 @@ const Pacientes = () => {
 };
 
 export default Pacientes;
-```
