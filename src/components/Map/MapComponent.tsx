@@ -16,6 +16,8 @@ interface MapComponentProps {
   onPositionUpdate?: (id: string, type: 'ubs' | 'ong' | 'paciente' | 'equipamento', lat: number, lng: number) => void;
   onRadiusActivated?: (patient: Paciente, entities: {ubs: Array<UBS & {distance: number}>, ongs: Array<ONG & {distance: number}>, equipamentos: Array<EquipamentoSocial & {distance: number}>}) => void;
   onRadiusCleared?: () => void;
+  onEditPatient?: (paciente: Paciente) => void;  // ADICIONE ESTA LINHA
+}
 }
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
@@ -56,7 +58,8 @@ export const MapComponent = ({
   editMode = false,
   onPositionUpdate,
   onRadiusActivated,
-  onRadiusCleared
+  onRadiusCleared,
+  onEditPatient
 }: MapComponentProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
@@ -344,6 +347,12 @@ export const MapComponent = ({
                 </div>
                 ${!editMode ? `
                   <div class="mt-3 pt-2 border-t">
+                    <button 
+                      class="edit-patient-btn w-full px-3 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm font-medium transition-colors mb-2"
+                      style="cursor: pointer;"
+                    >
+                      ✏️ Editar Paciente
+                    </button>
                     ${isRadiusActive ? `
                       <button 
                         data-testid="button-clear-radius"
@@ -355,7 +364,7 @@ export const MapComponent = ({
                     ` : `
                       <button 
                         data-testid="button-show-radius"
-                        class="radius-btn w-full px-3 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 text-sm font-medium transition-colors"
+                        class="radius-btn w-full px-3 py-2 bg-amber-500 text-white rounded hover:bg-amber-600 text-sm font-medium transition-colors"
                         style="cursor: pointer;"
                       >
                         🎯 Ver Raio de Apoio (1km)
@@ -374,8 +383,16 @@ export const MapComponent = ({
             
             // Add event listeners to radius buttons after InfoWindow opens
             google.maps.event.addListenerOnce(infoWindow, 'domready', () => {
+              const editBtn = document.querySelector('.edit-patient-btn');
               const showRadiusBtn = document.querySelector('.radius-btn');
               const clearRadiusBtn = document.querySelector('.radius-clear-btn');
+
+               if (editBtn && onEditPatient) {
+                editBtn.addEventListener('click', () => {
+                  onEditPatient(paciente);
+                  infoWindow.close();
+                });
+              }
               
               if (showRadiusBtn) {
                 showRadiusBtn.addEventListener('click', () => {

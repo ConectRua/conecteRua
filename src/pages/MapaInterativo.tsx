@@ -9,6 +9,7 @@ import { AddONGModal } from '@/components/Forms/AddONGModal';
 import { AddEquipamentoModal } from '@/components/Forms/AddEquipamentoModal';
 import { PatientForm } from '@/components/Forms/PatientForm';
 import { EquipamentoSocialIcon } from '@/components/icons/EquipamentoSocialIcon';
+import { EditPatientModal } from '@/components/Forms/EditPatientModal';
 import { ExportDropdown } from '@/components/Export/ExportDropdown';
 import { useApiData } from '@/hooks/useApiData';
 import { useState } from 'react';
@@ -60,6 +61,8 @@ const MapaInterativo = () => {
   const [showAddPatientModal, setShowAddPatientModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [radiusData, setRadiusData] = useState<RadiusData | null>(null);
+  const [showEditPatientModal, setShowEditPatientModal] = useState(false);
+  const [selectedPatientForEdit, setSelectedPatientForEdit] = useState<Paciente | null>(null);
 
   const handleAddUBS = (newUBS: Parameters<typeof addUBS>[0]) => {
     addUBS(newUBS);
@@ -96,11 +99,23 @@ const MapaInterativo = () => {
     setRadiusData({ paciente: patient, entities });
   };
 
-  const handleRadiusCleared = () => {
+const handleRadiusCleared = () => {
     setRadiusData(null);
+  };  // linha 97
+
+  const handleEditPatient = (paciente: Paciente) => {  
+    setSelectedPatientForEdit(paciente);
+    setShowEditPatientModal(true);
   };
 
-  return (
+  const handleUpdatePatient = (id: number, pacienteData: Partial<Paciente>) => {  
+    // Você precisa adicionar updatePaciente no useApiData se ainda não tiver
+    // updatePaciente(id, pacienteData); 
+    setShowEditPatientModal(false);
+    setSelectedPatientForEdit(null);
+  };
+
+  return (  
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -391,6 +406,7 @@ const MapaInterativo = () => {
               onPositionUpdate={handlePositionUpdate}
               onRadiusActivated={handleRadiusActivated}
               onRadiusCleared={handleRadiusCleared}
+              onEditPatient={handleEditPatient}
             />
           </CardContent>
         </Card>
@@ -473,8 +489,15 @@ const MapaInterativo = () => {
         open={showAddPatientModal}
         onOpenChange={setShowAddPatientModal}
         onAdd={handleAddPaciente}
+      />  {/* linha 495 */}
+
+      <EditPatientModal   {/* linha 496 - ADICIONE AQUI */}
+        open={showEditPatientModal} 
+        onOpenChange={setShowEditPatientModal}
+        onEdit={handleUpdatePatient}
+        paciente={selectedPatientForEdit}
       />
-    </div>
+    </div>  {/* linha 502 - fechamento final */}
   );
 };
 
