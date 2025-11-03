@@ -8,6 +8,7 @@ import { AddUBSModal } from '@/components/Forms/AddUBSModal';
 import { AddONGModal } from '@/components/Forms/AddONGModal';
 import { AddEquipamentoModal } from '@/components/Forms/AddEquipamentoModal';
 import { PatientForm } from '@/components/Forms/PatientForm';
+import { EditPatientModal } from '@/components/Forms/EditPatientModal';
 import { EquipamentoSocialIcon } from '@/components/icons/EquipamentoSocialIcon';
 import { ExportDropdown } from '@/components/Export/ExportDropdown';
 import { useApiData } from '@/hooks/useApiData';
@@ -46,6 +47,7 @@ const MapaInterativo = () => {
     addONG,
     addEquipamentoSocial,
     addPaciente,
+    updatePaciente,
     updatePosition,
     loading 
   } = useApiData();
@@ -60,6 +62,19 @@ const MapaInterativo = () => {
   const [showAddPatientModal, setShowAddPatientModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [radiusData, setRadiusData] = useState<RadiusData | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedPaciente, setSelectedPaciente] = useState<Paciente | null>(null);
+
+  const handleEditPaciente = (paciente: Paciente) => {
+  setSelectedPaciente(paciente);
+  setIsEditModalOpen(true);
+};
+
+const handleUpdatePaciente = (id: number, pacienteData: Partial<Paciente>) => {
+  updatePaciente(id, pacienteData);
+  setIsEditModalOpen(false);
+  setSelectedPaciente(null);
+};
 
   const handleAddUBS = (newUBS: Parameters<typeof addUBS>[0]) => {
     addUBS(newUBS);
@@ -391,6 +406,7 @@ const MapaInterativo = () => {
               onPositionUpdate={handlePositionUpdate}
               onRadiusActivated={handleRadiusActivated}
               onRadiusCleared={handleRadiusCleared}
+              onEditPaciente={handleEditPaciente}
             />
           </CardContent>
         </Card>
@@ -474,6 +490,13 @@ const MapaInterativo = () => {
         onOpenChange={setShowAddPatientModal}
         onAdd={handleAddPaciente}
       />
+
+      <EditPatientModal
+      open={isEditModalOpen} 
+      onOpenChange={setIsEditModalOpen}
+      onEdit={handleUpdatePaciente}
+      paciente={selectedPaciente}
+/>
     </div>
   );
 };

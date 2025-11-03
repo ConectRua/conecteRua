@@ -16,6 +16,7 @@ interface MapComponentProps {
   onPositionUpdate?: (id: string, type: 'ubs' | 'ong' | 'paciente' | 'equipamento', lat: number, lng: number) => void;
   onRadiusActivated?: (patient: Paciente, entities: {ubs: Array<UBS & {distance: number}>, ongs: Array<ONG & {distance: number}>, equipamentos: Array<EquipamentoSocial & {distance: number}>}) => void;
   onRadiusCleared?: () => void;
+  onEditPaciente?: (paciente: Paciente) => void;
 }
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
@@ -56,7 +57,8 @@ export const MapComponent = ({
   editMode = false,
   onPositionUpdate,
   onRadiusActivated,
-  onRadiusCleared
+  onRadiusCleared,
+  onEditPaciente
 }: MapComponentProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
@@ -323,50 +325,56 @@ export const MapComponent = ({
         
         const isRadiusActive = activePacienteId === paciente.id;
         
-        const infoWindow = new google.maps.InfoWindow({
-          content: `
-            <div class="p-3" style="min-width: 250px;">
-              <h3 class="font-bold text-lg mb-2" style="color: ${markerColor};">${escapeHtml(paciente.nome)}</h3>
-              <div class="space-y-1 text-sm">
-                <p><strong>Idade:</strong> ${escapeHtml(paciente.idade?.toString())} anos</p>
-                <p><strong>Endereço:</strong> ${escapeHtml(paciente.endereco)}</p>
-                <p><strong>CEP:</strong> ${escapeHtml(paciente.cep)}</p>
-                <p><strong>Telefone:</strong> ${escapeHtml(paciente.telefone)}</p>
-                ${precisao ? `<p><strong>Precisão:</strong> <span style="color: ${isLowPrecision ? '#f59e0b' : '#10b981'};">${escapeHtml(precisaoTexto)}</span>${isLowPrecision ? ' ⚠️' : ' ✓'}</p>` : ''}
-                ${paciente.distanciaUbs ? `<p><strong>Distância UBS:</strong> ${escapeHtml(paciente.distanciaUbs.toFixed(1))} km</p>` : ''}
-                <div class="mt-2">
-                  <strong>Condições de Saúde:</strong>
-                  <div class="flex flex-wrap gap-1 mt-1">
-                    ${(paciente.condicoesSaude || []).map(cond => 
-                      `<span class="px-2 py-1 rounded-full text-xs" style="background-color: #ede9fe; color: #5b21b6;">${escapeHtml(cond)}</span>`
-                    ).join('')}
-                  </div>
-                </div>
-                ${!editMode ? `
-                  <div class="mt-3 pt-2 border-t">
-                    ${isRadiusActive ? `
-                      <button 
-                        data-testid="button-clear-radius"
-                        class="radius-clear-btn w-full px-3 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm font-medium transition-colors"
-                        style="cursor: pointer;"
-                      >
-                        ❌ Limpar Raio
-                      </button>
-                    ` : `
-                      <button 
-                        data-testid="button-show-radius"
-                        class="radius-btn w-full px-3 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 text-sm font-medium transition-colors"
-                        style="cursor: pointer;"
-                      >
-                        🎯 Ver Raio de Apoio (1km)
-                      </button>
-                    `}
-                  </div>
-                ` : ''}
-              </div>
-            </div>
-          `
-        });
+const infoWindow = new google.maps.InfoWindow({
+  content: `
+    <div class="p-3" style="min-width: 250px;">
+      <h3 class="font-bold text-lg mb-2" style="color: ${markerColor};">${escapeHtml(paciente.nome)}</h3>
+      <div class="space-y-1 text-sm">
+        <p><strong>Idade:</strong> ${escapeHtml(paciente.idade?.toString())} anos</p>
+        <p><strong>Endereço:</strong> ${escapeHtml(paciente.endereco)}</p>
+        <p><strong>CEP:</strong> ${escapeHtml(paciente.cep)}</p>
+        <p><strong>Telefone:</strong> ${escapeHtml(paciente.telefone)}</p>
+        ${precisao ? `<p><strong>Precisão:</strong> <span style="color: ${isLowPrecision ? '#f59e0b' : '#10b981'};">${escapeHtml(precisaoTexto)}</span>${isLowPrecision ? ' ⚠️' : ' ✓'}</p>` : ''}
+        ${paciente.distanciaUbs ? `<p><strong>Distância UBS:</strong> ${escapeHtml(paciente.distanciaUbs.toFixed(1))} km</p>` : ''}
+        <div class="mt-2">
+          <strong>Condições de Saúde:</strong>
+          <div class="flex flex-wrap gap-1 mt-1">
+            ${(paciente.condicoesSaude || []).map(cond => 
+              `<span class="px-2 py-1 rounded-full text-xs" style="background-color: #ede9fe; color: #5b21b6;">${escapeHtml(cond)}</span>`
+            ).join('')}
+          </div>
+        </div>
+        ${!editMode ? `
+          <div class="mt-3 pt-2 border-t">
+            <button 
+              class="edit-paciente-btn w-full mb-2 px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm font-medium transition-colors"
+              style="cursor: pointer;"
+            >
+              ✏️ Editar Paciente
+            </button>
+            ${isRadiusActive ? `
+              <button 
+                data-testid="button-clear-radius"
+                class="radius-clear-btn w-full px-3 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm font-medium transition-colors"
+                style="cursor: pointer;"
+              >
+                ❌ Limpar Raio
+              </button>
+            ` : `
+              <button 
+                data-testid="button-show-radius"
+                class="radius-btn w-full px-3 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 text-sm font-medium transition-colors"
+                style="cursor: pointer;"
+              >
+                🎯 Ver Raio de Apoio (1km)
+              </button>
+            `}
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `
+});
 
         marker.addListener('click', () => {
           if (!editMode) {
@@ -374,9 +382,17 @@ export const MapComponent = ({
             
             // Add event listeners to radius buttons after InfoWindow opens
             google.maps.event.addListenerOnce(infoWindow, 'domready', () => {
+              const editBtn = document.querySelector('.edit-paciente-btn');
               const showRadiusBtn = document.querySelector('.radius-btn');
               const clearRadiusBtn = document.querySelector('.radius-clear-btn');
               
+              if (editBtn && onEditPaciente) {
+        editBtn.addEventListener('click', () => {
+          onEditPaciente(paciente);
+          infoWindow.close();
+        });
+      }
+
               if (showRadiusBtn) {
                 showRadiusBtn.addEventListener('click', () => {
                   // Clear any existing radius first
