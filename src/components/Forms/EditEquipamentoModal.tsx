@@ -100,7 +100,6 @@ export const EditEquipamentoModal = ({ open, onOpenChange, equipamento, onUpdate
 
     if (!formData.nome.trim()) newErrors.nome = 'Nome é obrigatório';
     if (!formData.endereco.trim()) newErrors.endereco = 'Endereço é obrigatório';
-    if (!formData.cep.trim()) newErrors.cep = 'CEP é obrigatório';
     if (!formData.telefone.trim()) newErrors.telefone = 'Telefone é obrigatório';
     if (!formData.responsavel.trim()) newErrors.responsavel = 'Responsável é obrigatório';
 
@@ -161,7 +160,7 @@ export const EditEquipamentoModal = ({ open, onOpenChange, equipamento, onUpdate
 
   // Função de geocodificação automática
   const geocodeAddress = async (endereco: string, cep: string, requestId: number) => {
-    if (!endereco.trim() || !cep.trim()) return;
+    if (!endereco.trim()) return;
     
     // Verificar se Google Maps API está disponível
     if (typeof window === 'undefined' || !window.google || !window.google.maps) {
@@ -345,7 +344,7 @@ export const EditEquipamentoModal = ({ open, onOpenChange, equipamento, onUpdate
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Label htmlFor="cep">CEP *</Label>
+                  <Label htmlFor="cep">CEP</Label>
                   <Input
                     id="cep"
                     data-testid="input-equipamento-cep"
@@ -355,7 +354,7 @@ export const EditEquipamentoModal = ({ open, onOpenChange, equipamento, onUpdate
                       setFormData(prev => ({ ...prev, cep: newCep }));
                       triggerGeocoding(formData.endereco, newCep);
                     }}
-                    placeholder="72302-101"
+                    placeholder="72302-101 (opcional)"
                     className={errors.cep ? 'border-red-500' : ''}
                   />
                   {errors.cep && <p className="text-sm text-red-500 mt-1">{errors.cep}</p>}
