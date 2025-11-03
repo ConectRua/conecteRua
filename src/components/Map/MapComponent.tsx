@@ -18,7 +18,6 @@ interface MapComponentProps {
   onRadiusCleared?: () => void;
   onEditPatient?: (paciente: Paciente) => void;  // ADICIONE ESTA LINHA
 }
-}
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
