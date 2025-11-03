@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState,} from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { useApiData } from '@/hooks/useApiData';
 import type { UBS, ONG, Paciente, EquipamentoSocial } from '../../../shared/schema';

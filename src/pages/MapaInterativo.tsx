@@ -13,8 +13,8 @@ import { EditPatientModal } from '@/components/Forms/EditPatientModal';
 import { ExportDropdown } from '@/components/Export/ExportDropdown';
 import { useApiData } from '@/hooks/useApiData';
 import { useState } from 'react';
-import { 
-  Map, 
+import {
+  Map,
   Filter,
   Download,
   Maximize,
@@ -38,9 +38,9 @@ interface RadiusData {
 }
 
 const MapaInterativo = () => {
-  const { 
-    ubsList, 
-    ongsList, 
+  const {
+    ubsList,
+    ongsList,
     pacientesList,
     equipamentosSociais,
     addUBS,
@@ -48,7 +48,7 @@ const MapaInterativo = () => {
     addEquipamentoSocial,
     addPaciente,
     updatePosition,
-    loading 
+    updatePaciente    
   } = useApiData();
 
   const [showUBS, setShowUBS] = useState(true);
@@ -108,9 +108,9 @@ const handleRadiusCleared = () => {
     setShowEditPatientModal(true);
   };
 
-  const handleUpdatePatient = (id: number, pacienteData: Partial<Paciente>) => {  
-    // Você precisa adicionar updatePaciente no useApiData se ainda não tiver
-    // updatePaciente(id, pacienteData); 
+  const handleUpdatePatient = (id: number, pacienteData: Partial<Paciente>) => {
+    updatePaciente(id, pacienteData); 
+
     setShowEditPatientModal(false);
     setSelectedPatientForEdit(null);
   };
